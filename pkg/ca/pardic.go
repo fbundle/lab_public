@@ -106,7 +106,8 @@ func (a *pArdic) Iter() func() int {
 	}
 }
 
-func padBefore(n int, v int, iter func() int) func() int {
+// shiftLeft : [1, 2, 3, 4, 5, ...] -> [v, v, v, 1, 2, 3, 4, 5, ...]
+func shiftLeft(n int, v int, iter func() int) func() int {
 	i := 0
 	return func() int {
 		if i < n {
@@ -128,7 +129,7 @@ func (a *pArdic) Mul(B PArdic) PArdic {
 	return NewPArdic(a.prime, func() int {
 		partial = append(partial, NewPArdic(
 			a.prime,
-			padBefore(i, 0, a.MulDigit(b.Get(i)).Iter())),
+			shiftLeft(i, 0, a.MulDigit(b.Get(i)).Iter())),
 		)
 		s := 0
 		for _, p := range partial {
