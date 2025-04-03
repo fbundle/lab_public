@@ -1,49 +1,14 @@
 package ca
 
-func divmod(a int, n int) (int, int) {
-	if n <= 0 || a < 0 {
-		panic("n must be > 0, a must be >= 0")
-	}
-	return a / n, a % n
-}
-
-type Iter func() int
-
-// shift : [1, 2, 3, 4, 5, ...] -> [v, v, v, 1, 2, 3, 4, 5, ...]
-func shift(n int, v int, iter func() int) func() int {
-	i := 0
-	return func() int {
-		if i < n {
-			i++
-			return v
-		}
-		return iter()
-	}
-}
-func NewIterFromList(list []int, tail int) Iter {
-	i := 0
-	return func() int {
-		if i < len(list) {
-			v := list[i]
-			i++
-			return v
-		}
-		return tail
-	}
-}
-
+// PAdic : p-adic numbers
 type PAdic interface {
 	Get(int) int
 	Add(PAdic) PAdic
 	Neg() PAdic
 	Sub(PAdic) PAdic
-	Mul(PAdic) PAdic
 	Iter() Iter
+	Mul(PAdic) PAdic
 	Approx(n int) (int, []int)
-}
-
-var zero = func() int {
-	return 0
 }
 
 type padic struct {
@@ -52,7 +17,7 @@ type padic struct {
 	cache []int
 }
 
-func NewPArdic(prime int, iter func() int) PAdic {
+func NewPAdic(prime int, iter func() int) PAdic {
 	carry := 0
 	return &padic{
 		prime: prime,
@@ -66,8 +31,8 @@ func NewPArdic(prime int, iter func() int) PAdic {
 	}
 }
 
-func NewPArdicFromInt(prime int, v int) PAdic {
-	return NewPArdic(prime, NewIterFromList([]int{v}, 0))
+func NewPAdicFromInt(prime int, v int) PAdic {
+	return NewPAdic(prime, NewIterFromList([]int{v}, 0))
 }
 
 func (a *padic) Get(i int) int {
@@ -145,8 +110,8 @@ func (a *padic) Mul(B PAdic) PAdic {
 	var partial []PAdic
 	i := 0
 	carry := 0
-	return NewPArdic(a.prime, func() int {
-		partial = append(partial, NewPArdic(
+	return NewPAdic(a.prime, func() int {
+		partial = append(partial, NewPAdic(
 			a.prime,
 			shift(i, 0, a.mulDigit(b.Get(i)).Iter())),
 		)
