@@ -1,11 +1,10 @@
 package ca
 
 type PArdic interface {
-	Get(i int) int
+	get(i int) int
 	Add(PArdic) PArdic
 	Neg() PArdic
 	Sub(PArdic) PArdic
-	MulDigit(b int) PArdic
 	Mul(B PArdic) PArdic
 	Iter() func() int
 	Approx(n int) (int, []int)
@@ -51,7 +50,7 @@ func NewPArdicFromList(prime int, list []int, iter func() int) PArdic {
 	}
 }
 
-func (a *pArdic) Get(i int) int {
+func (a *pArdic) get(i int) int {
 	for len(a.cache) <= i {
 		a.cache = append(a.cache, a.iter())
 	}
@@ -66,7 +65,7 @@ func (a *pArdic) Add(B PArdic) PArdic {
 	i := 0
 	c := 0
 	return NewPArdic(a.prime, func() int {
-		q, r := divmod(c+a.Get(i)+b.Get(i), a.prime)
+		q, r := divmod(c+a.get(i)+b.get(i), a.prime)
 		c = q
 		i++
 		return r
@@ -76,7 +75,7 @@ func (a *pArdic) Add(B PArdic) PArdic {
 func (a *pArdic) Neg() PArdic {
 	i := 0
 	return NewPArdic(a.prime, func() int {
-		r := a.prime - a.Get(i) - 1
+		r := a.prime - a.get(i) - 1
 		i++
 		return r
 	}).Add(NewPArdicFromList(a.prime, []int{1}, nil))
@@ -86,11 +85,11 @@ func (a *pArdic) Sub(B PArdic) PArdic {
 	return a.Add(B.Neg())
 }
 
-func (a *pArdic) MulDigit(b int) PArdic {
+func (a *pArdic) mulDigit(b int) PArdic {
 	i := 0
 	c := 0
 	return NewPArdic(a.prime, func() int {
-		q, r := divmod(c+a.Get(i)*b, a.prime)
+		q, r := divmod(c+a.get(i)*b, a.prime)
 		c = q
 		i++
 		return r
@@ -100,7 +99,7 @@ func (a *pArdic) MulDigit(b int) PArdic {
 func (a *pArdic) Iter() func() int {
 	i := 0
 	return func() int {
-		v := a.Get(i)
+		v := a.get(i)
 		i++
 		return v
 	}
@@ -129,11 +128,11 @@ func (a *pArdic) Mul(B PArdic) PArdic {
 	return NewPArdic(a.prime, func() int {
 		partial = append(partial, NewPArdic(
 			a.prime,
-			shiftLeft(i, 0, a.MulDigit(b.Get(i)).Iter())),
+			shiftLeft(i, 0, a.mulDigit(b.get(i)).Iter())),
 		)
 		s := 0
 		for _, p := range partial {
-			s += p.Get(i)
+			s += p.get(i)
 		}
 		q, r := divmod(c+s, a.prime)
 		c = q
@@ -147,9 +146,9 @@ func (a *pArdic) Approx(n int) (int, []int) {
 	s := 0
 	x := 1
 	for i := 0; i < n; i++ {
-		s += a.Get(i) * x
+		s += a.get(i) * x
 		x *= a.prime
-		approx[i] = a.Get(i)
+		approx[i] = a.get(i)
 	}
 	return s, approx
 }
