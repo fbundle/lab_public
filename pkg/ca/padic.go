@@ -11,7 +11,6 @@ type PAdic interface {
 	Norm() int
 	Div(PAdic) PAdic
 	Inv() PAdic
-	Inv1() PAdic
 	Approx(n int) (int, []int)
 }
 
@@ -115,14 +114,16 @@ func (a *padic) Div(B PAdic) PAdic {
 // Inv : [1, 1, 1, 1, ...] = 1 / (1 - p)
 // ab = 1 / (1 - p) => 1 = a b(1-p)
 func (a *padic) Inv() PAdic {
-	return a.Inv1().Mul(
+	return a.inv1().Mul(
 		NewPAdicFromInt(a.prime, 1).Sub(NewPAdicFromInt(a.prime, a.prime)),
 	)
 }
 
-// Inv1 : find b so that ab = [1, 1, 1, 1, ...]
+// inv1 : find b so that ab = [1, 1, 1, 1, ...]
 // b exists if and only if a_0 != 0
-func (a *padic) Inv1() PAdic {
+// if we add p^{-1}, then p-adic integers become p-adic number
+// ... + a_{-1} p^{-1} + a_0 + a_1 p + ...
+func (a *padic) inv1() PAdic {
 	// a_0 b_0 + carry = 1						=> b_0 = inv_a_0 n_0
 	// a_0 b_1 + a_1 b_0 + carry = 1			=> b_1 = inv_a_0 (1 - a_1 b_0 - carry) = inv_a_0 n_1
 	// a_0 b_2 + a_1 b_1 + a_2 b_0 + carry = 1	=> b_2 = int_a_0 (1 - a_1 b_1 - a_2 b_0 - carry) = inv_a_0 n_2
