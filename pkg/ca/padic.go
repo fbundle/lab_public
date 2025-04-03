@@ -121,7 +121,6 @@ func (a *padic) Inv() PAdic {
 }
 
 // Inv1 : find b so that ab = [1, 1, 1, 1, ...]
-// TODO - it looks like we can invert any p-adic integer, but it is not a field - something wrong here
 func (a *padic) Inv1() PAdic {
 	// a_0 b_0 + carry = 1						=> b_0 = inv_a_0 n_0
 	// a_0 b_1 + a_1 b_0 + carry = 1			=> b_1 = inv_a_0 (1 - a_1 b_0 - carry) = inv_a_0 n_1
