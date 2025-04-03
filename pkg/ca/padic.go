@@ -23,8 +23,8 @@ func NewPAdic(prime int, iter func() int) PAdic {
 	return &padic{
 		prime: prime,
 		iter: func() int {
-			v := iter()
-			q, r := divmod(carry+v, prime)
+			val := iter()
+			q, r := divmod(carry+val, prime)
 			carry = q
 			return r
 		},
@@ -49,16 +49,11 @@ func (a *padic) Add(B PAdic) PAdic {
 		panic("different bases")
 	}
 	i := 0
-	carry := 0
-	return &padic{
-		prime: a.prime,
-		iter: func() int {
-			q, r := divmod(carry+a.Get(i)+b.Get(i), a.prime)
-			carry = q
-			i++
-			return r
-		},
-	}
+	return NewPAdic(a.prime, func() int {
+		val := a.Get(i) + b.Get(i)
+		i++
+		return val
+	})
 }
 
 func (a *padic) Neg() PAdic {
@@ -89,41 +84,20 @@ func (a *padic) Iter() Iter {
 	}
 }
 
-func (a *padic) mulDigit(b int) PAdic {
-	i := 0
-	carry := 0
-	return &padic{
-		prime: a.prime,
-		iter: func() int {
-			q, r := divmod(carry+a.Get(i)*b, a.prime)
-			carry = q
-			i++
-			return r
-		},
-	}
-}
-
 func (a *padic) Mul(B PAdic) PAdic {
 	b := B.(*padic)
 	if a.prime != b.prime {
 		panic("different bases")
 	}
-	var partial []PAdic
 	i := 0
-	carry := 0
 	return NewPAdic(a.prime, func() int {
-		partial = append(partial, NewPAdic(
-			a.prime,
-			shift(i, 0, a.mulDigit(b.Get(i)).Iter())),
-		)
-		s := 0
-		for _, p := range partial {
-			s += p.Get(i)
+		val := 0
+		for j1 := 0; j1 <= i; j1++ {
+			j2 := i - j1
+			val += a.Get(j1) * b.Get(j2)
 		}
-		q, r := divmod(carry+s, a.prime)
-		carry = q
 		i++
-		return r
+		return val
 	})
 }
 
