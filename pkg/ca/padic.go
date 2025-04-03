@@ -1,6 +1,6 @@
 package ca
 
-// PAdic : p-adic numbers
+// PAdic : p-adic integers
 type PAdic interface {
 	Get(int) int
 	Add(PAdic) PAdic
