@@ -14,4 +14,6 @@ func main() {
 	fmt.Println(y.Approx(N))
 	fmt.Println(y.Mul(x).Approx(N)) // print 27 x 23
 	fmt.Println(y.Sub(x).Approx(N)) // print 27 - 23
+
+	fmt.Println(x.Mul(x.Inv()).Approx(N))
 }

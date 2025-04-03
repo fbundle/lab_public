@@ -9,6 +9,8 @@ type PAdic interface {
 	Iter() Iter
 	Mul(PAdic) PAdic
 	Norm() int
+	Inv() PAdic
+	Inv1() PAdic
 	Approx(n int) (int, []int)
 }
 
@@ -98,6 +100,46 @@ func (a *padic) Mul(B PAdic) PAdic {
 		}
 		i++
 		return val
+	})
+}
+
+// Inv : [1, 1, 1, 1, ...] = 1 / (1 - p)
+// ab = 1 / (1 - p) => 1 = a b(1-p)
+func (a *padic) Inv() PAdic {
+	return a.Inv1().Mul(
+		NewPAdicFromInt(a.prime, 1).Sub(NewPAdicFromInt(a.prime, a.prime)),
+	)
+}
+
+// Inv1 : find b so that ab = [1, 1, 1, 1, ...]
+func (a *padic) Inv1() PAdic {
+	// a_0 b_0 + carry = 1						=> b_0 = inv_a_0 n_0
+	// a_0 b_1 + a_1 b_0 + carry = 1			=> b_1 = inv_a_0 (1 - a_1 b_0 - carry) = inv_a_0 n_1
+	// a_0 b_2 + a_1 b_1 + a_2 b_0 + carry = 1	=> b_2 = int_a_0 (1 - a_1 b_1 - a_2 b_0 - carry) = inv_a_0 n_2
+	// ...
+	inv_a_0 := invmod(a.Get(0), a.prime)
+	var bList []int
+	i := 0
+	carry := 0
+	return NewPAdic(a.prime, func() int {
+		n_i := 1 - carry
+		for j := 0; j < i; j++ {
+			n_i -= a.Get(i-j) * bList[j]
+		}
+		b_i := mod(inv_a_0*n_i, a.prime)
+		bList = append(bList, b_i)
+		total := carry
+		for j := 0; j <= i; j++ {
+			total += a.Get(i-j) * bList[j]
+		}
+		// total mod p^i is must be
+		q, r := divmod(total, a.prime)
+		if r != 1 {
+			panic("runtime error")
+		}
+		carry = q
+		i++
+		return b_i
 	})
 }
 
