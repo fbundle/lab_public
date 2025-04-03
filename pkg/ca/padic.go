@@ -121,7 +121,7 @@ func (a *padic) Inv() PAdic {
 
 // inv1 : find b so that ab = [1, 1, 1, 1, ...]
 // b exists if and only if a_0 != 0
-// if we add p^{-1}, then p-adic integers become p-adic number
+// if we add p^{-1}, then p-adic integer $\Z_p$ become p-adic number $\Q_p$
 // ... + a_{-1} p^{-1} + a_0 + a_1 p + ...
 func (a *padic) inv1() PAdic {
 	// a_0 b_0 + carry = 1						=> b_0 = inv_a_0 n_0
