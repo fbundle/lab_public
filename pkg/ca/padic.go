@@ -123,6 +123,9 @@ func (a *padic) Inv() PAdic {
 // b exists if and only if a_0 != 0
 // if we add p^{-1}, then p-adic integer $\Z_p$ become p-adic number $\Q_p$
 // ... + a_{-1} p^{-1} + a_0 + a_1 p + ...
+// $\Q_p$ contains $\Q$ as its subfield, however, calculation in $\Q_p$ seems more difficult than $\Z_p$
+// for any rational $a / b$, since $b$ is finite, one can find large enough prime $p$
+// so that $a / b$ exists in $\Z_p$, or equivalently $b$ invertible
 func (a *padic) inv1() PAdic {
 	// a_0 b_0 + carry = 1						=> b_0 = inv_a_0 n_0
 	// a_0 b_1 + a_1 b_0 + carry = 1			=> b_1 = inv_a_0 (1 - a_1 b_0 - carry) = inv_a_0 n_1
