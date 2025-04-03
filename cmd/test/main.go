@@ -12,5 +12,6 @@ func main() {
 	y := ca.NewPArdicFromInt(3, 27)
 	fmt.Println(x.Approx(N))
 	fmt.Println(y.Approx(N))
-	fmt.Println(y.Mul(x).Approx(N)) // print 23 x 27
+	fmt.Println(y.Mul(x).Approx(N)) // print 27 x 23
+	fmt.Println(y.Sub(x).Approx(N)) // print 27 - 23
 }
