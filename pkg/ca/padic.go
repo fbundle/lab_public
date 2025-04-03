@@ -9,6 +9,7 @@ type PAdic interface {
 	Iter() Iter
 	Mul(PAdic) PAdic
 	Norm() int
+	Div(PAdic) PAdic
 	Inv() PAdic
 	Inv1() PAdic
 	Approx(n int) (int, []int)
@@ -101,6 +102,14 @@ func (a *padic) Mul(B PAdic) PAdic {
 		i++
 		return val
 	})
+}
+
+func (a *padic) Div(B PAdic) PAdic {
+	b := B.(*padic)
+	if a.prime != b.prime {
+		panic("different bases")
+	}
+	return a.Mul(b.Inv())
 }
 
 // Inv : [1, 1, 1, 1, ...] = 1 / (1 - p)
