@@ -127,6 +127,9 @@ func (a *padic) Inv1() PAdic {
 	// a_0 b_1 + a_1 b_0 + carry = 1			=> b_1 = inv_a_0 (1 - a_1 b_0 - carry) = inv_a_0 n_1
 	// a_0 b_2 + a_1 b_1 + a_2 b_0 + carry = 1	=> b_2 = int_a_0 (1 - a_1 b_1 - a_2 b_0 - carry) = inv_a_0 n_2
 	// ...
+	if a.Get(0) == 0 {
+		panic("division by zero")
+	}
 	inv_a_0 := invmod(a.Get(0), a.prime)
 	var bList []int
 	i := 0
