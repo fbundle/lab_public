@@ -17,11 +17,11 @@ type PAdic interface {
 
 type padic struct {
 	prime int
-	iter  func() int
+	iter  Iter
 	cache []int
 }
 
-func NewPAdic(prime int, iter func() int) PAdic {
+func NewPAdic(prime int, iter Iter) PAdic {
 	carry := 0
 	return &padic{
 		prime: prime,
