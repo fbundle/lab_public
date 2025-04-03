@@ -50,6 +50,14 @@ func NewPArdicFromList(prime int, list []int, iter func() int) PArdic {
 	}
 }
 
+func NewPArdicFromInt(prime int, v int) PArdic {
+	return NewPArdic(prime, func() int {
+		q, r := divmod(v, prime)
+		v = q
+		return r
+	})
+}
+
 func (a *pArdic) get(i int) int {
 	for len(a.cache) <= i {
 		a.cache = append(a.cache, a.iter())
