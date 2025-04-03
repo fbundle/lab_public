@@ -121,6 +121,7 @@ func (a *padic) Inv() PAdic {
 }
 
 // Inv1 : find b so that ab = [1, 1, 1, 1, ...]
+// b exists if and only if a_0 != 0
 func (a *padic) Inv1() PAdic {
 	// a_0 b_0 + carry = 1						=> b_0 = inv_a_0 n_0
 	// a_0 b_1 + a_1 b_0 + carry = 1			=> b_1 = inv_a_0 (1 - a_1 b_0 - carry) = inv_a_0 n_1
