@@ -8,6 +8,7 @@ type PAdic interface {
 	Sub(PAdic) PAdic
 	Iter() Iter
 	Mul(PAdic) PAdic
+	Norm() int
 	Approx(n int) (int, []int)
 }
 
@@ -136,4 +137,15 @@ func (a *padic) Approx(n int) (int, []int) {
 		approx[i] = a.Get(i)
 	}
 	return s, approx
+}
+
+func (a *padic) Norm() int {
+	i := 0
+	for {
+		v := a.Get(i)
+		if v != 0 {
+			return i
+		}
+		i++
+	}
 }
