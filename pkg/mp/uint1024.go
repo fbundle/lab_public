@@ -68,7 +68,7 @@ func (a Uint1024) Mul(b Uint1024) Uint1024 {
 	return NewUint1024FromFreq(freq)
 }
 
-// TODO - implement dft and dftCT using uint128
+// TODO - implement dft and dftCT using uint128 because multiplying two uint64s cause overflow
 
 func TestDft() {
 	invR := invmod(R, P)
