@@ -20,7 +20,6 @@ type Uint1792Block = [N]uint64
 // Uint1792 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ...
 type Uint1792 struct {
 	Time Uint1792Block
-	Freq Uint1792Block
 }
 
 func FromUint64(x uint64) Uint1792 {
@@ -42,12 +41,7 @@ func fromTime(time Uint1792Block) Uint1792 {
 	}
 	return Uint1792{
 		Time: time,
-		Freq: time2freq(time),
 	}
-}
-
-func fromFreq(freq Uint1792Block) Uint1792 {
-	return fromTime(freq2time(freq))
 }
 
 func FromString(s string) Uint1792 {
@@ -157,11 +151,13 @@ func (a Uint1792) Add(b Uint1792) Uint1792 {
 }
 
 func (a Uint1792) Mul(b Uint1792) Uint1792 {
+	aFreq, bFreq := time2freq(a.Time), time2freq(b.Time)
+
 	freq := Uint1792Block{}
 	for i := 0; i < N; i++ {
-		freq[i] = mul(a.Freq[i], b.Freq[i])
+		freq[i] = mul(aFreq[i], bFreq[i])
 	}
-	return fromFreq(freq)
+	return fromTime(freq2time(freq))
 }
 
 func (a Uint1792) Sub(b Uint1792) Uint1792 {
