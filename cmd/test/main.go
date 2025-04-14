@@ -19,10 +19,9 @@ func testPAdic() {
 }
 
 func main() {
-	x := uint3548.TrimFromTime(uint3548.Uint3584Block{131414234243, 12314555, 123131, 5345777, 7646456})
+	x := uint3548.FromString("0x1DE80001501001E0FB00004E70145BE3")
 	s := x.String()
-	fmt.Println(s)
 	y := uint3548.FromString(s)
-	t := y.String()
-	fmt.Println(t)
+	fmt.Println(x)
+	fmt.Println(y)
 }

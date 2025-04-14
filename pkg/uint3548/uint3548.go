@@ -22,12 +22,15 @@ type Uint3584 struct {
 	Freq Uint3584Block
 }
 
+func FromUint64(x uint64) Uint3584 {
+	return FromTime(trimTime(Uint3584Block{x}))
+}
+
 func (a Uint3584) Uint64() uint64 {
 	return a.Time[0] + a.Time[1]*B + a.Time[2]*B*B
 }
 
-func TrimFromTime(time Uint3584Block) Uint3584 {
-	// trim coefficients to [0, B-1]
+func trimTime(time Uint3584Block) Uint3584Block {
 	for i := 0; i < N; i++ {
 		q, r := time[i]/B, time[i]%B
 		time[i] = r
@@ -35,7 +38,7 @@ func TrimFromTime(time Uint3584Block) Uint3584 {
 			time[i+1] = time[i+1] + q
 		}
 	}
-	return FromTime(time)
+	return time
 }
 
 func FromTime(time Uint3584Block) Uint3584 {
@@ -147,7 +150,7 @@ func (a Uint3584) Add(b Uint3584) Uint3584 {
 	for i := 0; i < N; i++ {
 		time[i] = add(a.Time[i], b.Time[i])
 	}
-	return TrimFromTime(time)
+	return FromTime(trimTime(time))
 }
 
 func (a Uint3584) Mul(b Uint3584) Uint3584 {
@@ -157,6 +160,16 @@ func (a Uint3584) Mul(b Uint3584) Uint3584 {
 	}
 	return FromFreq(freq)
 }
+
+func (a Uint3584) Sub(b Uint3584) Uint3584 {
+	// second complement for b
+	return Uint3584{}
+}
+
+func (a Uint3584) Div(b Uint3584) Uint3584 {
+	return Uint3584{}
+}
+
 func time2freq(time Uint3584Block) Uint3584Block {
 	return dft(time, N, R)
 }
