@@ -16,7 +16,7 @@ const (
 // Uint1792Block : polynomial of degree at most N-1 in F_p[X]
 type Uint1792Block = [N]uint64
 
-// Uint1792 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ...
+// Uint1792 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
 type Uint1792 struct {
 	Time Uint1792Block
 }
