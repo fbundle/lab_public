@@ -1,5 +1,6 @@
 package uint3548
 
+// Uint3548Block:  a block of N uint64s, each is in mod P
 type Uint3584Block = [N]uint64
 
 type Uint3584 struct {
@@ -11,8 +12,8 @@ func (u Uint3584) Uint64() uint64 {
 	return u.Time[0] + u.Time[1]*B + u.Time[2]*B*B
 }
 
-func NewUint3548FromTime(time Uint3584Block) Uint3584 {
-	// trim to [0, B-1]
+func New(time Uint3584Block) Uint3584 {
+	// trim to [0, B-1] for easier conversion
 	for i := 0; i < N; i++ {
 		q, r := time[i]/B, time[i]%B
 		time[i] = r
@@ -26,15 +27,15 @@ func NewUint3548FromTime(time Uint3584Block) Uint3584 {
 	}
 }
 
-func NewUint3548FromFreq(freq Uint3584Block) Uint3584 {
+func FromFreq(freq Uint3584Block) Uint3584 {
 	return Uint3584{
 		Time: freq2time(freq),
 		Freq: freq,
 	}
 }
 
-func NewUint3548FromUint64(u uint64) Uint3584 {
-	return NewUint3548FromTime(Uint3584Block{u})
+func FromUint64(u uint64) Uint3584 {
+	return New(Uint3584Block{u})
 }
 
 func (a Uint3584) Add(b Uint3584) Uint3584 {
@@ -42,7 +43,7 @@ func (a Uint3584) Add(b Uint3584) Uint3584 {
 	for i := 0; i < N; i++ {
 		time[i] = add(a.Time[i], b.Time[i])
 	}
-	return NewUint3548FromTime(time)
+	return New(time)
 }
 
 func (a Uint3584) Mul(b Uint3584) Uint3584 {
@@ -50,7 +51,7 @@ func (a Uint3584) Mul(b Uint3584) Uint3584 {
 	for i := 0; i < N; i++ {
 		freq[i] = mul(a.Freq[i], b.Freq[i])
 	}
-	return NewUint3548FromFreq(freq)
+	return FromFreq(freq)
 }
 
 func time2freq(time Uint3584Block) Uint3584Block {

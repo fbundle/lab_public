@@ -3,8 +3,8 @@ package uint3548
 import "fmt"
 
 func TestFFT() {
-	x := NewUint3548FromTime(Uint3584Block{131414234243, 12314555, 123131, 5345777, 7646456})
-	z := NewUint3548FromFreq(x.Freq)
+	x := New(Uint3584Block{131414234243, 12314555, 123131, 5345777, 7646456})
+	z := FromFreq(x.Freq)
 	fmt.Println(x)
 	fmt.Println(z)
 }
