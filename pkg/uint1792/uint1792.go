@@ -1,7 +1,6 @@
 package uint1792
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -201,29 +200,7 @@ func (a Uint1792) Abs() Uint1792 {
 }
 
 func (a Uint1792) Div(b Uint1792) Uint1792 {
-	// Step 1: Compute inverse of b
-	bInv := b.reciprocal() // approximate b⁻¹ using Newton-Raphson
-
-	// Step 2: Multiply a * b⁻¹
-	q := a.Mul(bInv)
-	return q
-}
-
-func (a Uint1792) reciprocal() Uint1792 {
-	// Start with a crude approximation
-	two := FromUint64(2)
-	x := FromUint64(1) // x0 ≈ 1/b
-
-	for {
-		// x1 = x * (2 - a * x)
-		x1 := x.Mul(two.Sub(a.Mul(x)))
-		if x1 == x {
-			break
-		}
-		fmt.Println(x.Sub(x1).Abs())
-		x = x1
-	}
-	return x
+	return Uint1792{}
 }
 
 func time2freq(time Uint1792Block) Uint1792Block {
