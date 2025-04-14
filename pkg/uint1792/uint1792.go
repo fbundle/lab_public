@@ -224,6 +224,11 @@ func (a Uint1792) Div(b Uint1792) Uint1792 {
 	return a.Mul(x).ShiftRight(896 / 28)
 }
 
+func (a Uint1792) Mod(b Uint1792) Uint1792 {
+	x := a.Div(b)
+	return a.Sub(b.Mul(x))
+}
+
 func time2freq(time Uint1792Block) Uint1792Block {
 	return dft(time, N, R)
 }

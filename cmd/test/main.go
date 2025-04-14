@@ -22,7 +22,5 @@ func main() {
 	x := uint1792.FromString("0x318346193417412890342342")
 	s := x.String()
 	y := uint1792.FromString(s)
-	fmt.Println(x.Div(y))
-	fmt.Println(y)
-	fmt.Println(y.ShiftLeft(1))
+	fmt.Println(x.Add(uint1792.FromString("0x3183461934")).Mod(y))
 }
