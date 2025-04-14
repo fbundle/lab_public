@@ -193,7 +193,9 @@ func (a Uint1792) Abs() Uint1792 {
 	}
 }
 
-// Inv : TODO - Newton-Raphson Division - return x so that ax = 2^1792 = m using fixed point arithmetic
+// Inv : TODO - Newton-Raphson Division
+// - return x so that ax = 2^1792 = m using fixed point arithmetic
+// implement using Uint3584 add sub mul
 func (a Uint1792) Inv() Uint1792 {
 	x := a
 	for {
