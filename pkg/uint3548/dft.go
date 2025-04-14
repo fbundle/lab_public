@@ -11,7 +11,7 @@ func TestFFT() {
 
 type DFT func(block Uint3584Block, n int, omega uint64) Uint3584Block
 
-var dft DFT = NaiveDFT
+var dft DFT = CooleyTukeyFFT
 
 func SetDefaultDFT(f DFT) {
 	dft = f

@@ -3,12 +3,12 @@ package uint3548
 const (
 	P    = 18446744069414584321 // p = 2^64 - 2^32 + 1 and 2 is the 192-th primitive root of unity
 	R, N = 8, 64                // 8 is 64-th primitive root of unity
-	B    = 1 << 28              // choose base 2^d so that N * B * B < P
+	B    = 1 << 28              // choose base 2^d so that N * B * B < P - this guarantees that multiplication won't overflow
 )
 
 const (
-	invR = 16140901060737761281 // inverse of R in mod P
-	invN = 18158513693329981441 // inverse of N in mod P
+	invR = 16140901060737761281 // precompute R^{-1}
+	invN = 18158513693329981441 // precompute N^{-1}
 )
 
 type Uint3584Block = [N]uint64
@@ -23,6 +23,7 @@ func (u Uint3584) Uint64() uint64 {
 }
 
 func NewUint3548FromTime(time Uint3584Block) Uint3584 {
+	// trim to [0, B-1]
 	for i := 0; i < N; i++ {
 		q, r := time[i]/B, time[i]%B
 		time[i] = r
@@ -32,17 +33,13 @@ func NewUint3548FromTime(time Uint3584Block) Uint3584 {
 	}
 	return Uint3584{
 		Time: time,
-		Freq: dft(time, N, R),
+		Freq: time2freq(time),
 	}
 }
 
 func NewUint3548FromFreq(freq Uint3584Block) Uint3584 {
-	time := Uint3584Block{}
-	for i, f := range dft(freq, N, invR) {
-		time[i] = mul(f, invN)
-	}
 	return Uint3584{
-		Time: time,
+		Time: freq2time(freq),
 		Freq: freq,
 	}
 }
@@ -65,4 +62,16 @@ func (a Uint3584) Mul(b Uint3584) Uint3584 {
 		freq[i] = mul(a.Freq[i], b.Freq[i])
 	}
 	return NewUint3548FromFreq(freq)
+}
+
+func time2freq(time Uint3584Block) Uint3584Block {
+	return dft(time, N, R)
+}
+
+func freq2time(freq Uint3584Block) Uint3584Block {
+	time := Uint3584Block{}
+	for i, f := range dft(freq, N, invR) {
+		time[i] = mul(f, invN)
+	}
+	return time
 }
