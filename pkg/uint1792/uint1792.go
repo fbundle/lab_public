@@ -13,7 +13,7 @@ const (
 	invN = 18158513693329981441 // precompute N^{-1}
 )
 
-// Uint1792Block Uint3548Block:  a block of N uint64s, each is in mod P
+// Uint1792Block : polynomial of degree at most N-1 in F_p[X]
 type Uint1792Block = [N]uint64
 
 // Uint1792 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ...
