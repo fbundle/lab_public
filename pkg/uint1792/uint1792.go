@@ -179,6 +179,20 @@ func (a Uint1792) Abs() Uint1792 {
 	}
 }
 
+func (a Uint1792) ShiftLeft(n int) Uint1792 {
+	time := Uint1792Block{}
+	for i := 0; i < N; i++ {
+		if 0 <= i-n && i-n < N {
+			time[i] = a.Time[i-n]
+		}
+	}
+	return fromTime(time)
+}
+
+func (a Uint1792) ShiftRight(n int) Uint1792 {
+	return a.ShiftLeft(-n)
+}
+
 // Inv : TODO - Newton-Raphson Division
 // - return x so that ax = 2^1792 = m using fixed point arithmetic
 // implement using Uint3584 add sub mul
