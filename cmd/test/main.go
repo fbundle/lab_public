@@ -19,7 +19,7 @@ func testPAdic() {
 }
 
 func main() {
-	x := uint3548.New(uint3548.Uint3584Block{131414234243, 12314555, 123131, 5345777, 7646456})
+	x := uint3548.TrimFromTime(uint3548.Uint3584Block{131414234243, 12314555, 123131, 5345777, 7646456})
 	s := x.String()
 	fmt.Println(s)
 	y := uint3548.FromString(s)

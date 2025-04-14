@@ -25,7 +25,7 @@ func (a Uint3584) Uint64() uint64 {
 	return a.Time[0] + a.Time[1]*B + a.Time[2]*B*B
 }
 
-func New(time Uint3584Block) Uint3584 {
+func TrimFromTime(time Uint3584Block) Uint3584 {
 	// trim to [0, B-1] for easier conversion
 	for i := 0; i < N; i++ {
 		q, r := time[i]/B, time[i]%B
@@ -34,6 +34,10 @@ func New(time Uint3584Block) Uint3584 {
 			time[i+1] = time[i+1] + q
 		}
 	}
+	return FromTime(time)
+}
+
+func FromTime(time Uint3584Block) Uint3584 {
 	return Uint3584{
 		Time: time,
 		Freq: time2freq(time),
@@ -90,7 +94,7 @@ func FromString(s string) Uint3584 {
 		time[i] = x
 	}
 
-	return New(time)
+	return FromTime(time)
 }
 
 func (a Uint3584) String() string {
@@ -142,7 +146,7 @@ func (a Uint3584) Add(b Uint3584) Uint3584 {
 	for i := 0; i < N; i++ {
 		time[i] = add(a.Time[i], b.Time[i])
 	}
-	return New(time)
+	return TrimFromTime(time)
 }
 
 func (a Uint3584) Mul(b Uint3584) Uint3584 {
