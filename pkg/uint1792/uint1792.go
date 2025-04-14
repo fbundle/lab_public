@@ -193,7 +193,7 @@ func (a Uint1792) Abs() Uint1792 {
 	}
 }
 
-// Inv : TODO - Newton-Raphson Division in Base-B
+// Inv : TODO - Newton-Raphson Division in Base B
 func (a Uint1792) Inv() Uint1792 {
 	x := a
 	for {
