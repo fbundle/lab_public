@@ -1,7 +1,6 @@
 package uint1792
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -193,23 +192,36 @@ func (a Uint1792) ShiftRight(n int) Uint1792 {
 	return a.ShiftLeft(-n)
 }
 
-// Inv : TODO - Newton-Raphson Division
-// - return x so that ax = 2^1792 = m using fixed point arithmetic
-// implement using Uint3584 add sub mul
-// after that, implement Div and Mod
+// Inv : Newton-Raphson Division for 1 < a < 2^896
+// return x so that ax = 2^896 = m using fixed point arithmetic
 func (a Uint1792) Inv() Uint1792 {
-	x := a
+	// a / m = a.ShiftRight(N/2)
+	zero := Uint1792Block{}
+	if a.ShiftRight(N/2).Time != zero {
+		panic("inv if only a < 2^896")
+	}
+	if a.Uint64() == 0 {
+		panic("division by zero")
+	}
+
+	two := FromUint64(2)
+	x := FromUint64(1)
+	//Newton-Raphson iterations
+	// x_{n+1} = 2 x_n - (a x_n^2) / m
 	for {
-		// x = x * (2 - a * x)
-		x1 := x.Mul(FromUint64(2).Sub(a.Mul(x)))
-		if x == x1 {
+		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).ShiftRight(N / 2))
+		if x1 == x {
 			break
 		}
-		fmt.Println(x.Sub(x1).Abs())
 		x = x1
 	}
 
 	return x
+}
+
+func (a Uint1792) Div(b Uint1792) Uint1792 {
+	x := b.Inv() // x = 2^896 / b
+	return a.Mul(x).ShiftRight(896 / 28)
 }
 
 func time2freq(time Uint1792Block) Uint1792Block {

@@ -9,4 +9,4 @@ implementation of $p$-adic integers
 
 - `uint1792` without division
 - multiplication using FFT
-- TODO `uint896` with division
+- `uint896` with division
