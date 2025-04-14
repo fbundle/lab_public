@@ -13,6 +13,7 @@ const (
 
 const (
 	invR = 16140901060737761281 // inverse of R in mod P
+	invN = 18158513693329981441 // inverse of N in mod P
 )
 
 type Uint1024Block = [N]uint64
@@ -38,8 +39,6 @@ func NewUint1024FromTime(time Uint1024Block) Uint1024 {
 
 func NewUint1024FromFreq(freq Uint1024Block) Uint1024 {
 	time := Uint1024Block{}
-	invR := invmod(R, P)
-	invN := invmod(N, P)
 	for i, f := range dft(freq, N, invR) {
 		time[i] = (invN * f) % P
 	}
@@ -68,6 +67,8 @@ func (a Uint1024) Mul(b Uint1024) Uint1024 {
 	}
 	return NewUint1024FromFreq(freq)
 }
+
+// TODO - implement dft and dftCT using uint128
 
 func TestDft() {
 	invR := invmod(R, P)
