@@ -1,15 +1,16 @@
 package main
 
 import (
-	"ca/pkg/ca"
+	"ca/pkg/mp"
+	"ca/pkg/pa"
 	"fmt"
 )
 
 func testPAdic() {
 	const N = 10
-	x := ca.NewPAdicFromInt(3, 23)
-	y := ca.NewPAdicFromInt(3, 27)
-	z := ca.NewPAdicFromInt(3, 92)
+	x := pa.NewPAdicFromInt(3, 23)
+	y := pa.NewPAdicFromInt(3, 27)
+	z := pa.NewPAdicFromInt(3, 92)
 	fmt.Println(x.Approx(N))
 	fmt.Println(y.Approx(N))
 	fmt.Println(y.Mul(x).Approx(N)) // print 27 x 23 = 621
@@ -18,5 +19,10 @@ func testPAdic() {
 }
 
 func main() {
-
+	a := mp.NewUint1024FromUint64(1231231123121)
+	b := mp.NewUint1024FromUint64(6345353645645)
+	_, _ = a, b
+	fmt.Println(a)
+	fmt.Println(mp.NewUint1024FromFreq(a.Freq))
+	mp.TestDft()
 }

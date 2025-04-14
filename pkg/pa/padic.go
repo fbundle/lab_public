@@ -1,4 +1,4 @@
-package ca
+package pa
 
 // PAdic : p-adic integers
 type PAdic interface {
