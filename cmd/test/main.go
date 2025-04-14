@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ca/pkg/mp"
 	"ca/pkg/pa"
+	"ca/pkg/uint3548"
 	"fmt"
 )
 
@@ -19,10 +19,5 @@ func testPAdic() {
 }
 
 func main() {
-	a := mp.NewUint1024FromUint64(1231231123121)
-	b := mp.NewUint1024FromUint64(6345353645645)
-	_, _ = a, b
-	fmt.Println(a)
-	fmt.Println(mp.NewUint1024FromFreq(a.Freq))
-	mp.TestDft()
+	uint3548.TestFFT()
 }
