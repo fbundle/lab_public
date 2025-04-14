@@ -198,7 +198,7 @@ func (a Uint1792) Inv() Uint1792 {
 	// a / m = a.ShiftRight(N/2)
 	zero := Uint1792Block{}
 	if a.ShiftRight(N/2).Time != zero {
-		panic("inv if only a < 2^896")
+		panic("inv is supported only for 1 < a < 2^896")
 	}
 	if a.Uint64() == 0 {
 		panic("division by zero")
