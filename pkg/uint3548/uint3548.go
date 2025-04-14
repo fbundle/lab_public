@@ -18,12 +18,13 @@ type Uint3584Block = [N]uint64
 
 // Uint3584 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ...
 type Uint3584 struct {
-	Time Uint3584Block
-	Freq Uint3584Block
+	Time    Uint3584Block
+	Freq    Uint3584Block
+	hasFreq bool
 }
 
 func FromUint64(x uint64) Uint3584 {
-	return FromTime(trimTime(Uint3584Block{x}))
+	return fromTime(trimTime(Uint3584Block{x}))
 }
 
 func (a Uint3584) Uint64() uint64 {
@@ -41,17 +42,19 @@ func trimTime(time Uint3584Block) Uint3584Block {
 	return time
 }
 
-func FromTime(time Uint3584Block) Uint3584 {
+func fromTime(time Uint3584Block) Uint3584 {
 	return Uint3584{
-		Time: time,
-		Freq: time2freq(time),
+		Time:    time,
+		Freq:    Uint3584Block{},
+		hasFreq: false,
 	}
 }
 
-func FromFreq(freq Uint3584Block) Uint3584 {
+func fromFreq(freq Uint3584Block) Uint3584 {
 	return Uint3584{
-		Time: freq2time(freq),
-		Freq: freq,
+		Time:    freq2time(freq),
+		Freq:    freq,
+		hasFreq: true,
 	}
 }
 
@@ -98,7 +101,7 @@ func FromString(s string) Uint3584 {
 		time[i] = x
 	}
 
-	return FromTime(time)
+	return fromTime(time)
 }
 
 func (a Uint3584) String() string {
@@ -142,7 +145,11 @@ func (a Uint3584) String() string {
 		ch := toChar[base16[i]]
 		out += ch
 	}
-	return "0x" + strings.TrimLeft(out, "0")
+	out = strings.TrimLeft(out, "0")
+	if len(out) == 0 {
+		out = "0"
+	}
+	return "0x" + out
 }
 
 func (a Uint3584) Add(b Uint3584) Uint3584 {
@@ -150,20 +157,33 @@ func (a Uint3584) Add(b Uint3584) Uint3584 {
 	for i := 0; i < N; i++ {
 		time[i] = add(a.Time[i], b.Time[i])
 	}
-	return FromTime(trimTime(time))
+	return fromTime(trimTime(time))
 }
 
 func (a Uint3584) Mul(b Uint3584) Uint3584 {
+	aFreq := a.Freq
+	if !a.hasFreq {
+		aFreq = time2freq(a.Time)
+	}
+	bFreq := b.Freq
+	if !b.hasFreq {
+		bFreq = time2freq(b.Time)
+	}
 	freq := Uint3584Block{}
 	for i := 0; i < N; i++ {
-		freq[i] = mul(a.Freq[i], b.Freq[i])
+		freq[i] = mul(aFreq[i], bFreq[i])
 	}
-	return FromFreq(freq)
+	return fromFreq(freq)
 }
 
 func (a Uint3584) Sub(b Uint3584) Uint3584 {
 	// second complement for b
-	return Uint3584{}
+	bTime := b.Time
+	for i := 0; i < N; i++ {
+		bTime[i] = (^bTime[i]) % B // flip bits and trim to B
+	}
+	bNeg := fromTime(bTime).Add(FromUint64(1))
+	return a.Add(bNeg)
 }
 
 func (a Uint3584) Div(b Uint3584) Uint3584 {

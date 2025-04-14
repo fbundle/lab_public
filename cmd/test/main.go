@@ -22,6 +22,6 @@ func main() {
 	x := uint3548.FromString("0x1DE80001501001E0FB00004E70145BE3")
 	s := x.String()
 	y := uint3548.FromString(s)
-	fmt.Println(x)
+	fmt.Println(x.Sub(y))
 	fmt.Println(y)
 }
