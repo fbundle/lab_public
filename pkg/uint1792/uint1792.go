@@ -1,6 +1,7 @@
 package uint1792
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -219,6 +220,7 @@ func (a Uint1792) reciprocal() Uint1792 {
 		if x1 == x {
 			break
 		}
+		fmt.Println(x.Sub(x1).Abs())
 		x = x1
 	}
 	return x
