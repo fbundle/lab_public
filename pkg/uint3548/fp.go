@@ -7,6 +7,10 @@ func add(a uint64, b uint64) uint64 {
 	return aLarge.Add(bLarge).Mod64(P)
 }
 
+func sub(a uint64, b uint64) uint64 {
+	return add(a, P-b%P)
+}
+
 func mul(a uint64, b uint64) uint64 {
 	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
 	return aLarge.Mul(bLarge).Mod64(P)

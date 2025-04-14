@@ -45,24 +45,25 @@ func CooleyTukeyFFT(block Uint3584Block, n int, omega uint64) Uint3584Block {
 	if n == 1 {
 		return block
 	}
-	if n <= 0 || n > N || n%2 != 0 {
-		panic("n must be 1 or even in [2, 64]")
+	if n <= 0 || n%2 != 0 {
+		panic("n must be power of 2")
 	}
 	var even, odd Uint3584Block
 	for i := 0; i < n/2; i++ {
 		even[i] = block[2*i]
 		odd[i] = block[2*i+1]
 	}
-	evenFFT := CooleyTukeyFFT(even, n/2, omega*omega)
-	oddFFT := CooleyTukeyFFT(odd, n/2, omega*omega)
+	nextOmega := mul(omega, omega)
+	evenFFT := CooleyTukeyFFT(even, n/2, nextOmega)
+	oddFFT := CooleyTukeyFFT(odd, n/2, nextOmega)
 
 	result := Uint3584Block{}
 	var omegaPow uint64 = 1 // omega^0
 	for i := 0; i < n/2; i++ {
-		t := (omegaPow * oddFFT[i]) % P
-		result[i] = (evenFFT[i] + t) % P
-		result[i+n/2] = (evenFFT[i] - t) % P
-		omegaPow = (omegaPow * omega) % P
+		t := mul(omegaPow, oddFFT[i])
+		result[i] = add(evenFFT[i], t)
+		result[i+n/2] = sub(evenFFT[i], t)
+		omegaPow = mul(omegaPow, omega)
 	}
 	return result
 }
