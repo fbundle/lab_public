@@ -188,10 +188,12 @@ func (a Uint1792) shiftRight(n int) Uint1792 {
 	return fromTime(time)
 }
 
-// invFPA : Newton-Raphson algorithm to find the root of f(x) = m / x - a = 0
-// for 1 < a < 2^896
-// return x so that ax = 2^896 = m using fixed point arithmetic
-func (a Uint1792) invFPA() Uint1792 {
+// invNewton : Newton iteration to find the root of f(x) = m / x - a = 0
+// for 1 < a < 2^896, return x so that ax = 2^896 = m using fixed point arithmetic
+// plenty accurate
+// TODO - probably can increase m to close to 2^1792
+// TODO - since we don't need to many bits after the decimal point to estimate m / a
+func (a Uint1792) invNewton() Uint1792 {
 	zero := Uint1792Block{}
 	if a.shiftRight(N/2).Time != zero {
 		panic("inv is supported only for 1 < a < 2^896")
@@ -202,7 +204,7 @@ func (a Uint1792) invFPA() Uint1792 {
 
 	two := FromUint64(2)
 	x := FromUint64(1)
-	//Newton-Raphson iterations
+	// Newton iteration
 	// x_{n+1} = 2 x_n - (a x_n^2) / m
 	for {
 		// a / m = a.shiftRight(N/2)
@@ -217,8 +219,8 @@ func (a Uint1792) invFPA() Uint1792 {
 }
 
 func (a Uint1792) Div(b Uint1792) Uint1792 {
-	x := b.invFPA() // x = 2^896 / b
-	return a.Mul(x).shiftRight(896 / 28)
+	x := b.invNewton() // x = 2^896 / b
+	return a.Mul(x).shiftRight(N / 2)
 }
 
 func (a Uint1792) Mod(b Uint1792) Uint1792 {
