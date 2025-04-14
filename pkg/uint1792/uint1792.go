@@ -196,6 +196,7 @@ func (a Uint1792) Abs() Uint1792 {
 // Inv : TODO - Newton-Raphson Division
 // - return x so that ax = 2^1792 = m using fixed point arithmetic
 // implement using Uint3584 add sub mul
+// after that, implement Div and Mod
 func (a Uint1792) Inv() Uint1792 {
 	x := a
 	for {
@@ -209,9 +210,6 @@ func (a Uint1792) Inv() Uint1792 {
 	}
 
 	return x
-}
-func (a Uint1792) Div(b Uint1792) Uint1792 {
-	return a.Mul(b.Inv())
 }
 
 func time2freq(time Uint1792Block) Uint1792Block {
