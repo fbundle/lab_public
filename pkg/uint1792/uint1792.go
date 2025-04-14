@@ -19,10 +19,8 @@ type Uint1792Block = [N]uint64
 
 // Uint1792 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ...
 type Uint1792 struct {
-	Time    Uint1792Block
-	Freq    Uint1792Block
-	hasTime bool
-	hasFreq bool
+	Time Uint1792Block
+	Freq Uint1792Block
 }
 
 func FromUint64(x uint64) Uint1792 {
@@ -43,50 +41,13 @@ func fromTime(time Uint1792Block) Uint1792 {
 		}
 	}
 	return Uint1792{
-		Time:    time,
-		Freq:    Uint1792Block{},
-		hasTime: true,
-		hasFreq: false,
+		Time: time,
+		Freq: time2freq(time),
 	}
 }
 
 func fromFreq(freq Uint1792Block) Uint1792 {
-	return Uint1792{
-		Time:    Uint1792Block{},
-		Freq:    freq,
-		hasTime: false,
-		hasFreq: true,
-	}
-}
-
-func (a Uint1792) requireTime() Uint1792 {
-	if !a.hasTime && !a.hasFreq {
-		panic("require either time or freq")
-	}
-	if a.hasTime {
-		return a
-	}
-	return Uint1792{
-		Time:    freq2time(a.Freq),
-		Freq:    a.Freq,
-		hasTime: true,
-		hasFreq: true,
-	}
-}
-
-func (a Uint1792) requireFreq() Uint1792 {
-	if !a.hasTime && !a.hasFreq {
-		panic("require either time or freq")
-	}
-	if a.hasFreq {
-		return a
-	}
-	return Uint1792{
-		Time:    a.Time,
-		Freq:    time2freq(a.Time),
-		hasTime: true,
-		hasFreq: true,
-	}
+	return fromTime(freq2time(freq))
 }
 
 func FromString(s string) Uint1792 {
@@ -140,7 +101,6 @@ func FromString(s string) Uint1792 {
 }
 
 func (a Uint1792) String() string {
-	a = a.requireTime()
 	// convert base 2^28 to base16
 	var base16 []byte = nil
 	for i := 0; i < N; i++ {
@@ -189,7 +149,6 @@ func (a Uint1792) String() string {
 }
 
 func (a Uint1792) Add(b Uint1792) Uint1792 {
-	a, b = a.requireTime(), b.requireTime()
 	time := Uint1792Block{}
 	for i := 0; i < N; i++ {
 		time[i] = add(a.Time[i], b.Time[i])
@@ -198,7 +157,6 @@ func (a Uint1792) Add(b Uint1792) Uint1792 {
 }
 
 func (a Uint1792) Mul(b Uint1792) Uint1792 {
-	a, b = a.requireFreq(), b.requireFreq()
 	freq := Uint1792Block{}
 	for i := 0; i < N; i++ {
 		freq[i] = mul(a.Freq[i], b.Freq[i])
