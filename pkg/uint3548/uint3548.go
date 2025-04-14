@@ -76,7 +76,21 @@ func FromString(s string) Uint3584 {
 		base16 = append(base16, toBase16[string(s[i])])
 	}
 	// convert base16 to base 2^28
-	return Uint3584{}
+	time := Uint3584Block{}
+	for len(base16)%7 != 0 {
+		base16 = append(base16, 0)
+	}
+	for i := 0; i < len(base16)/7; i++ {
+		var x uint64 = 0
+		var b uint64 = 1
+		for j := 0; j < 7; j++ {
+			x += uint64(base16[7*i+j]) * b
+			b *= 16
+		}
+		time[i] = x
+	}
+
+	return New(time)
 }
 
 func (a Uint3584) String() string {

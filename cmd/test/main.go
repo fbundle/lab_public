@@ -20,5 +20,9 @@ func testPAdic() {
 
 func main() {
 	x := uint3548.New(uint3548.Uint3584Block{131414234243, 12314555, 123131, 5345777, 7646456})
-	fmt.Println(x.String())
+	s := x.String()
+	fmt.Println(s)
+	y := uint3548.FromString(s)
+	t := y.String()
+	fmt.Println(t)
 }
