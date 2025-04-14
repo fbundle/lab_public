@@ -65,8 +65,12 @@ func (a Uint1792) requireTime() Uint1792 {
 	}
 	if a.hasTime {
 		return a
-	} else {
-		return fromTime(freq2time(a.Freq))
+	}
+	return Uint1792{
+		Time:    freq2time(a.Freq),
+		Freq:    a.Freq,
+		hasTime: true,
+		hasFreq: true,
 	}
 }
 
@@ -76,13 +80,12 @@ func (a Uint1792) requireFreq() Uint1792 {
 	}
 	if a.hasFreq {
 		return a
-	} else {
-		return Uint1792{
-			Time:    a.Time,
-			Freq:    time2freq(a.Time),
-			hasTime: true,
-			hasFreq: true,
-		}
+	}
+	return Uint1792{
+		Time:    a.Time,
+		Freq:    time2freq(a.Time),
+		hasTime: true,
+		hasFreq: true,
 	}
 }
 
