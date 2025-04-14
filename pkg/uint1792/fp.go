@@ -1,4 +1,4 @@
-package uint3548
+package uint1792
 
 import "ca/pkg/uint128"
 

@@ -1,4 +1,4 @@
-package uint3548
+package uint1792
 
 import (
 	"strings"
@@ -13,25 +13,25 @@ const (
 	invN = 18158513693329981441 // precompute N^{-1}
 )
 
-// Uint3584Block Uint3548Block:  a block of N uint64s, each is in mod P
-type Uint3584Block = [N]uint64
+// Uint1792Block Uint3548Block:  a block of N uint64s, each is in mod P
+type Uint1792Block = [N]uint64
 
-// Uint3584 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ...
-type Uint3584 struct {
-	Time    Uint3584Block
-	Freq    Uint3584Block
+// Uint1792 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ...
+type Uint1792 struct {
+	Time    Uint1792Block
+	Freq    Uint1792Block
 	hasFreq bool
 }
 
-func FromUint64(x uint64) Uint3584 {
-	return fromTime(trimTime(Uint3584Block{x}))
+func FromUint64(x uint64) Uint1792 {
+	return fromTime(trimTime(Uint1792Block{x}))
 }
 
-func (a Uint3584) Uint64() uint64 {
+func (a Uint1792) Uint64() uint64 {
 	return a.Time[0] + a.Time[1]*B + a.Time[2]*B*B
 }
 
-func trimTime(time Uint3584Block) Uint3584Block {
+func trimTime(time Uint1792Block) Uint1792Block {
 	for i := 0; i < N; i++ {
 		q, r := time[i]/B, time[i]%B
 		time[i] = r
@@ -42,27 +42,31 @@ func trimTime(time Uint3584Block) Uint3584Block {
 	return time
 }
 
-func fromTime(time Uint3584Block) Uint3584 {
-	return Uint3584{
+func fromTime(time Uint1792Block) Uint1792 {
+	return Uint1792{
 		Time:    time,
-		Freq:    Uint3584Block{},
+		Freq:    Uint1792Block{},
 		hasFreq: false,
 	}
 }
 
-func fromFreq(freq Uint3584Block) Uint3584 {
-	return Uint3584{
+func fromFreq(freq Uint1792Block) Uint1792 {
+	return Uint1792{
 		Time:    freq2time(freq),
 		Freq:    freq,
 		hasFreq: true,
 	}
 }
 
-func FromString(s string) Uint3584 {
+func FromString(s string) Uint1792 {
 	if s[0:2] != "0x" {
 		panic("string does not start with 0x")
 	}
 	s = strings.ToUpper(s[2:])
+
+	if len(s) > 448 {
+		panic("string too long")
+	}
 	// convert string to base16
 	var base16 []byte
 	toBase16 := map[string]byte{
@@ -87,7 +91,7 @@ func FromString(s string) Uint3584 {
 		base16 = append(base16, toBase16[string(s[i])])
 	}
 	// convert base16 to base 2^28
-	time := Uint3584Block{}
+	time := Uint1792Block{}
 	for len(base16)%7 != 0 {
 		base16 = append(base16, 0)
 	}
@@ -104,7 +108,7 @@ func FromString(s string) Uint3584 {
 	return fromTime(time)
 }
 
-func (a Uint3584) String() string {
+func (a Uint1792) String() string {
 	// convert base 2^28 to base16
 	var base16 []byte = nil
 	for i := 0; i < N; i++ {
@@ -152,15 +156,15 @@ func (a Uint3584) String() string {
 	return "0x" + out
 }
 
-func (a Uint3584) Add(b Uint3584) Uint3584 {
-	time := Uint3584Block{}
+func (a Uint1792) Add(b Uint1792) Uint1792 {
+	time := Uint1792Block{}
 	for i := 0; i < N; i++ {
 		time[i] = add(a.Time[i], b.Time[i])
 	}
 	return fromTime(trimTime(time))
 }
 
-func (a Uint3584) Mul(b Uint3584) Uint3584 {
+func (a Uint1792) Mul(b Uint1792) Uint1792 {
 	aFreq := a.Freq
 	if !a.hasFreq {
 		aFreq = time2freq(a.Time)
@@ -169,14 +173,14 @@ func (a Uint3584) Mul(b Uint3584) Uint3584 {
 	if !b.hasFreq {
 		bFreq = time2freq(b.Time)
 	}
-	freq := Uint3584Block{}
+	freq := Uint1792Block{}
 	for i := 0; i < N; i++ {
 		freq[i] = mul(aFreq[i], bFreq[i])
 	}
 	return fromFreq(freq)
 }
 
-func (a Uint3584) Sub(b Uint3584) Uint3584 {
+func (a Uint1792) Sub(b Uint1792) Uint1792 {
 	// second complement for b
 	bTime := b.Time
 	for i := 0; i < N; i++ {
@@ -186,16 +190,46 @@ func (a Uint3584) Sub(b Uint3584) Uint3584 {
 	return a.Add(bNeg)
 }
 
-func (a Uint3584) Div(b Uint3584) Uint3584 {
-	return Uint3584{}
+// Abs : treat Uint1792 as a signed integer
+func (a Uint1792) Abs() Uint1792 {
+	if a.Time[N-1]/(1<<27) > 0 {
+		return FromUint64(0).Sub(a)
+	} else {
+		return a
+	}
 }
 
-func time2freq(time Uint3584Block) Uint3584Block {
+func (a Uint1792) Div(b Uint1792) Uint1792 {
+	// Step 1: Compute inverse of b
+	bInv := b.reciprocal() // approximate b⁻¹ using Newton-Raphson
+
+	// Step 2: Multiply a * b⁻¹
+	q := a.Mul(bInv)
+	return q
+}
+
+func (a Uint1792) reciprocal() Uint1792 {
+	// Start with a crude approximation
+	two := FromUint64(2)
+	x := FromUint64(1) // x0 ≈ 1/b
+
+	for {
+		// x1 = x * (2 - a * x)
+		x1 := x.Mul(two.Sub(a.Mul(x)))
+		if x1 == x {
+			break
+		}
+		x = x1
+	}
+	return x
+}
+
+func time2freq(time Uint1792Block) Uint1792Block {
 	return dft(time, N, R)
 }
 
-func freq2time(freq Uint3584Block) Uint3584Block {
-	time := Uint3584Block{}
+func freq2time(freq Uint1792Block) Uint1792Block {
+	time := Uint1792Block{}
 	for i, f := range dft(freq, N, invR) {
 		time[i] = mul(f, invN)
 	}
