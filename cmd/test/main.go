@@ -19,5 +19,6 @@ func testPAdic() {
 }
 
 func main() {
-	uint3548.TestFFT()
+	x := uint3548.New(uint3548.Uint3584Block{131414234243, 12314555, 123131, 5345777, 7646456})
+	fmt.Println(x.String())
 }

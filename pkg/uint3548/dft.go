@@ -1,14 +1,5 @@
 package uint3548
 
-import "fmt"
-
-func TestFFT() {
-	x := New(Uint3584Block{131414234243, 12314555, 123131, 5345777, 7646456})
-	z := FromFreq(x.Freq)
-	fmt.Println(x)
-	fmt.Println(z)
-}
-
 type DFT func(block Uint3584Block, n int, omega uint64) Uint3584Block
 
 var dft DFT = CooleyTukeyFFT
