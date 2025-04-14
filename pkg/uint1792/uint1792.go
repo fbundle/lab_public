@@ -1,6 +1,7 @@
 package uint1792
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -47,14 +48,6 @@ func fromTime(time Uint1792Block) Uint1792 {
 		Time:    time,
 		Freq:    Uint1792Block{},
 		hasFreq: false,
-	}
-}
-
-func fromFreq(freq Uint1792Block) Uint1792 {
-	return Uint1792{
-		Time:    freq2time(freq),
-		Freq:    freq,
-		hasFreq: true,
 	}
 }
 
@@ -177,7 +170,8 @@ func (a Uint1792) Mul(b Uint1792) Uint1792 {
 	for i := 0; i < N; i++ {
 		freq[i] = mul(aFreq[i], bFreq[i])
 	}
-	return fromFreq(freq)
+	time := trimTime(freq2time(freq))
+	return fromTime(time)
 }
 
 func (a Uint1792) Sub(b Uint1792) Uint1792 {
@@ -199,8 +193,23 @@ func (a Uint1792) Abs() Uint1792 {
 	}
 }
 
+// Inv : TODO - Newton-Raphson Division in Base-B
+func (a Uint1792) Inv() Uint1792 {
+	x := a
+	for {
+		// x = x * (2 - a * x)
+		x1 := x.Mul(FromUint64(2).Sub(a.Mul(x)))
+		if x == x1 {
+			break
+		}
+		fmt.Println(x.Sub(x1).Abs())
+		x = x1
+	}
+
+	return x
+}
 func (a Uint1792) Div(b Uint1792) Uint1792 {
-	return Uint1792{}
+	return a.Mul(b.Inv())
 }
 
 func time2freq(time Uint1792Block) Uint1792Block {
