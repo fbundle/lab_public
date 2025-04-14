@@ -178,25 +178,22 @@ func (a Uint1792) Abs() Uint1792 {
 	}
 }
 
-func (a Uint1792) ShiftLeft(n int) Uint1792 {
+func (a Uint1792) shiftRight(n int) Uint1792 {
 	time := Uint1792Block{}
 	for i := 0; i < N; i++ {
-		if 0 <= i-n && i-n < N {
-			time[i] = a.Time[i-n]
+		if 0 <= i+n && i+n < N {
+			time[i] = a.Time[i+n]
 		}
 	}
 	return fromTime(time)
 }
 
-func (a Uint1792) ShiftRight(n int) Uint1792 {
-	return a.ShiftLeft(-n)
-}
-
-// Inv : Newton-Raphson Division for 1 < a < 2^896
+// invFPA : Newton-Raphson algorithm to find the root of f(x) = m / x - a = 0
+// for 1 < a < 2^896
 // return x so that ax = 2^896 = m using fixed point arithmetic
-func (a Uint1792) Inv() Uint1792 {
+func (a Uint1792) invFPA() Uint1792 {
 	zero := Uint1792Block{}
-	if a.ShiftRight(N/2).Time != zero {
+	if a.shiftRight(N/2).Time != zero {
 		panic("inv is supported only for 1 < a < 2^896")
 	}
 	if a.Uint64() == 0 {
@@ -208,8 +205,8 @@ func (a Uint1792) Inv() Uint1792 {
 	//Newton-Raphson iterations
 	// x_{n+1} = 2 x_n - (a x_n^2) / m
 	for {
-		// a / m = a.ShiftRight(N/2)
-		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).ShiftRight(N / 2))
+		// a / m = a.shiftRight(N/2)
+		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(N / 2))
 		if x1 == x {
 			break
 		}
@@ -220,8 +217,8 @@ func (a Uint1792) Inv() Uint1792 {
 }
 
 func (a Uint1792) Div(b Uint1792) Uint1792 {
-	x := b.Inv() // x = 2^896 / b
-	return a.Mul(x).ShiftRight(896 / 28)
+	x := b.invFPA() // x = 2^896 / b
+	return a.Mul(x).shiftRight(896 / 28)
 }
 
 func (a Uint1792) Mod(b Uint1792) Uint1792 {
