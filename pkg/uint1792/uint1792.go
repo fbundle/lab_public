@@ -195,7 +195,6 @@ func (a Uint1792) ShiftRight(n int) Uint1792 {
 // Inv : Newton-Raphson Division for 1 < a < 2^896
 // return x so that ax = 2^896 = m using fixed point arithmetic
 func (a Uint1792) Inv() Uint1792 {
-	// a / m = a.ShiftRight(N/2)
 	zero := Uint1792Block{}
 	if a.ShiftRight(N/2).Time != zero {
 		panic("inv is supported only for 1 < a < 2^896")
@@ -209,6 +208,7 @@ func (a Uint1792) Inv() Uint1792 {
 	//Newton-Raphson iterations
 	// x_{n+1} = 2 x_n - (a x_n^2) / m
 	for {
+		// a / m = a.ShiftRight(N/2)
 		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).ShiftRight(N / 2))
 		if x1 == x {
 			break
