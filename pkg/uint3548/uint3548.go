@@ -16,6 +16,7 @@ const (
 // Uint3584Block Uint3548Block:  a block of N uint64s, each is in mod P
 type Uint3584Block = [N]uint64
 
+// Uint3584 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ...
 type Uint3584 struct {
 	Time Uint3584Block
 	Freq Uint3584Block
@@ -26,7 +27,7 @@ func (a Uint3584) Uint64() uint64 {
 }
 
 func TrimFromTime(time Uint3584Block) Uint3584 {
-	// trim to [0, B-1] for easier conversion
+	// trim coefficients to [0, B-1]
 	for i := 0; i < N; i++ {
 		q, r := time[i]/B, time[i]%B
 		time[i] = r
