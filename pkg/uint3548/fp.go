@@ -2,6 +2,17 @@ package uint3548
 
 import "ca/pkg/uint128"
 
+const (
+	P    = 18446744069414584321 // p = 2^64 - 2^32 + 1 and 2 is the 192-th primitive root of unity
+	R, N = 8, 64                // 8 is 64-th primitive root of unity
+	B    = 1 << 28              // choose base 2^d so that N * B * B < P - this guarantees that multiplication won't overflow
+)
+
+const (
+	invR = 16140901060737761281 // precompute R^{-1}
+	invN = 18158513693329981441 // precompute N^{-1}
+)
+
 func add(a uint64, b uint64) uint64 {
 	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
 	return aLarge.Add(bLarge).Mod64(P)
