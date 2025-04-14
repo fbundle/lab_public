@@ -21,18 +21,20 @@ type Uint1792Block = [N]uint64
 type Uint1792 struct {
 	Time    Uint1792Block
 	Freq    Uint1792Block
+	hasTime bool
 	hasFreq bool
 }
 
 func FromUint64(x uint64) Uint1792 {
-	return fromTime(trimTime(Uint1792Block{x}))
+	return fromTime(Uint1792Block{x})
 }
 
 func (a Uint1792) Uint64() uint64 {
 	return a.Time[0] + a.Time[1]*B + a.Time[2]*B*B
 }
 
-func trimTime(time Uint1792Block) Uint1792Block {
+func fromTime(time Uint1792Block) Uint1792 {
+	// trim time
 	for i := 0; i < N; i++ {
 		q, r := time[i]/B, time[i]%B
 		time[i] = r
@@ -40,14 +42,47 @@ func trimTime(time Uint1792Block) Uint1792Block {
 			time[i+1] = time[i+1] + q
 		}
 	}
-	return time
-}
-
-func fromTime(time Uint1792Block) Uint1792 {
 	return Uint1792{
 		Time:    time,
 		Freq:    Uint1792Block{},
+		hasTime: true,
 		hasFreq: false,
+	}
+}
+
+func fromFreq(freq Uint1792Block) Uint1792 {
+	return Uint1792{
+		Time:    Uint1792Block{},
+		Freq:    freq,
+		hasTime: false,
+		hasFreq: true,
+	}
+}
+
+func (a Uint1792) requireTime() Uint1792 {
+	if !a.hasTime && !a.hasFreq {
+		panic("require either time or freq")
+	}
+	if a.hasTime {
+		return a
+	} else {
+		return fromTime(freq2time(a.Freq))
+	}
+}
+
+func (a Uint1792) requireFreq() Uint1792 {
+	if !a.hasTime && !a.hasFreq {
+		panic("require either time or freq")
+	}
+	if a.hasFreq {
+		return a
+	} else {
+		return Uint1792{
+			Time:    a.Time,
+			Freq:    time2freq(a.Time),
+			hasTime: true,
+			hasFreq: true,
+		}
 	}
 }
 
@@ -55,7 +90,7 @@ func FromString(s string) Uint1792 {
 	if s[0:2] != "0x" {
 		panic("string does not start with 0x")
 	}
-	s = strings.ToUpper(s[2:])
+	s = strings.ToLower(s[2:])
 
 	if len(s) > 448 {
 		panic("string too long")
@@ -73,12 +108,12 @@ func FromString(s string) Uint1792 {
 		"7": 7,
 		"8": 8,
 		"9": 9,
-		"A": 10,
-		"B": 11,
-		"C": 12,
-		"D": 13,
-		"E": 14,
-		"F": 15,
+		"a": 10,
+		"b": 11,
+		"c": 12,
+		"d": 13,
+		"e": 14,
+		"f": 15,
 	}
 	for i := len(s) - 1; i >= 0; i-- {
 		base16 = append(base16, toBase16[string(s[i])])
@@ -102,6 +137,7 @@ func FromString(s string) Uint1792 {
 }
 
 func (a Uint1792) String() string {
+	a = a.requireTime()
 	// convert base 2^28 to base16
 	var base16 []byte = nil
 	for i := 0; i < N; i++ {
@@ -127,12 +163,12 @@ func (a Uint1792) String() string {
 		7:  "7",
 		8:  "8",
 		9:  "9",
-		10: "A",
-		11: "B",
-		12: "C",
-		13: "D",
-		14: "E",
-		15: "F",
+		10: "a",
+		11: "b",
+		12: "c",
+		13: "d",
+		14: "e",
+		15: "f",
 	}
 	out := ""
 	if len(base16)%2 != 0 {
@@ -150,28 +186,21 @@ func (a Uint1792) String() string {
 }
 
 func (a Uint1792) Add(b Uint1792) Uint1792 {
+	a, b = a.requireTime(), b.requireTime()
 	time := Uint1792Block{}
 	for i := 0; i < N; i++ {
 		time[i] = add(a.Time[i], b.Time[i])
 	}
-	return fromTime(trimTime(time))
+	return fromTime(time)
 }
 
 func (a Uint1792) Mul(b Uint1792) Uint1792 {
-	aFreq := a.Freq
-	if !a.hasFreq {
-		aFreq = time2freq(a.Time)
-	}
-	bFreq := b.Freq
-	if !b.hasFreq {
-		bFreq = time2freq(b.Time)
-	}
+	a, b = a.requireFreq(), b.requireFreq()
 	freq := Uint1792Block{}
 	for i := 0; i < N; i++ {
-		freq[i] = mul(aFreq[i], bFreq[i])
+		freq[i] = mul(a.Freq[i], b.Freq[i])
 	}
-	time := trimTime(freq2time(freq))
-	return fromTime(time)
+	return fromFreq(freq)
 }
 
 func (a Uint1792) Sub(b Uint1792) Uint1792 {
