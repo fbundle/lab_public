@@ -8,10 +8,6 @@ const (
 	R, N = 8, 64   // 8 is 64-th primitive root of unity in mod P
 	B    = 1 << 28 // choose base 2^d so that N * B * B < P - this guarantees that multiplication won't overflow
 )
-const (
-	invR = 16140901060737761281 // precompute R^{-1}
-	invN = 18158513693329981441 // precompute N^{-1}
-)
 
 // Uint1792Block : polynomial of degree at most N-1 in F_p[X]
 type Uint1792Block = [N]uint64
@@ -228,6 +224,12 @@ func (a Uint1792) Mod(b Uint1792) Uint1792 {
 	return a.Sub(b.Mul(x))
 }
 
+const (
+	invR = 16140901060737761281 // precompute R^{-1}
+	invN = 18158513693329981441 // precompute N^{-1}
+	S    = 18410715272404008961 // precompute N^{-1} R^{-1}
+)
+
 func time2freq(time Uint1792Block) Uint1792Block {
 	return dft(time, N, R)
 }
@@ -237,5 +239,6 @@ func freq2time(freq Uint1792Block) Uint1792Block {
 	for i, f := range dft(freq, N, invR) {
 		time[i] = mul(f, invN)
 	}
+	// TODO - check why dft(time, N, mul(invR, invS)) seems to not work
 	return time
 }
