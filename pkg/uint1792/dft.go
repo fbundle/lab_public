@@ -39,7 +39,7 @@ func CooleyTukeyFFT(block Block, n int, omega uint64) Block {
 	if n <= 0 || n%2 != 0 {
 		panic("n must be power of 2")
 	}
-	var even, odd Block
+	var even, odd Block // TODO - test whether to use [N]uint64 or []uint64 faster
 	for i := 0; i < n/2; i++ {
 		even[i] = block[2*i]
 		odd[i] = block[2*i+1]
