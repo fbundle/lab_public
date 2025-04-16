@@ -185,12 +185,12 @@ func (a Uint1792) shiftRight(n int) Uint1792 {
 	return fromTime(time)
 }
 
-// invNewton : Newton iteration to find the root of f(x) = m / x - a = 0
+// invNewton896 : Newton iteration to find the root of f(x) = m / x - a = 0
 // for 1 < a < 2^896, return x so that ax = 2^896 = m using fixed point arithmetic
 // plenty accurate
 // TODO - probably can increase m to close to 2^1792
 // TODO - since we don't need to many bits after the decimal point to estimate m / a
-func (a Uint1792) invNewton() Uint1792 {
+func (a Uint1792) invNewton896() Uint1792 {
 	zero := Block{}
 	if a.shiftRight(N/2).Time != zero {
 		panic("inv is supported only for 1 < a < 2^896")
@@ -216,7 +216,7 @@ func (a Uint1792) invNewton() Uint1792 {
 }
 
 func (a Uint1792) Div(b Uint1792) Uint1792 {
-	x := b.invNewton() // x = 2^896 / b
+	x := b.invNewton896() // x = 2^896 / b
 	return a.Mul(x).shiftRight(N / 2)
 }
 
