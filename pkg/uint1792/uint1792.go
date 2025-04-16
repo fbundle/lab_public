@@ -216,8 +216,8 @@ func (a Uint1792) invNewton896() Uint1792 {
 }
 
 func (a Uint1792) Div(b Uint1792) Uint1792 {
-	x := b.invNewton896() // x = 2^896 / b
-	return a.Mul(x).shiftRight(N / 2)
+	x := b.invNewton896()             // x = 2^896 / b
+	return a.Mul(x).shiftRight(N / 2) // a/b = a (2^896 / b) / 2^896
 }
 
 func (a Uint1792) Mod(b Uint1792) Uint1792 {
