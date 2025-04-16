@@ -1,6 +1,11 @@
 package uint1792
 
-type DFT func(block Block, n int, omega uint64) Block
+import (
+	"fmt"
+	"os"
+)
+
+type DFT func(x Block, n int, omega uint64) (y Block)
 
 var dft DFT = CooleyTukeyFFT
 
@@ -8,7 +13,11 @@ func SetDefaultDFT(f DFT) {
 	dft = f
 }
 
-func NaiveDFT(block Block, n int, omega uint64) Block {
+// NaiveDFT : naive implementation of DFT - for reference
+// construct DFT matrix w of size (n, n) with omega as the root of unity
+// return y = wx
+func NaiveDFT(x Block, n int, omega uint64) (y Block) {
+	_, _ = fmt.Fprintf(os.Stderr, "WARNING : this implementation is for reference, use FFT instead")
 	makeDftMat := func(n int, omega uint64) [][]uint64 {
 		w := make([][]uint64, n)
 		for i := 0; i < n; i++ {
@@ -22,39 +31,37 @@ func NaiveDFT(block Block, n int, omega uint64) Block {
 		return w
 	}
 	w := makeDftMat(n, omega)
-	out := Block{}
 	for i := 0; i < n; i++ {
 		for j := 0; j < n; j++ {
-			out[i] = add(out[i], mul(w[i][j], block[j]))
+			y[i] = add(y[i], mul(w[i][j], x[j]))
 		}
 	}
-	return out
+	return y
 }
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(block Block, n int, omega uint64) Block {
+func CooleyTukeyFFT(x Block, n int, omega uint64) (y Block) {
 	if n == 1 {
-		return block
+		return x
 	}
 	if n <= 0 || n%2 != 0 {
 		panic("n must be power of 2")
 	}
-	var even, odd Block // TODO - test whether to use [N]uint64 or []uint64 faster
+	var e, o Block // even and odd values of x
 	for i := 0; i < n/2; i++ {
-		even[i] = block[2*i]
-		odd[i] = block[2*i+1]
+		e[i] = x[2*i]
+		o[i] = x[2*i+1]
 	}
 	nextOmega := mul(omega, omega)
-	evenFFT := CooleyTukeyFFT(even, n/2, nextOmega)
-	oddFFT := CooleyTukeyFFT(odd, n/2, nextOmega)
+	eFFT := CooleyTukeyFFT(e, n/2, nextOmega)
+	oFFT := CooleyTukeyFFT(o, n/2, nextOmega)
 
-	result := Block{}
 	var omegaPow uint64 = 1 // omega^0
 	for i := 0; i < n/2; i++ {
-		t := mul(omegaPow, oddFFT[i])
-		result[i] = add(evenFFT[i], t)
-		result[i+n/2] = sub(evenFFT[i], t)
+		t := mul(omegaPow, oFFT[i])
+		y[i] = add(eFFT[i], t)
+		y[i+n/2] = sub(eFFT[i], t)
 		omegaPow = mul(omegaPow, omega)
 	}
-	return result
+	return y
 }
