@@ -22,7 +22,7 @@ func testUint1792() {
 	x := uint1792.FromString("0x318346193417412890342342")
 	s := x.String()
 	y := uint1792.FromString(s)
-	fmt.Println(x.Add(uint1792.FromString("0x934174128903")).Mod(y))
+	fmt.Println(x.Add(uint1792.FromString("0x484723895378245789")).Mod(y))
 }
 
 func main() {
