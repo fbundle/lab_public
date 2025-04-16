@@ -2,9 +2,8 @@ package uint1792
 
 import "ca/pkg/uint128"
 
-const (
-	P = 18446744069414584321 // p = 2^64 - 2^32 + 1 and 2 is the 192-th primitive root of unity
-)
+// P : operations on finite field of order P
+const P = 18446744069414584321 // p = 2^64 - 2^32 + 1 and 2 is the 192-th primitive root of unity
 
 func add(a uint64, b uint64) uint64 {
 	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
