@@ -18,9 +18,13 @@ func testPAdic() {
 	fmt.Println(z.Div(x).Approx(N)) // print 92 / 23 = 4
 }
 
-func main() {
+func testUint1792() {
 	x := uint1792.FromString("0x318346193417412890342342")
 	s := x.String()
 	y := uint1792.FromString(s)
-	fmt.Println(x.Add(uint1792.FromString("0x3183461934")).Mod(y))
+	fmt.Println(x.Add(uint1792.FromString("0x934174128903")).Mod(y))
+}
+
+func main() {
+	testUint1792()
 }

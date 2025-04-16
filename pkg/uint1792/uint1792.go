@@ -9,23 +9,23 @@ const (
 	B    = 1 << 28 // choose base 2^d so that N * B * B < P - this guarantees that multiplication won't overflow
 )
 
-// Uint1792Block : polynomial of degree at most N-1 in F_p[X]
-type Uint1792Block = [N]uint64
+// Block : polynomial of degree at most N-1 in F_p[X]
+type Block = [N]uint64
 
 // Uint1792 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
 type Uint1792 struct {
-	Time Uint1792Block
+	Time Block
 }
 
 func FromUint64(x uint64) Uint1792 {
-	return fromTime(Uint1792Block{x})
+	return fromTime(Block{x})
 }
 
 func (a Uint1792) Uint64() uint64 {
 	return a.Time[0] + a.Time[1]*B + a.Time[2]*B*B
 }
 
-func fromTime(time Uint1792Block) Uint1792 {
+func fromTime(time Block) Uint1792 {
 	// trim time
 	for i := 0; i < N; i++ {
 		q, r := time[i]/B, time[i]%B
@@ -72,7 +72,7 @@ func FromString(s string) Uint1792 {
 		base16 = append(base16, toBase16[string(s[i])])
 	}
 	// convert base16 to base 2^28
-	time := Uint1792Block{}
+	time := Block{}
 	for len(base16)%7 != 0 {
 		base16 = append(base16, 0)
 	}
@@ -138,7 +138,7 @@ func (a Uint1792) String() string {
 }
 
 func (a Uint1792) Add(b Uint1792) Uint1792 {
-	time := Uint1792Block{}
+	time := Block{}
 	for i := 0; i < N; i++ {
 		time[i] = add(a.Time[i], b.Time[i])
 	}
@@ -148,7 +148,7 @@ func (a Uint1792) Add(b Uint1792) Uint1792 {
 func (a Uint1792) Mul(b Uint1792) Uint1792 {
 	aFreq, bFreq := time2freq(a.Time), time2freq(b.Time)
 
-	freq := Uint1792Block{}
+	freq := Block{}
 	for i := 0; i < N; i++ {
 		freq[i] = mul(aFreq[i], bFreq[i])
 	}
@@ -175,7 +175,7 @@ func (a Uint1792) Abs() Uint1792 {
 }
 
 func (a Uint1792) shiftRight(n int) Uint1792 {
-	time := Uint1792Block{}
+	time := Block{}
 	for i := 0; i < N; i++ {
 		if 0 <= i+n && i+n < N {
 			time[i] = a.Time[i+n]
@@ -190,7 +190,7 @@ func (a Uint1792) shiftRight(n int) Uint1792 {
 // TODO - probably can increase m to close to 2^1792
 // TODO - since we don't need to many bits after the decimal point to estimate m / a
 func (a Uint1792) invNewton() Uint1792 {
-	zero := Uint1792Block{}
+	zero := Block{}
 	if a.shiftRight(N/2).Time != zero {
 		panic("inv is supported only for 1 < a < 2^896")
 	}
@@ -230,12 +230,12 @@ const (
 	S    = 18410715272404008961 // precompute N^{-1} R^{-1}
 )
 
-func time2freq(time Uint1792Block) Uint1792Block {
+func time2freq(time Block) Block {
 	return dft(time, N, R)
 }
 
-func freq2time(freq Uint1792Block) Uint1792Block {
-	time := Uint1792Block{}
+func freq2time(freq Block) Block {
+	time := Block{}
 	for i, f := range dft(freq, N, invR) {
 		time[i] = mul(f, invN)
 	}

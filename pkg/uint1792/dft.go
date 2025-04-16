@@ -1,6 +1,6 @@
 package uint1792
 
-type DFT func(block Uint1792Block, n int, omega uint64) Uint1792Block
+type DFT func(block Block, n int, omega uint64) Block
 
 var dft DFT = CooleyTukeyFFT
 
@@ -8,7 +8,7 @@ func SetDefaultDFT(f DFT) {
 	dft = f
 }
 
-func NaiveDFT(block Uint1792Block, n int, omega uint64) Uint1792Block {
+func NaiveDFT(block Block, n int, omega uint64) Block {
 	makeDftMat := func(n int, omega uint64) [][]uint64 {
 		w := make([][]uint64, n)
 		for i := 0; i < n; i++ {
@@ -22,7 +22,7 @@ func NaiveDFT(block Uint1792Block, n int, omega uint64) Uint1792Block {
 		return w
 	}
 	w := makeDftMat(n, omega)
-	out := Uint1792Block{}
+	out := Block{}
 	for i := 0; i < n; i++ {
 		for j := 0; j < n; j++ {
 			out[i] = add(out[i], mul(w[i][j], block[j]))
@@ -32,14 +32,14 @@ func NaiveDFT(block Uint1792Block, n int, omega uint64) Uint1792Block {
 }
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(block Uint1792Block, n int, omega uint64) Uint1792Block {
+func CooleyTukeyFFT(block Block, n int, omega uint64) Block {
 	if n == 1 {
 		return block
 	}
 	if n <= 0 || n%2 != 0 {
 		panic("n must be power of 2")
 	}
-	var even, odd Uint1792Block
+	var even, odd Block
 	for i := 0; i < n/2; i++ {
 		even[i] = block[2*i]
 		odd[i] = block[2*i+1]
@@ -48,7 +48,7 @@ func CooleyTukeyFFT(block Uint1792Block, n int, omega uint64) Uint1792Block {
 	evenFFT := CooleyTukeyFFT(even, n/2, nextOmega)
 	oddFFT := CooleyTukeyFFT(odd, n/2, nextOmega)
 
-	result := Uint1792Block{}
+	result := Block{}
 	var omegaPow uint64 = 1 // omega^0
 	for i := 0; i < n/2; i++ {
 		t := mul(omegaPow, oddFFT[i])
