@@ -1,4 +1,5 @@
-package uint128 // import "lukechampine.com/uint128"
+// Package uint128 : https://pkg.go.dev/lukechampine.com/uint128?utm_source=godoc
+package uint128
 
 import (
 	"encoding/binary"
