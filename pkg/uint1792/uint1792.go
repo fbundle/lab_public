@@ -13,6 +13,8 @@ const (
 // Block : polynomial of degree at most N-1 in F_p[X]
 type Block = [N]uint64
 
+var zeroBlock Block = [N]uint64{}
+
 // Uint1792 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
 type Uint1792 struct {
 	Time Block
@@ -166,13 +168,29 @@ func (a Uint1792) Sub(b Uint1792) Uint1792 {
 	return a.Add(bNeg)
 }
 
-// Abs : treat Uint1792 as a signed integer
+// IsNeg : treat Uint1792 as Int1792
+func (a Uint1792) IsNeg() bool {
+	return a.Time[N-1]/(1<<27) > 0
+}
+
 func (a Uint1792) Abs() Uint1792 {
-	if a.Time[N-1]/(1<<27) > 0 {
+	if a.IsNeg() {
 		return FromUint64(0).Sub(a)
 	} else {
 		return a
 	}
+}
+
+func (a Uint1792) Sign() int {
+	if a.IsNeg() {
+		return -1
+	}
+	if a.Time == zeroBlock {
+		return 0
+	} else {
+		return 1
+	}
+
 }
 
 func (a Uint1792) shiftRight(n int) Uint1792 {
@@ -191,8 +209,7 @@ func (a Uint1792) shiftRight(n int) Uint1792 {
 // TODO - probably can increase m to close to 2^1792
 // TODO - since we don't need to many bits after the decimal point to estimate m / a
 func (a Uint1792) invNewton896() Uint1792 {
-	zero := Block{}
-	if a.shiftRight(N/2).Time != zero {
+	if a.shiftRight(N/2).Time != zeroBlock {
 		panic("inv is supported only for 1 < a < 2^896")
 	}
 	if a.Uint64() == 0 {
