@@ -235,7 +235,7 @@ func (a Uint1792) inv(n int) Uint1792 {
 }
 
 func (a Uint1792) Div(b Uint1792) Uint1792 {
-	x := b.inv(N / 2)                 // x = 2^896 / b
+	x := b.inv(N / 2)                 // x ~ 2^896 / b
 	return a.Mul(x).shiftRight(N / 2) // a/b = a (2^896 / b) / 2^896
 }
 
