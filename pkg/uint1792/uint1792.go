@@ -269,12 +269,12 @@ const (
 )
 
 func time2freq(time Block) Block {
-	return Block(dft(time[:], R))
+	return Block(CooleyTukeyFFT(time[:], R))
 }
 
 func freq2time(freq Block) Block {
 	time := Block{}
-	for i, f := range dft(freq[:], invR) {
+	for i, f := range CooleyTukeyFFT(freq[:], invR) {
 		time[i] = mul(f, invN)
 	}
 	// TODO - check why dft(time, N, mul(invR, invS)) seems to not work

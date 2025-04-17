@@ -5,14 +5,6 @@ import (
 	"os"
 )
 
-type DFT func(x []uint64, omega uint64) (y []uint64)
-
-var dft DFT = CooleyTukeyFFT
-
-func SetDefaultDFT(f DFT) {
-	dft = f
-}
-
 // NaiveDFT : naive implementation of DFT - for reference
 // construct DFT matrix w of size (n, n) with omega as the root of unity
 // return y = wx
