@@ -8,23 +8,23 @@ import (
 // NaiveDFT : naive implementation of DFT - for reference
 // construct DFT matrix w of size (n, n) with omega as the root of unity
 // return y = wx
-func NaiveDFT(x []uint64, omega uint64) (y []uint64) {
+func NaiveDFT(x []uint64, ω uint64) (y []uint64) {
 	n := len(x)
 	_, _ = fmt.Fprintf(os.Stderr, "WARNING : this implementation is for reference, use FFT instead")
-	makeDftMat := func(n int, omega uint64) [][]uint64 {
+	makeDftMat := func(n int, ω uint64) [][]uint64 {
 		w := make([][]uint64, n)
 		for i := 0; i < n; i++ {
 			w[i] = make([]uint64, n)
 		}
 		for i := 0; i < n; i++ {
 			for j := 0; j < n; j++ {
-				w[i][j] = pow(omega, uint64(i*j))
+				w[i][j] = pow(ω, uint64(i*j))
 			}
 		}
 		return w
 	}
 	y = make([]uint64, n)
-	w := makeDftMat(n, omega)
+	w := makeDftMat(n, ω)
 	for i := 0; i < n; i++ {
 		for j := 0; j < n; j++ {
 			y[i] = add(y[i], mul(w[i][j], x[j]))
