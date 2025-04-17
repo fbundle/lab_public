@@ -2,6 +2,7 @@ package main
 
 import (
 	"ca/pkg/fib"
+	"ca/pkg/integer"
 	"ca/pkg/padic"
 	"ca/pkg/uint1792"
 	"fmt"
@@ -39,5 +40,5 @@ func main() {
 		panic(err)
 		return
 	}
-	fmt.Println(fib.Fib(uint1792.Zero, uint64(n)))
+	fmt.Println(fib.Fib(integer.Zero, uint64(n)))
 }
