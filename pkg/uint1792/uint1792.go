@@ -255,6 +255,12 @@ func (a Uint1792) Mod(b Uint1792) Uint1792 {
 	return a.Sub(b.Mul(x))
 }
 
+func (a Uint1792) DivMod(b Uint1792) (Uint1792, Uint1792) {
+	q := a.Div(b)
+	r := a.Sub(b.Mul(q))
+	return q, r
+}
+
 const (
 	invR = 16140901060737761281 // precompute R^{-1}
 	invN = 18158513693329981441 // precompute N^{-1}

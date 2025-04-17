@@ -37,3 +37,16 @@ func (a Int) Mul(b Int) Int {
 func (a Int) Neg() Int {
 	return Int{(&big.Int{}).Neg(a.bigint)}
 }
+
+func (a Int) Div(b Int) Int {
+	return Int{(&big.Int{}).Div(a.bigint, b.bigint)}
+}
+
+func (a Int) Mod(b Int) Int {
+	return Int{(&big.Int{}).Mod(a.bigint, b.bigint)}
+}
+
+func (a Int) DivMod(b Int) (Int, Int) {
+	q, r := (&big.Int{}).DivMod(a.bigint, b.bigint, &big.Int{})
+	return Int{q}, Int{r}
+}
