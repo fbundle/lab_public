@@ -26,7 +26,7 @@ func testUint1792() {
 	x := uint1792.FromString("0x318346193417412890342342")
 	z := uint1792.FromString("0x484723895378245789")
 	y := uint1792.FromString(x.String())
-	fmt.Println(x.Add(z).Mod(y)) // (x + z) % x
+	fmt.Println(x.Add(z).Mod(y)) // (x + integer) % x
 }
 
 func main() {
