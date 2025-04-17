@@ -5,7 +5,7 @@ import (
 	"ca/pkg/integer"
 	"ca/pkg/padic"
 	"ca/pkg/ring"
-	"ca/pkg/uint1792"
+	"ca/pkg/uint_ntt"
 	"fmt"
 )
 
@@ -21,10 +21,10 @@ func testPAdic() {
 	fmt.Println(z.Div(x).Approx(N)) // print 92 / 23 = 4
 }
 
-func testUint1792() {
-	x := uint1792.FromString("0x318346193417412890342342")
-	z := uint1792.FromString("0x484723895378245789")
-	y := uint1792.FromString(x.String())
+func testUint() {
+	x := uint_ntt.FromString("0x318346193417412890342342")
+	z := uint_ntt.FromString("0x484723895378245789")
+	y := uint_ntt.FromString(x.String())
 	fmt.Println(x.Add(z).Mod(y)) // (x + integer) % x
 }
 
@@ -38,5 +38,5 @@ func testEA() {
 }
 
 func main() {
-	testUint1792()
+	testUint()
 }
