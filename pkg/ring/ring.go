@@ -42,15 +42,12 @@ func EuclideanAlgorithm[T EuclideanDomain[T]](x T, y T) (T, T) {
 		panic("Euclidean Algorithm only works for norm >= 2")
 	}
 	cmp := xNorm.Cmp(yNorm)
-	if cmp == 0 {
-		panic("euclidean algorithm: x=y => just find the inverse of x, y")
-	}
 	if cmp < 0 {
 		// x < y here
 		b, a := EuclideanAlgorithm(y, x)
 		return a, b
 	}
-	// x > y here
+	// x >= y here
 	q, r := x.DivMod(y) // x = qb + r
 	// ax + by = 1 <=> a(qb + r) + by = 1 <=> ar + (aq + b)y = 1
 	a, b1 := EuclideanAlgorithm(r, y)
