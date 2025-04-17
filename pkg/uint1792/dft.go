@@ -34,7 +34,7 @@ func NaiveDFT(x []uint64, omega uint64) (y []uint64) {
 }
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(x []uint64, omega uint64) (y []uint64) {
+func CooleyTukeyFFT(x []uint64, ω uint64) (y []uint64) {
 	n := len(x)
 	if n == 1 {
 		return x
@@ -47,17 +47,17 @@ func CooleyTukeyFFT(x []uint64, omega uint64) (y []uint64) {
 		e = append(e, x[2*i])
 		o = append(o, x[2*i+1])
 	}
-	nextOmega := mul(omega, omega)
-	eFFT := CooleyTukeyFFT(e, nextOmega)
-	oFFT := CooleyTukeyFFT(o, nextOmega)
+	ω2 := mul(ω, ω)
+	eFFT := CooleyTukeyFFT(e, ω2)
+	oFFT := CooleyTukeyFFT(o, ω2)
 
 	y = make([]uint64, n)
-	var omegaPow uint64 = 1 // omega^0
+	var ωn uint64 = 1 // ω^0
 	for i := 0; i < n/2; i++ {
-		t := mul(omegaPow, oFFT[i])
+		t := mul(ωn, oFFT[i])
 		y[i] = add(eFFT[i], t)
 		y[i+n/2] = sub(eFFT[i], t)
-		omegaPow = mul(omegaPow, omega)
+		ωn = mul(ωn, ω)
 	}
 	return y
 }
