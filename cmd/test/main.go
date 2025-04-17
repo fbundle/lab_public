@@ -7,7 +7,6 @@ import (
 	"ca/pkg/ring"
 	"ca/pkg/uint1792"
 	"fmt"
-	"math/big"
 )
 
 func testPAdic() {
@@ -39,8 +38,5 @@ func testEA() {
 }
 
 func main() {
-	s := "aba"
-	i := new(big.Int)
-	i.SetString(s, 16)
-	fmt.Println(i) // 10
+	testUint1792()
 }
