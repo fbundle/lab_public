@@ -5,13 +5,9 @@ import (
 	"os"
 )
 
-type DFT func(x Block, n int, omega uint64) (y Block)
+type DFT func(x []uint64, omega uint64) (y []uint64)
 
-var dft DFT = func(x Block, n int, omega uint64) (y Block) {
-	out := CooleyTukeyFFT(x[:], omega)
-	copy(y[:], out)
-	return y
-}
+var dft DFT = CooleyTukeyFFT
 
 func SetDefaultDFT(f DFT) {
 	dft = f
@@ -41,33 +37,6 @@ func NaiveDFT(x []uint64, omega uint64) (y []uint64) {
 		for j := 0; j < n; j++ {
 			y[i] = add(y[i], mul(w[i][j], x[j]))
 		}
-	}
-	return y
-}
-
-// CooleyTukeyBlockFFT :Cooley-Tukey algorithm
-func CooleyTukeyBlockFFT(x Block, n int, omega uint64) (y Block) {
-	if n == 1 {
-		return x
-	}
-	if n <= 0 || n%2 != 0 {
-		panic("n must be power of 2")
-	}
-	var e, o Block // even and odd values of x
-	for i := 0; i < n/2; i++ {
-		e[i] = x[2*i]
-		o[i] = x[2*i+1]
-	}
-	nextOmega := mul(omega, omega)
-	eFFT := CooleyTukeyBlockFFT(e, n/2, nextOmega)
-	oFFT := CooleyTukeyBlockFFT(o, n/2, nextOmega)
-
-	var omegaPow uint64 = 1 // omega^0
-	for i := 0; i < n/2; i++ {
-		t := mul(omegaPow, oFFT[i])
-		y[i] = add(eFFT[i], t)
-		y[i+n/2] = sub(eFFT[i], t)
-		omegaPow = mul(omegaPow, omega)
 	}
 	return y
 }

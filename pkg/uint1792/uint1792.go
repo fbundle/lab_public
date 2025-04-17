@@ -269,12 +269,12 @@ const (
 )
 
 func time2freq(time Block) Block {
-	return dft(time, N, R)
+	return Block(dft(time[:], R))
 }
 
 func freq2time(freq Block) Block {
 	time := Block{}
-	for i, f := range dft(freq, N, invR) {
+	for i, f := range dft(freq[:], invR) {
 		time[i] = mul(f, invN)
 	}
 	// TODO - check why dft(time, N, mul(invR, invS)) seems to not work
