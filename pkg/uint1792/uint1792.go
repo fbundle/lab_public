@@ -1,6 +1,7 @@
 package uint1792
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -159,13 +160,16 @@ func (a Uint1792) Mul(b Uint1792) Uint1792 {
 }
 
 func (a Uint1792) Sub(b Uint1792) Uint1792 {
-	// second complement for b
-	bTime := b.Time
+	return a.Add(b.Neg())
+}
+
+func (a Uint1792) Neg() Uint1792 {
+	// second complement
+	time := Block{}
 	for i := 0; i < N; i++ {
-		bTime[i] = (^bTime[i]) % B // flip bits and trim to B
+		time[i] = (^a.Time[i]) % B // flip bits and trim to B
 	}
-	bNeg := fromTime(bTime).Add(FromUint64(1))
-	return a.Add(bNeg)
+	return fromTime(time).Add(FromUint64(1))
 }
 
 // IsNeg : treat Uint1792 as Int1792
@@ -193,6 +197,7 @@ func (a Uint1792) Sign() int {
 
 }
 
+// shiftRight : a -> a / 2^{28 n}
 func (a Uint1792) shiftRight(n int) Uint1792 {
 	time := Block{}
 	for i := 0; i < N; i++ {
@@ -203,14 +208,11 @@ func (a Uint1792) shiftRight(n int) Uint1792 {
 	return fromTime(time)
 }
 
-// invNewton896 : Newton iteration to find the root of f(x) = m / x - a = 0
-// for 1 < a < 2^896, return x so that ax = 2^896 = m using fixed point arithmetic
-// plenty accurate
-// TODO - probably can increase m to close to 2^1792
-// TODO - since we don't need to many bits after the decimal point to estimate m / a
-func (a Uint1792) invNewton896() Uint1792 {
-	if a.shiftRight(N/2).Time != zeroBlock {
-		panic("inv is supported only for 1 < a < 2^896")
+// invNewton : approx the root of f(x) = m / x - a for m = 2^{28 n}
+// using fixed point arithmetic
+func (a Uint1792) invNewton(n int) Uint1792 {
+	if a.shiftRight(n).Time != zeroBlock {
+		panic(fmt.Sprintf("inv is supported only for 1 < a < 2^{28 %d}", n))
 	}
 	if a.Uint64() == 0 {
 		panic("division by zero")
@@ -222,7 +224,7 @@ func (a Uint1792) invNewton896() Uint1792 {
 	// x_{n+1} = 2 x_n - (a x_n^2) / m
 	for {
 		// a / m = a.shiftRight(N/2)
-		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(N / 2))
+		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(n))
 		if x1 == x {
 			break
 		}
@@ -233,7 +235,7 @@ func (a Uint1792) invNewton896() Uint1792 {
 }
 
 func (a Uint1792) Div(b Uint1792) Uint1792 {
-	x := b.invNewton896()             // x = 2^896 / b
+	x := b.invNewton(N / 2)           // x = 2^896 / b
 	return a.Mul(x).shiftRight(N / 2) // a/b = a (2^896 / b) / 2^896
 }
 
