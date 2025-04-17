@@ -279,3 +279,11 @@ func freq2time(freq Block) Block {
 	// TODO - check why dft(time, N, mul(invR, invS)) seems to not work
 	return time
 }
+
+func (a Uint1792) Cmp(b Uint1792) int {
+	return a.Sub(b).Sign()
+}
+
+func (a Uint1792) Equal(b Uint1792) bool {
+	return a.Cmp(b) == 0
+}

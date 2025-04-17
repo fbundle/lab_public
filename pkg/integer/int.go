@@ -2,51 +2,59 @@ package integer
 
 import "math/big"
 
-type Int struct {
+type Integer struct {
 	bigint *big.Int
 }
 
-var Zero Int = Int{big.NewInt(0)}
+var Zero Integer = Integer{big.NewInt(0)}
 
-var One Int = Int{big.NewInt(1)}
+var One Integer = Integer{big.NewInt(1)}
 
-func (a Int) Zero() Int {
+func (a Integer) Zero() Integer {
 	return Zero
 }
 
-func (a Int) One() Int {
+func (a Integer) One() Integer {
 	return One
 }
 
-func (a Int) String() string {
+func (a Integer) String() string {
 	return "0x" + a.bigint.Text(16)
 }
 
-func (a Int) Add(b Int) Int {
-	return Int{(&big.Int{}).Add(a.bigint, b.bigint)}
+func (a Integer) Add(b Integer) Integer {
+	return Integer{(&big.Int{}).Add(a.bigint, b.bigint)}
 }
 
-func (a Int) Sub(b Int) Int {
-	return Int{(&big.Int{}).Sub(a.bigint, b.bigint)}
+func (a Integer) Sub(b Integer) Integer {
+	return Integer{(&big.Int{}).Sub(a.bigint, b.bigint)}
 }
 
-func (a Int) Mul(b Int) Int {
-	return Int{(&big.Int{}).Mul(a.bigint, b.bigint)}
+func (a Integer) Mul(b Integer) Integer {
+	return Integer{(&big.Int{}).Mul(a.bigint, b.bigint)}
 }
 
-func (a Int) Neg() Int {
-	return Int{(&big.Int{}).Neg(a.bigint)}
+func (a Integer) Neg() Integer {
+	return Integer{(&big.Int{}).Neg(a.bigint)}
 }
 
-func (a Int) Div(b Int) Int {
-	return Int{(&big.Int{}).Div(a.bigint, b.bigint)}
+func (a Integer) Div(b Integer) Integer {
+	return Integer{(&big.Int{}).Div(a.bigint, b.bigint)}
 }
 
-func (a Int) Mod(b Int) Int {
-	return Int{(&big.Int{}).Mod(a.bigint, b.bigint)}
+func (a Integer) Mod(b Integer) Integer {
+	return Integer{(&big.Int{}).Mod(a.bigint, b.bigint)}
 }
 
-func (a Int) DivMod(b Int) (Int, Int) {
+func (a Integer) DivMod(b Integer) (Integer, Integer) {
 	q, r := (&big.Int{}).DivMod(a.bigint, b.bigint, &big.Int{})
-	return Int{q}, Int{r}
+	return Integer{q}, Integer{r}
+}
+
+func (a Integer) Cmp(b Integer) int {
+	return a.bigint.Cmp(b.bigint)
+}
+
+func (a Integer) Equal(b Integer) bool {
+	return a.bigint.Cmp(b.bigint) == 0
 }
