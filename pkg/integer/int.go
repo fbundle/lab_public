@@ -2,59 +2,72 @@ package integer
 
 import "math/big"
 
-type Integer struct {
+type Int struct {
 	bigint *big.Int
 }
 
-var Zero Integer = Integer{big.NewInt(0)}
+func FromInt64(x int64) Int {
+	return Int{bigint: big.NewInt(x)}
+}
 
-var One Integer = Integer{big.NewInt(1)}
+var Zero Int = Int{big.NewInt(0)}
 
-func (a Integer) Zero() Integer {
+var One Int = Int{big.NewInt(1)}
+
+func (a Int) Zero() Int {
 	return Zero
 }
 
-func (a Integer) One() Integer {
+func (a Int) One() Int {
 	return One
 }
 
-func (a Integer) String() string {
-	return "0x" + a.bigint.Text(16)
+func (a Int) String() string {
+	text := a.bigint.Text(16)
+	if text[0] == '-' {
+		return "-0x" + text[1:]
+	} else {
+		return "0x" + text
+	}
 }
 
-func (a Integer) Add(b Integer) Integer {
-	return Integer{(&big.Int{}).Add(a.bigint, b.bigint)}
+func (a Int) Add(b Int) Int {
+	return Int{(&big.Int{}).Add(a.bigint, b.bigint)}
 }
 
-func (a Integer) Sub(b Integer) Integer {
-	return Integer{(&big.Int{}).Sub(a.bigint, b.bigint)}
+func (a Int) Sub(b Int) Int {
+	return Int{(&big.Int{}).Sub(a.bigint, b.bigint)}
 }
 
-func (a Integer) Mul(b Integer) Integer {
-	return Integer{(&big.Int{}).Mul(a.bigint, b.bigint)}
+func (a Int) Mul(b Int) Int {
+	return Int{(&big.Int{}).Mul(a.bigint, b.bigint)}
 }
 
-func (a Integer) Neg() Integer {
-	return Integer{(&big.Int{}).Neg(a.bigint)}
+func (a Int) Neg() Int {
+	return Int{(&big.Int{}).Neg(a.bigint)}
 }
 
-func (a Integer) Div(b Integer) Integer {
-	return Integer{(&big.Int{}).Div(a.bigint, b.bigint)}
+func (a Int) Div(b Int) Int {
+	return Int{(&big.Int{}).Div(a.bigint, b.bigint)}
 }
 
-func (a Integer) Mod(b Integer) Integer {
-	return Integer{(&big.Int{}).Mod(a.bigint, b.bigint)}
+func (a Int) Mod(b Int) Int {
+	return Int{(&big.Int{}).Mod(a.bigint, b.bigint)}
 }
 
-func (a Integer) DivMod(b Integer) (Integer, Integer) {
+func (a Int) DivMod(b Int) (Int, Int) {
 	q, r := (&big.Int{}).DivMod(a.bigint, b.bigint, &big.Int{})
-	return Integer{q}, Integer{r}
+	return Int{q}, Int{r}
 }
 
-func (a Integer) Cmp(b Integer) int {
+func (a Int) Cmp(b Int) int {
 	return a.bigint.Cmp(b.bigint)
 }
 
-func (a Integer) Equal(b Integer) bool {
+func (a Int) Equal(b Int) bool {
 	return a.bigint.Cmp(b.bigint) == 0
+}
+
+func (a Int) Norm() Int {
+	return Int{(&big.Int{}).Abs(a.bigint)}
 }

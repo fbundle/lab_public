@@ -23,7 +23,7 @@ type Ring[T any] interface {
 
 type EuclideanDomain[T any] interface {
 	Ring[T]
-	Norm() integer.Integer
+	Norm() integer.Int
 	DivMod(T) (T, T)
 	Div(T) T
 	Mod(T) T

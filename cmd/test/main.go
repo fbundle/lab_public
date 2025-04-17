@@ -4,10 +4,9 @@ import (
 	"ca/pkg/fib"
 	"ca/pkg/integer"
 	"ca/pkg/padic"
+	"ca/pkg/ring"
 	"ca/pkg/uint1792"
 	"fmt"
-	"os"
-	"strconv"
 )
 
 func testPAdic() {
@@ -29,16 +28,15 @@ func testUint1792() {
 	fmt.Println(x.Add(z).Mod(y)) // (x + integer) % x
 }
 
-func main() {
-	if len(os.Args) < 2 {
-		panic("usage: go run main.go <n>")
-	}
+func testFib() {
+	fmt.Println(fib.Fib(integer.Zero, uint64(20)))
+}
 
-	arg := os.Args[1]
-	n, err := strconv.Atoi(arg)
-	if err != nil {
-		panic(err)
-		return
-	}
-	fmt.Println(fib.Fib(integer.Zero, uint64(n)))
+func testEA() {
+	a, b := ring.EuclideanAlgorithm(integer.FromInt64(15), integer.FromInt64(46))
+	fmt.Println(a, b)
+}
+
+func main() {
+
 }
