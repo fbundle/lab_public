@@ -2,6 +2,8 @@ package padic
 
 // PAdic : p-adic integers
 type PAdic interface {
+	Zero() PAdic
+	One() PAdic
 	Prime() int
 	Get(int) int
 	Add(PAdic) PAdic
@@ -19,6 +21,14 @@ type padic struct {
 	prime int
 	iter  Iter
 	cache []int
+}
+
+func (p *padic) Zero() PAdic {
+	return NewPAdicFromInt(p.prime, 0)
+}
+
+func (p *padic) One() PAdic {
+	return NewPAdicFromInt(p.prime, 1)
 }
 
 func (p *padic) Prime() int {
