@@ -36,18 +36,12 @@ type Field[T any] interface {
 
 // EuclideanAlgorithm : return a, b so that ax + by = 1
 func EuclideanAlgorithm[T EuclideanDomain[T]](x T, y T) (T, T) {
-	zero := x.Zero()
-	one := x.One()
-	if x.Equal(zero) || y.Equal(zero) {
-		panic("euclidean algorithm: zero")
+	one := integer.One
+	xNorm, yNorm := x.Norm(), y.Norm()
+	if xNorm.Cmp(one) < 1 || yNorm.Cmp(one) < 1 {
+		panic("Euclidean Algorithm only works for norm >= 2")
 	}
-	if x.Equal(one) {
-		return one, zero
-	}
-	if y.Equal(one) {
-		return zero, one
-	}
-	cmp := x.Norm().Cmp(y.Norm())
+	cmp := xNorm.Cmp(yNorm)
 	if cmp == 0 {
 		panic("euclidean algorithm: x=y => just find the inverse of x, y")
 	}
