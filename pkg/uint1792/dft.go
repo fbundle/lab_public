@@ -16,7 +16,8 @@ func SetDefaultDFT(f DFT) {
 // NaiveDFT : naive implementation of DFT - for reference
 // construct DFT matrix w of size (n, n) with omega as the root of unity
 // return y = wx
-func NaiveDFT(x Block, n int, omega uint64) (y Block) {
+func NaiveDFT(x []uint64, omega uint64) (y []uint64) {
+	n := len(x)
 	_, _ = fmt.Fprintf(os.Stderr, "WARNING : this implementation is for reference, use FFT instead")
 	makeDftMat := func(n int, omega uint64) [][]uint64 {
 		w := make([][]uint64, n)
@@ -30,6 +31,7 @@ func NaiveDFT(x Block, n int, omega uint64) (y Block) {
 		}
 		return w
 	}
+	y = make([]uint64, n)
 	w := makeDftMat(n, omega)
 	for i := 0; i < n; i++ {
 		for j := 0; j < n; j++ {
@@ -62,6 +64,52 @@ func CooleyTukeyFFT(x Block, n int, omega uint64) (y Block) {
 		y[i] = add(eFFT[i], t)
 		y[i+n/2] = sub(eFFT[i], t)
 		omegaPow = mul(omegaPow, omega)
+	}
+	return y
+}
+
+func MixedRadixFFT192(x Block, omega uint64) (y Block) {
+	// Factor n = r * s
+	r, s := 3, 64
+
+	// Reshape x into matrix x[r][s]
+	matrix := make([]Block, r)
+	for i := range matrix {
+		for j := 0; j < s; j++ {
+			matrix[i][j] = x[i*s+j]
+		}
+	}
+
+	// Row-wise FFTs (length s)
+	for i := 0; i < r; i++ {
+		matrix[i] = CooleyTukeyFFT(matrix[i], s, pow(omega, uint64(r))) // ω^r
+	}
+
+	// Twiddle factors
+	for i := 0; i < r; i++ {
+		for j := 0; j < s; j++ {
+			w := pow(omega, uint64(i*j)) // ω^{i*j}
+			matrix[i][j] = mul(matrix[i][j], w)
+		}
+	}
+
+	// Column-wise FFTs (length r)
+	for j := 0; j < s; j++ {
+		col := make([]uint64, r)
+		for i := 0; i < r; i++ {
+			col[i] = matrix[i][j]
+		}
+		col = NaiveDFT(col, pow(omega, uint64(s))) // ω^s
+		for i := 0; i < r; i++ {
+			matrix[i][j] = col[i]
+		}
+	}
+
+	// Flatten output
+	for i := 0; i < r; i++ {
+		for j := 0; j < s; j++ {
+			y[i*s+j] = matrix[i][j]
+		}
 	}
 	return y
 }
