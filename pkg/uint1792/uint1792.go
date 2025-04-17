@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	R = 8 // 8 is 64-th primitive root of unity in mod P
-	N = 64
-	B = 1 << 28 // pick base B = 2^d, N * B * B < P so that multiplication won't overflow
+	// R, N : possible to use other constant using findPrimitiveRoot
+	R, N = 8, 64   // 8 is 64-th primitive root of unity in mod P
+	B    = 1 << 28 // pick base B = 2^d, N * B * B < P so that multiplication won't overflow
 )
 
 // Block : polynomial of degree at most N-1 in F_p[X]

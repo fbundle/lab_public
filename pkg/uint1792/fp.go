@@ -5,7 +5,17 @@ import (
 )
 
 // P : operations on finite field of order P
-const P = 18446744069414584321 // p = 2^64 - 2^32 + 1 and 2 is the 192-th primitive root of unity
+const (
+	// P, G : p = 2^64 - 2^32 + 1, generator g of F_p^\times, g^{p-1} = 1 mod p
+	P, G uint64 = 18446744069414584321, 7
+)
+
+func findPrimitiveRoot(n uint64) uint64 {
+	if (P-1)%n != 0 {
+		panic("n must divide P-1")
+	}
+	return pow(G, (P-1)/n)
+}
 
 func add(a uint64, b uint64) uint64 {
 	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
