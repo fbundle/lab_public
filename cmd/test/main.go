@@ -1,9 +1,12 @@
 package main
 
 import (
+	"ca/pkg/fib"
 	"ca/pkg/padic"
 	"ca/pkg/uint1792"
 	"fmt"
+	"os"
+	"strconv"
 )
 
 func testPAdic() {
@@ -26,5 +29,15 @@ func testUint1792() {
 }
 
 func main() {
-	testUint1792()
+	if len(os.Args) < 2 {
+		panic("usage: go run main.go <n>")
+	}
+
+	arg := os.Args[1]
+	n, err := strconv.Atoi(arg)
+	if err != nil {
+		panic(err)
+		return
+	}
+	fmt.Println(fib.Fib(uint1792.Zero, uint64(n)))
 }

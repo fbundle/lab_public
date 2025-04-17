@@ -21,6 +21,17 @@ type Uint1792 struct {
 	Time Block
 }
 
+var Zero Uint1792 = FromUint64(0)
+var One Uint1792 = FromUint64(1)
+
+func (a Uint1792) Zero() Uint1792 {
+	return Uint1792{Time: zeroBlock}
+}
+
+func (a Uint1792) One() Uint1792 {
+	return One
+}
+
 func FromUint64(x uint64) Uint1792 {
 	return fromTime(Block{x})
 }
