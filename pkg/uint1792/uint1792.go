@@ -1,6 +1,7 @@
 package uint1792
 
 import (
+	"ca/pkg/integer"
 	"fmt"
 	"strings"
 )
@@ -286,4 +287,8 @@ func (a Uint1792) Cmp(b Uint1792) int {
 
 func (a Uint1792) Equal(b Uint1792) bool {
 	return a.Cmp(b) == 0
+}
+
+func (a Uint1792) Norm() integer.Int {
+	return integer.FromString(a.Abs().String())
 }

@@ -10,6 +10,17 @@ func FromInt64(x int64) Int {
 	return Int{bigint: big.NewInt(x)}
 }
 
+func FromString(s string) Int {
+	if s[:2] != "0x" {
+		panic("invalid input")
+	}
+	bigint, ok := (&big.Int{}).SetString(s[2:], 16)
+	if !ok {
+		panic("invalid input")
+	}
+	return Int{bigint: bigint}
+}
+
 var Zero Int = Int{big.NewInt(0)}
 
 var One Int = Int{big.NewInt(1)}
