@@ -1,4 +1,4 @@
-package str
+package ring
 
 type Ring[T any] interface {
 	Zero() T

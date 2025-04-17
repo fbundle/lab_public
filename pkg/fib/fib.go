@@ -1,8 +1,8 @@
 package fib
 
-import "ca/pkg/str"
+import "ca/pkg/ring"
 
-func boxProd[T str.Ring[T]](x [3]T, y [3]T) [3]T {
+func boxProd[T ring.Ring[T]](x [3]T, y [3]T) [3]T {
 	a1, b1, c1 := x[0], x[1], x[2]
 	a2, b2, c2 := y[0], y[1], y[2]
 	return [3]T{
@@ -12,7 +12,7 @@ func boxProd[T str.Ring[T]](x [3]T, y [3]T) [3]T {
 	}
 }
 
-func boxPow[T str.Ring[T]](x [3]T, n uint64) [3]T {
+func boxPow[T ring.Ring[T]](x [3]T, n uint64) [3]T {
 	dummy := x[0]
 	if n == 0 {
 		return [3]T{
@@ -33,7 +33,7 @@ func boxPow[T str.Ring[T]](x [3]T, n uint64) [3]T {
 	}
 }
 
-func Fib[T str.Ring[T]](dummy T, n uint64) T {
+func Fib[T ring.Ring[T]](dummy T, n uint64) T {
 	x := [3]T{
 		dummy.Zero(),
 		dummy.One(),
