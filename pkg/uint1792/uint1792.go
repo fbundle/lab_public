@@ -208,9 +208,9 @@ func (a Uint1792) shiftRight(n int) Uint1792 {
 	return fromTime(time)
 }
 
-// invNewton : approx the root of f(x) = m / x - a for m = 2^{28 n}
+// inv : approx the root of f(x) = m / x - a for m = 2^{28 n}
 // using fixed point arithmetic
-func (a Uint1792) invNewton(n int) Uint1792 {
+func (a Uint1792) inv(n int) Uint1792 {
 	if a.shiftRight(n).Time != zeroBlock {
 		panic(fmt.Sprintf("inv is supported only for 1 < a < 2^{28 %d}", n))
 	}
@@ -235,7 +235,7 @@ func (a Uint1792) invNewton(n int) Uint1792 {
 }
 
 func (a Uint1792) Div(b Uint1792) Uint1792 {
-	x := b.invNewton(N / 2)           // x = 2^896 / b
+	x := b.inv(N / 2)                 // x = 2^896 / b
 	return a.Mul(x).shiftRight(N / 2) // a/b = a (2^896 / b) / 2^896
 }
 
