@@ -1532,13 +1532,14 @@ func (a UintNTT) Add(b UintNTT) UintNTT {
 }
 
 func (a UintNTT) Mul(b UintNTT) UintNTT {
-	aFreq, bFreq := time2freq(a.Time), time2freq(b.Time)
-	l := min(len(aFreq), len(bFreq))
+	l := nextPowerOfTwo(uint64(len(a.Time) + len(b.Time)))
+
+	aFreq, bFreq := time2freq(a.Time, l), time2freq(b.Time, l)
 	freq := Block{}
-	for i := 0; i < l; i++ {
+	for i := 0; i < int(l); i++ {
 		freq = append(freq, mul(aFreq.get(i), bFreq.get(i)))
 	}
-	time := freq2time(freq)
+	time := freq2time(freq, l)
 	return fromTime(time)
 }
 
@@ -1551,9 +1552,9 @@ func nextPowerOfTwo(x uint64) uint64 {
 	}
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
-func time2freq(time Block) Block {
+func time2freq(time Block, length uint64) Block {
 	// extend  into powers of 2
-	l := nextPowerOfTwo(uint64(len(time)))
+	l := nextPowerOfTwo(length)
 	for len(time) < int(l) {
 		time = append(time, 0)
 	}
@@ -1567,9 +1568,9 @@ func time2freq(time Block) Block {
 	return freq
 }
 
-func freq2time(freq Block) Block {
+func freq2time(freq Block, length uint64) Block {
 	// extend  into powers of 2
-	l := nextPowerOfTwo(uint64(len(freq)))
+	l := nextPowerOfTwo(length)
 	for len(freq) < int(l) {
 		freq = append(freq, 0)
 	}
