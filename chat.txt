@@ -1412,7 +1412,7 @@ func fromTime(time Block) UintNTT {
 		q, r = time[i]/B, time[i]%B
 		time[i] = r
 		if i+1 < len(time) {
-			time[i+1] = time[i+1] + q
+			time[i+1] = add(time[i+1], q)
 		}
 	}
 	time = append(time, q)
@@ -1538,7 +1538,8 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 	for i := 0; i < l; i++ {
 		freq = append(freq, mul(aFreq.get(i), bFreq.get(i)))
 	}
-	return fromTime(freq2time(freq))
+	time := freq2time(freq)
+	return fromTime(time)
 }
 
 func nextPowerOfTwo(x uint64) uint64 {

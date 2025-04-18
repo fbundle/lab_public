@@ -39,7 +39,7 @@ func testEA() {
 }
 
 func testUintNTT() {
-	x := uint_ntt.FromString("0x318346193417412890342342")
+	x := uint_ntt.FromString("0x11111111")
 	y := uint_ntt.FromString(x.String())
 	fmt.Println(x.Add(y))
 	fmt.Println(x.Mul(y))
