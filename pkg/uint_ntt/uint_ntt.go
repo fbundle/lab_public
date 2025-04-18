@@ -107,9 +107,9 @@ func FromString(s string) Uint1792 {
 	for i := 0; i < len(base16); i += 4 {
 		var x uint64 = 0
 		x += uint64(base16[i])
-		x += uint64(base16[i+1] * 16)
-		x += uint64(base16[i+2] * 16 * 16)
-		x += uint64(base16[i+3] * 16 * 16 * 16)
+		x += uint64(base16[i+1]) * 16
+		x += uint64(base16[i+2]) * 16 * 16
+		x += uint64(base16[i+3]) * 16 * 16 * 16
 		time = append(time, x)
 	}
 
@@ -168,7 +168,7 @@ func (a Uint1792) Add(b Uint1792) Uint1792 {
 	l := max(len(a.Time), len(b.Time))
 	time := make(Block, l)
 	for i := 0; i < l; i++ {
-		time[i] = add(a.Time[i], b.Time[i])
+		time[i] = add(a.Time.get(i), b.Time.get(i))
 	}
 	return fromTime(time)
 }
@@ -216,8 +216,8 @@ func freq2time(freq Block) Block {
 	}
 
 	time := Block{}
-	ω := inv(getPrimitiveRoot(l))
-	for _, f := range CooleyTukeyFFT(freq, ω) {
+	ω := getPrimitiveRoot(l)
+	for _, f := range CooleyTukeyFFT(freq, inv(ω)) {
 		time = append(time, mul(f, inv(l)))
 	}
 
