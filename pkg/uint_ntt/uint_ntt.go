@@ -23,31 +23,31 @@ func (b Block) get(i int) uint64 {
 
 var zeroBlock []uint64
 
-// Uint1792 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
-type Uint1792 struct {
+// UintNTT : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
+type UintNTT struct {
 	Time Block
 }
 
-var Zero Uint1792 = FromUint64(0)
-var One Uint1792 = FromUint64(1)
+var Zero UintNTT = FromUint64(0)
+var One UintNTT = FromUint64(1)
 
-func (a Uint1792) Zero() Uint1792 {
-	return Uint1792{Time: zeroBlock}
+func (a UintNTT) Zero() UintNTT {
+	return UintNTT{Time: zeroBlock}
 }
 
-func (a Uint1792) One() Uint1792 {
+func (a UintNTT) One() UintNTT {
 	return One
 }
 
-func FromUint64(x uint64) Uint1792 {
+func FromUint64(x uint64) UintNTT {
 	return fromTime(Block{x})
 }
 
-func (a Uint1792) Uint64() uint64 {
+func (a UintNTT) Uint64() uint64 {
 	return a.Time[0] + a.Time[1]*B + a.Time[2]*B*B
 }
 
-func fromTime(time Block) Uint1792 {
+func fromTime(time Block) UintNTT {
 	// trim time
 	var q, r uint64 = 0, 0
 	for i := 0; i < len(time); i++ {
@@ -61,12 +61,12 @@ func fromTime(time Block) Uint1792 {
 	for len(time) > 0 && time[len(time)-1] == 0 {
 		time = time[:len(time)-1]
 	}
-	return Uint1792{
+	return UintNTT{
 		Time: time,
 	}
 }
 
-func FromString(s string) Uint1792 {
+func FromString(s string) UintNTT {
 	if s[0:2] != "0x" {
 		panic("string does not start with 0x")
 	}
@@ -116,7 +116,7 @@ func FromString(s string) Uint1792 {
 	return fromTime(time)
 }
 
-func (a Uint1792) String() string {
+func (a UintNTT) String() string {
 	// convert base 2^16 to base16 (2^4)
 	var base16 []byte = nil
 	for i := 0; i < len(a.Time); i++ {
@@ -164,7 +164,7 @@ func (a Uint1792) String() string {
 	return "0x" + out
 }
 
-func (a Uint1792) Add(b Uint1792) Uint1792 {
+func (a UintNTT) Add(b UintNTT) UintNTT {
 	l := max(len(a.Time), len(b.Time))
 	time := make(Block, l)
 	for i := 0; i < l; i++ {
@@ -173,7 +173,7 @@ func (a Uint1792) Add(b Uint1792) Uint1792 {
 	return fromTime(time)
 }
 
-func (a Uint1792) Mul(b Uint1792) Uint1792 {
+func (a UintNTT) Mul(b UintNTT) UintNTT {
 	aFreq, bFreq := time2freq(a.Time), time2freq(b.Time)
 	l := min(len(aFreq), len(bFreq))
 	freq := Block{}
