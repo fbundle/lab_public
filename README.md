@@ -14,6 +14,6 @@ implementation of $p$-adic integers
 
 ## uint_ntt.go
 
-- (almost) arbitrary precision integer (maximum uint $4294967294 \times 16$ bits)  
+- (almost) arbitrary precision integer ($4294967294 \times 16$ bits $\sim$ 8GB per integer)  
 - multiplication using FFT
 - TODO : division using Newton iteration
