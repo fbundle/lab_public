@@ -11,5 +11,9 @@ implementation of $p$-adic integers
 - `uint1792` with division $\lfloor a / b \rfloor$ for $1 < b < 2^{896}$ (can increase the bound close to $2^{1792}$)
 - multiplication using FFT
 - division using Newton iteration
-- TODO : use mixed-radix Cooley-Tukey FFT
-- TODO : use different primes then use CRT to construct output in larger base
+
+## uint_ntt.go
+
+- (almost) arbitrary precision integer (maximum uint $4294967294 \times 16$ bits)  
+- multiplication using FFT
+- TODO : division using Newton iteration
