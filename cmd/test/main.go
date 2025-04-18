@@ -60,5 +60,5 @@ func testUintNTT() {
 }
 
 func main() {
-	testFib()
+	testUintNTT()
 }
