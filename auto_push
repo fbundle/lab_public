@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# make chat
+./export_to_chat > chat.txt
+
 git add .
 git commit -m "auto_push"
 git push

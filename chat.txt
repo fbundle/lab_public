@@ -1,0 +1,1703 @@
+below is the readme and implementation of a simple functional programming language
+./pkg/uint1792/dft.go
+package uint1792
+
+import (
+	"fmt"
+	"os"
+)
+
+// NaiveDFT : naive implementation of DFT - for reference
+// construct DFT matrix w of size (n, n) with omega as the root of unity
+// return y = wx
+func NaiveDFT(x []uint64, ω uint64) (y []uint64) {
+	n := len(x)
+	_, _ = fmt.Fprintf(os.Stderr, "WARNING : this implementation is for reference, use FFT instead")
+	makeDftMat := func(n int, ω uint64) [][]uint64 {
+		w := make([][]uint64, n)
+		for i := 0; i < n; i++ {
+			w[i] = make([]uint64, n)
+		}
+		for i := 0; i < n; i++ {
+			for j := 0; j < n; j++ {
+				w[i][j] = pow(ω, uint64(i*j))
+			}
+		}
+		return w
+	}
+	y = make([]uint64, n)
+	w := makeDftMat(n, ω)
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			y[i] = add(y[i], mul(w[i][j], x[j]))
+		}
+	}
+	return y
+}
+
+// CooleyTukeyFFT :Cooley-Tukey algorithm
+func CooleyTukeyFFT(x []uint64, ω uint64) (y []uint64) {
+	n := len(x)
+	if n == 1 {
+		return x
+	}
+	if n <= 0 || n%2 != 0 {
+		panic("n must be power of 2")
+	}
+	var e, o []uint64 // even and odd values of x
+	for i := 0; i < n/2; i++ {
+		e = append(e, x[2*i])
+		o = append(o, x[2*i+1])
+	}
+	ω2 := mul(ω, ω)
+	eFFT := CooleyTukeyFFT(e, ω2)
+	oFFT := CooleyTukeyFFT(o, ω2)
+
+	y = make([]uint64, n)
+	var ωn uint64 = 1 // ω^0
+	for i := 0; i < n/2; i++ {
+		t := mul(ωn, oFFT[i])
+		y[i] = add(eFFT[i], t)
+		y[i+n/2] = sub(eFFT[i], t)
+		ωn = mul(ωn, ω)
+	}
+	return y
+}
+./pkg/uint1792/uint1792.go
+package uint1792
+
+import (
+	"ca/pkg/integer"
+	"fmt"
+	"strings"
+)
+
+const (
+	// R, N : possible to use other constant using findPrimitiveRoot
+	R, N = 8, 64   // 8 is 64-th primitive root of unity in mod P
+	B    = 1 << 28 // pick base B = 2^d, N * B * B < P so that multiplication won't overflow
+)
+
+// TODO - set N variable and find R on the fly
+
+// Block : polynomial of degree at most N-1 in F_p[X]
+type Block = [N]uint64
+
+var zeroBlock Block = [N]uint64{}
+
+// Uint1792 : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
+type Uint1792 struct {
+	Time Block
+}
+
+var Zero Uint1792 = FromUint64(0)
+var One Uint1792 = FromUint64(1)
+
+func (a Uint1792) Zero() Uint1792 {
+	return Uint1792{Time: zeroBlock}
+}
+
+func (a Uint1792) One() Uint1792 {
+	return One
+}
+
+func FromUint64(x uint64) Uint1792 {
+	return fromTime(Block{x})
+}
+
+func (a Uint1792) Uint64() uint64 {
+	return a.Time[0] + a.Time[1]*B + a.Time[2]*B*B
+}
+
+func fromTime(time Block) Uint1792 {
+	// trim time
+	for i := 0; i < N; i++ {
+		q, r := time[i]/B, time[i]%B
+		time[i] = r
+		if i+1 < N {
+			time[i+1] = time[i+1] + q
+		}
+	}
+	return Uint1792{
+		Time: time,
+	}
+}
+
+func FromString(s string) Uint1792 {
+	if s[0:2] != "0x" {
+		panic("string does not start with 0x")
+	}
+	s = strings.ToLower(s[2:])
+
+	if len(s) > 448 {
+		panic("string too long")
+	}
+	// convert string to base16
+	var base16 []byte
+	toBase16 := map[string]byte{
+		"0": 0,
+		"1": 1,
+		"2": 2,
+		"3": 3,
+		"4": 4,
+		"5": 5,
+		"6": 6,
+		"7": 7,
+		"8": 8,
+		"9": 9,
+		"a": 10,
+		"b": 11,
+		"c": 12,
+		"d": 13,
+		"e": 14,
+		"f": 15,
+	}
+	for i := len(s) - 1; i >= 0; i-- {
+		base16 = append(base16, toBase16[string(s[i])])
+	}
+	// convert base16 to base 2^28
+	time := Block{}
+	for len(base16)%7 != 0 {
+		base16 = append(base16, 0)
+	}
+	for i := 0; i < len(base16)/7; i++ {
+		var x uint64 = 0
+		var b uint64 = 1
+		for j := 0; j < 7; j++ {
+			x += uint64(base16[7*i+j]) * b
+			b *= 16
+		}
+		time[i] = x
+	}
+
+	return fromTime(time)
+}
+
+func (a Uint1792) String() string {
+	// convert base 2^28 to base16
+	var base16 []byte = nil
+	for i := 0; i < N; i++ {
+		x := a.Time[i]
+		for j := 0; j < 7; j++ {
+			q, r := x/16, x%16
+			base16 = append(base16, byte(r))
+			x = q
+		}
+		if x > 0 {
+			panic("wrong")
+		}
+	}
+	// convert base16 to string
+	toChar := map[byte]string{
+		0:  "0",
+		1:  "1",
+		2:  "2",
+		3:  "3",
+		4:  "4",
+		5:  "5",
+		6:  "6",
+		7:  "7",
+		8:  "8",
+		9:  "9",
+		10: "a",
+		11: "b",
+		12: "c",
+		13: "d",
+		14: "e",
+		15: "f",
+	}
+	out := ""
+	if len(base16)%2 != 0 {
+		base16 = append(base16, byte(0))
+	}
+	for i := len(base16) - 1; i >= 0; i-- {
+		ch := toChar[base16[i]]
+		out += ch
+	}
+	out = strings.TrimLeft(out, "0")
+	if len(out) == 0 {
+		out = "0"
+	}
+	return "0x" + out
+}
+
+func (a Uint1792) Add(b Uint1792) Uint1792 {
+	time := Block{}
+	for i := 0; i < N; i++ {
+		time[i] = add(a.Time[i], b.Time[i])
+	}
+	return fromTime(time)
+}
+
+func (a Uint1792) Mul(b Uint1792) Uint1792 {
+	aFreq, bFreq := time2freq(a.Time), time2freq(b.Time)
+
+	freq := Block{}
+	for i := 0; i < N; i++ {
+		freq[i] = mul(aFreq[i], bFreq[i])
+	}
+	return fromTime(freq2time(freq))
+}
+
+func (a Uint1792) Sub(b Uint1792) Uint1792 {
+	return a.Add(b.Neg())
+}
+
+func (a Uint1792) Neg() Uint1792 {
+	// second complement
+	time := Block{}
+	for i := 0; i < N; i++ {
+		time[i] = (^a.Time[i]) % B // flip bits and trim to B
+	}
+	return fromTime(time).Add(FromUint64(1))
+}
+
+// IsNeg : treat Uint1792 as Int1792
+func (a Uint1792) IsNeg() bool {
+	return a.Time[N-1]/(1<<27) > 0
+}
+
+func (a Uint1792) Abs() Uint1792 {
+	if a.IsNeg() {
+		return FromUint64(0).Sub(a)
+	} else {
+		return a
+	}
+}
+
+func (a Uint1792) Sign() int {
+	if a.IsNeg() {
+		return -1
+	}
+	if a.Time == zeroBlock {
+		return 0
+	} else {
+		return 1
+	}
+
+}
+
+// shiftRight : a -> a / 2^{28 n}
+func (a Uint1792) shiftRight(n int) Uint1792 {
+	time := Block{}
+	for i := 0; i < N; i++ {
+		if 0 <= i+n && i+n < N {
+			time[i] = a.Time[i+n]
+		}
+	}
+	return fromTime(time)
+}
+
+// inv : approx the root of f(x) = m / x - a for m = 2^{28 n}
+// using fixed point arithmetic
+func (a Uint1792) inv(n int) Uint1792 {
+	if a.shiftRight(n).Time != zeroBlock {
+		panic(fmt.Sprintf("inv is supported only for 1 < a < 2^{28 %d}", n))
+	}
+	if a.Uint64() == 0 {
+		panic("division by zero")
+	}
+
+	two := FromUint64(2)
+	x := FromUint64(1)
+	// Newton iteration
+	// x_{n+1} = 2 x_n - (a x_n^2) / m
+	for {
+		// a / m = a.shiftRight(N/2)
+		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(n))
+		if x1 == x {
+			break
+		}
+		x = x1
+	}
+
+	return x
+}
+
+func (a Uint1792) Div(b Uint1792) Uint1792 {
+	x := b.inv(N / 2)                 // x ~ 2^896 / b
+	return a.Mul(x).shiftRight(N / 2) // a/b = a (2^896 / b) / 2^896
+}
+
+func (a Uint1792) Mod(b Uint1792) Uint1792 {
+	x := a.Div(b)
+	return a.Sub(b.Mul(x))
+}
+
+func (a Uint1792) DivMod(b Uint1792) (Uint1792, Uint1792) {
+	q := a.Div(b)
+	r := a.Sub(b.Mul(q))
+	return q, r
+}
+
+const (
+	invR = 16140901060737761281 // precompute R^{-1}
+	invN = 18158513693329981441 // precompute N^{-1}
+	S    = 18410715272404008961 // precompute N^{-1} R^{-1}
+)
+
+func time2freq(time Block) Block {
+	return Block(CooleyTukeyFFT(time[:], R))
+}
+
+func freq2time(freq Block) Block {
+	time := Block{}
+	for i, f := range CooleyTukeyFFT(freq[:], invR) {
+		time[i] = mul(f, invN)
+	}
+	// TODO - check why dft(time, N, mul(invR, invS)) seems to not work
+	return time
+}
+
+func (a Uint1792) Cmp(b Uint1792) int {
+	return a.Sub(b).Sign()
+}
+
+func (a Uint1792) Equal(b Uint1792) bool {
+	return a.Cmp(b) == 0
+}
+
+func (a Uint1792) Norm() integer.Int {
+	return integer.FromString(a.Abs().String())
+}
+./pkg/uint1792/fp.go
+package uint1792
+
+import (
+	"ca/pkg/vend/uint128"
+)
+
+// p : operations on finite field of order p
+const (
+	// p, g : p = 2^64 - 2^32 + 1, generator g of F_p^\times, g^{p-1} = 1 mod p
+	p, g uint64 = 18446744069414584321, 7
+)
+
+func findPrimitiveRoot(n uint64) uint64 {
+	if (p-1)%n != 0 {
+		panic("n must divide p-1")
+	}
+	return pow(g, (p-1)/n)
+}
+
+// int : Fermat little theorem a^{p-1} = 1 mod p
+func inv(a uint64) uint64 {
+	return pow(a, p-2)
+}
+
+func add(a uint64, b uint64) uint64 {
+	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
+	return aLarge.Add(bLarge).Mod64(p)
+}
+
+func sub(a uint64, b uint64) uint64 {
+	return add(a, p-b%p)
+}
+
+func mul(a uint64, b uint64) uint64 {
+	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
+	return aLarge.Mul(bLarge).Mod64(p)
+}
+
+func pow(a uint64, n uint64) uint64 {
+	a, n = a%p, n%p
+
+	var x uint64 = 1
+	for n > 0 {
+		if n%2 == 1 {
+			x = mul(x, a)
+		}
+		a = mul(a, a)
+		n /= 2
+	}
+	return x
+}
+./pkg/padic/padic.go
+package padic
+
+// PAdic : p-adic integers
+type PAdic interface {
+	Zero() PAdic
+	One() PAdic
+	Prime() int
+	Get(int) int
+	Add(PAdic) PAdic
+	Neg() PAdic
+	Sub(PAdic) PAdic
+	Iter() Iter
+	Mul(PAdic) PAdic
+	Norm() int
+	Div(PAdic) PAdic
+	Inv() PAdic
+	Approx(n int) (int, []int)
+}
+
+type padic struct {
+	prime int
+	iter  Iter
+	cache []int
+}
+
+func (p *padic) Zero() PAdic {
+	return NewPAdicFromInt(p.prime, 0)
+}
+
+func (p *padic) One() PAdic {
+	return NewPAdicFromInt(p.prime, 1)
+}
+
+func (p *padic) Prime() int {
+	return p.prime
+}
+
+func NewPAdic(prime int, iter Iter) PAdic {
+	carry := 0
+	return &padic{
+		prime: prime,
+		iter: func() int {
+			val := iter()
+			q, r := divmod(carry+val, prime)
+			carry = q
+			return r
+		},
+		cache: nil,
+	}
+}
+
+func NewPAdicFromInt(prime int, v int) PAdic {
+	return NewPAdic(prime, NewIterFromList([]int{v}, 0))
+}
+
+func (a *padic) Get(i int) int {
+	for len(a.cache) <= i {
+		a.cache = append(a.cache, a.iter())
+	}
+	return a.cache[i]
+}
+
+func (a *padic) Add(B PAdic) PAdic {
+	b := B.(*padic)
+	if a.prime != b.prime {
+		panic("different bases")
+	}
+	i := 0
+	return NewPAdic(a.prime, func() int {
+		val := a.Get(i) + b.Get(i)
+		i++
+		return val
+	})
+}
+
+func (a *padic) Neg() PAdic {
+	i := 0
+	return (&padic{
+		prime: a.prime,
+		iter: func() int {
+			r := a.prime - a.Get(i) - 1
+			i++
+			return r
+		},
+	}).Add(&padic{
+		prime: a.prime,
+		iter:  NewIterFromList([]int{1}, 0),
+	})
+}
+
+func (a *padic) Sub(B PAdic) PAdic {
+	return a.Add(B.Neg())
+}
+
+func (a *padic) Iter() Iter {
+	i := 0
+	return func() int {
+		v := a.Get(i)
+		i++
+		return v
+	}
+}
+
+func (a *padic) Mul(B PAdic) PAdic {
+	b := B.(*padic)
+	if a.prime != b.prime {
+		panic("different bases")
+	}
+	i := 0
+	return NewPAdic(a.prime, func() int {
+		val := 0
+		for j1 := 0; j1 <= i; j1++ {
+			j2 := i - j1
+			val += a.Get(j1) * b.Get(j2)
+		}
+		i++
+		return val
+	})
+}
+
+func (a *padic) Div(B PAdic) PAdic {
+	b := B.(*padic)
+	if a.prime != b.prime {
+		panic("different bases")
+	}
+	return a.Mul(b.Inv())
+}
+
+// Inv : [1, 1, 1, 1, ...] = 1 / (1 - p)
+// ab = 1 / (1 - p) => 1 = a b(1-p)
+func (a *padic) Inv() PAdic {
+	return a.inv1().Mul(
+		NewPAdicFromInt(a.prime, 1).Sub(NewPAdicFromInt(a.prime, a.prime)),
+	)
+}
+
+// inv1 : find b so that ab = [1, 1, 1, 1, ...]
+// b exists if and only if a_0 != 0
+// if we add p^{-1}, then p-adic integer $\Z_p$ become p-adic number $\Q_p$
+// ... + a_{-1} p^{-1} + a_0 + a_1 p + ...
+// $\Q_p$ contains $\Q$ as its subfield, however, calculation in $\Q_p$ seems more difficult than $\Z_p$
+// for any rational $a / b$, since $b$ is finite, one can find large enough prime $p$
+// so that $a / b$ exists in $\Z_p$, or equivalently $b$ invertible
+func (a *padic) inv1() PAdic {
+	// a_0 b_0 + carry = 1						=> b_0 = inv_a_0 n_0
+	// a_0 b_1 + a_1 b_0 + carry = 1			=> b_1 = inv_a_0 (1 - a_1 b_0 - carry) = inv_a_0 n_1
+	// a_0 b_2 + a_1 b_1 + a_2 b_0 + carry = 1	=> b_2 = int_a_0 (1 - a_1 b_1 - a_2 b_0 - carry) = inv_a_0 n_2
+	// ...
+	if a.Get(0) == 0 {
+		panic("division by zero")
+	}
+	inv_a_0 := invmod(a.Get(0), a.prime)
+	var bList []int
+	i := 0
+	carry := 0
+	return NewPAdic(a.prime, func() int {
+		n_i := 1 - carry
+		for j := 0; j < i; j++ {
+			n_i -= a.Get(i-j) * bList[j]
+		}
+		b_i := mod(inv_a_0*n_i, a.prime)
+		bList = append(bList, b_i)
+		total := carry
+		for j := 0; j <= i; j++ {
+			total += a.Get(i-j) * bList[j]
+		}
+		// total mod p^i is must be
+		q, r := divmod(total, a.prime)
+		if r != 1 {
+			panic("runtime error")
+		}
+		carry = q
+		i++
+		return b_i
+	})
+}
+
+func (a *padic) Approx(n int) (int, []int) {
+	approx := make([]int, n)
+	s := 0
+	x := 1
+	for i := 0; i < n; i++ {
+		s += a.Get(i) * x
+		x *= a.prime
+		approx[i] = a.Get(i)
+	}
+	return s, approx
+}
+
+func (a *padic) Norm() int {
+	i := 0
+	for {
+		v := a.Get(i)
+		if v != 0 {
+			return i
+		}
+		i++
+	}
+}
+./pkg/padic/util.go
+package padic
+
+func divmod(a int, n int) (int, int) {
+	if n <= 0 || a < 0 {
+		panic("n must be > 0, a must be >= 0")
+	}
+	return a / n, a % n
+}
+
+type Iter func() int
+
+// shift : [1, 2, 3, 4, 5, ...] -> [v, v, v, 1, 2, 3, 4, 5, ...]
+func shift(n int, v int, iter func() int) func() int {
+	i := 0
+	return func() int {
+		if i < n {
+			i++
+			return v
+		}
+		return iter()
+	}
+}
+
+func NewIterFromList(list []int, tail int) Iter {
+	i := 0
+	return func() int {
+		if i < len(list) {
+			v := list[i]
+			i++
+			return v
+		}
+		return tail
+	}
+}
+
+// euclidean : find x, y so that ax + by = 1
+func euclidean(a int, b int) (int, int) {
+	if a < 0 || b < 0 {
+		panic("a must be > 0, b must be > 0")
+	}
+	if a < b {
+		y, x := euclidean(b, a)
+		return x, y
+	}
+	// assume a >= b
+	if b == 1 {
+		return 0, 1
+	}
+	q, r := divmod(a, b)
+	// a = qb + r
+	// 1 = ax + by = (qb + r)x + by = rx + b(y + qx) = rx + b y_1
+	x, y1 := euclidean(r, b)
+	y := y1 - q*x
+	return x, y
+}
+
+// mod : always return non-negative
+func mod(a int, n int) int {
+	if n <= 0 {
+		panic("n must be > 0")
+	}
+	r := a % n
+	if r < 0 {
+		r = r + n
+	}
+	return r
+}
+
+// invmod : invert of a mod n
+func invmod(a int, n int) int {
+	x, _ := euclidean(a, n)
+	// ax + ny = 1
+	return mod(x, n)
+}
+./pkg/fib/fib.go
+package fib
+
+import "ca/pkg/ring"
+
+func boxProd[T ring.Ring[T]](x [3]T, y [3]T) [3]T {
+	a1, b1, c1 := x[0], x[1], x[2]
+	a2, b2, c2 := y[0], y[1], y[2]
+	return [3]T{
+		a1.Mul(a2).Add(b1.Mul(b2)),
+		a1.Mul(b2).Add(b1.Mul(c2)),
+		b1.Mul(b2).Add(c1.Mul(c2)),
+	}
+}
+
+func boxPow[T ring.Ring[T]](x [3]T, n uint64) [3]T {
+	dummy := x[0]
+	if n == 0 {
+		return [3]T{
+			dummy.One(),
+			dummy.Zero(),
+			dummy.One(),
+		}
+	}
+	if n == 1 {
+		return x
+	}
+	if n%2 == 0 {
+		half := boxPow(x, n/2)
+		return boxProd(half, half)
+	} else {
+		half := boxPow(x, n/2)
+		return boxProd(boxProd(half, half), x)
+	}
+}
+
+func Fib[T ring.Ring[T]](dummy T, n uint64) T {
+	x := [3]T{
+		dummy.Zero(),
+		dummy.One(),
+		dummy.One(),
+	}
+
+	x = boxPow(x, n)
+	return x[1]
+}
+./pkg/integer/int.go
+package integer
+
+import "math/big"
+
+type Int struct {
+	bigint *big.Int
+}
+
+func FromInt64(x int64) Int {
+	return Int{bigint: big.NewInt(x)}
+}
+
+func FromString(s string) Int {
+	if s[:2] != "0x" {
+		panic("invalid input")
+	}
+	bigint, ok := (&big.Int{}).SetString(s[2:], 16)
+	if !ok {
+		panic("invalid input")
+	}
+	return Int{bigint: bigint}
+}
+
+var Zero Int = Int{big.NewInt(0)}
+
+var One Int = Int{big.NewInt(1)}
+
+func (a Int) Zero() Int {
+	return Zero
+}
+
+func (a Int) One() Int {
+	return One
+}
+
+func (a Int) String() string {
+	text := a.bigint.Text(16)
+	if text[0] == '-' {
+		return "-0x" + text[1:]
+	} else {
+		return "0x" + text
+	}
+}
+
+func (a Int) Add(b Int) Int {
+	return Int{(&big.Int{}).Add(a.bigint, b.bigint)}
+}
+
+func (a Int) Sub(b Int) Int {
+	return Int{(&big.Int{}).Sub(a.bigint, b.bigint)}
+}
+
+func (a Int) Mul(b Int) Int {
+	return Int{(&big.Int{}).Mul(a.bigint, b.bigint)}
+}
+
+func (a Int) Neg() Int {
+	return Int{(&big.Int{}).Neg(a.bigint)}
+}
+
+func (a Int) Div(b Int) Int {
+	return Int{(&big.Int{}).Div(a.bigint, b.bigint)}
+}
+
+func (a Int) Mod(b Int) Int {
+	return Int{(&big.Int{}).Mod(a.bigint, b.bigint)}
+}
+
+func (a Int) DivMod(b Int) (Int, Int) {
+	q, r := (&big.Int{}).DivMod(a.bigint, b.bigint, &big.Int{})
+	return Int{q}, Int{r}
+}
+
+func (a Int) Cmp(b Int) int {
+	return a.bigint.Cmp(b.bigint)
+}
+
+func (a Int) Equal(b Int) bool {
+	return a.bigint.Cmp(b.bigint) == 0
+}
+
+func (a Int) Norm() Int {
+	return Int{(&big.Int{}).Abs(a.bigint)}
+}
+./pkg/vend/uint128/uint128.go
+// Package uint128 : https://pkg.go.dev/lukechampine.com/uint128?utm_source=godoc
+package uint128
+
+import (
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"math"
+	"math/big"
+	"math/bits"
+)
+
+// Zero is a zero-valued uint128.
+var Zero Uint128
+
+// Max is the largest possible uint128 value.
+var Max = New(math.MaxUint64, math.MaxUint64)
+
+// A Uint128 is an unsigned 128-bit number.
+type Uint128 struct {
+	Lo, Hi uint64
+}
+
+// IsZero returns true if u == 0.
+func (u Uint128) IsZero() bool {
+	// NOTE: we do not compare against Zero, because that is a global variable
+	// that could be modified.
+	return u == Uint128{}
+}
+
+// Equals returns true if u == v.
+//
+// Uint128 values can be compared directly with ==, but use of the Equals method
+// is preferred for consistency.
+func (u Uint128) Equals(v Uint128) bool {
+	return u == v
+}
+
+// Equals64 returns true if u == v.
+func (u Uint128) Equals64(v uint64) bool {
+	return u.Lo == v && u.Hi == 0
+}
+
+// Cmp compares u and v and returns:
+//
+//	-1 if u <  v
+//	 0 if u == v
+//	+1 if u >  v
+func (u Uint128) Cmp(v Uint128) int {
+	if u == v {
+		return 0
+	} else if u.Hi < v.Hi || (u.Hi == v.Hi && u.Lo < v.Lo) {
+		return -1
+	} else {
+		return 1
+	}
+}
+
+// Cmp64 compares u and v and returns:
+//
+//	-1 if u <  v
+//	 0 if u == v
+//	+1 if u >  v
+func (u Uint128) Cmp64(v uint64) int {
+	if u.Hi == 0 && u.Lo == v {
+		return 0
+	} else if u.Hi == 0 && u.Lo < v {
+		return -1
+	} else {
+		return 1
+	}
+}
+
+// And returns u&v.
+func (u Uint128) And(v Uint128) Uint128 {
+	return Uint128{u.Lo & v.Lo, u.Hi & v.Hi}
+}
+
+// And64 returns u&v.
+func (u Uint128) And64(v uint64) Uint128 {
+	return Uint128{u.Lo & v, u.Hi & 0}
+}
+
+// Or returns u|v.
+func (u Uint128) Or(v Uint128) Uint128 {
+	return Uint128{u.Lo | v.Lo, u.Hi | v.Hi}
+}
+
+// Or64 returns u|v.
+func (u Uint128) Or64(v uint64) Uint128 {
+	return Uint128{u.Lo | v, u.Hi | 0}
+}
+
+// Xor returns u^v.
+func (u Uint128) Xor(v Uint128) Uint128 {
+	return Uint128{u.Lo ^ v.Lo, u.Hi ^ v.Hi}
+}
+
+// Xor64 returns u^v.
+func (u Uint128) Xor64(v uint64) Uint128 {
+	return Uint128{u.Lo ^ v, u.Hi ^ 0}
+}
+
+// Add returns u+v.
+func (u Uint128) Add(v Uint128) Uint128 {
+	lo, carry := bits.Add64(u.Lo, v.Lo, 0)
+	hi, carry := bits.Add64(u.Hi, v.Hi, carry)
+	if carry != 0 {
+		panic("overflow")
+	}
+	return Uint128{lo, hi}
+}
+
+// AddWrap returns u+v with wraparound semantics; for example,
+// Max.AddWrap(From64(1)) == Zero.
+func (u Uint128) AddWrap(v Uint128) Uint128 {
+	lo, carry := bits.Add64(u.Lo, v.Lo, 0)
+	hi, _ := bits.Add64(u.Hi, v.Hi, carry)
+	return Uint128{lo, hi}
+}
+
+// Add64 returns u+v.
+func (u Uint128) Add64(v uint64) Uint128 {
+	lo, carry := bits.Add64(u.Lo, v, 0)
+	hi, carry := bits.Add64(u.Hi, 0, carry)
+	if carry != 0 {
+		panic("overflow")
+	}
+	return Uint128{lo, hi}
+}
+
+// AddWrap64 returns u+v with wraparound semantics; for example,
+// Max.AddWrap64(1) == Zero.
+func (u Uint128) AddWrap64(v uint64) Uint128 {
+	lo, carry := bits.Add64(u.Lo, v, 0)
+	hi := u.Hi + carry
+	return Uint128{lo, hi}
+}
+
+// Sub returns u-v.
+func (u Uint128) Sub(v Uint128) Uint128 {
+	lo, borrow := bits.Sub64(u.Lo, v.Lo, 0)
+	hi, borrow := bits.Sub64(u.Hi, v.Hi, borrow)
+	if borrow != 0 {
+		panic("underflow")
+	}
+	return Uint128{lo, hi}
+}
+
+// SubWrap returns u-v with wraparound semantics; for example,
+// Zero.SubWrap(From64(1)) == Max.
+func (u Uint128) SubWrap(v Uint128) Uint128 {
+	lo, borrow := bits.Sub64(u.Lo, v.Lo, 0)
+	hi, _ := bits.Sub64(u.Hi, v.Hi, borrow)
+	return Uint128{lo, hi}
+}
+
+// Sub64 returns u-v.
+func (u Uint128) Sub64(v uint64) Uint128 {
+	lo, borrow := bits.Sub64(u.Lo, v, 0)
+	hi, borrow := bits.Sub64(u.Hi, 0, borrow)
+	if borrow != 0 {
+		panic("underflow")
+	}
+	return Uint128{lo, hi}
+}
+
+// SubWrap64 returns u-v with wraparound semantics; for example,
+// Zero.SubWrap64(1) == Max.
+func (u Uint128) SubWrap64(v uint64) Uint128 {
+	lo, borrow := bits.Sub64(u.Lo, v, 0)
+	hi := u.Hi - borrow
+	return Uint128{lo, hi}
+}
+
+// Mul returns u*v, panicking on overflow.
+func (u Uint128) Mul(v Uint128) Uint128 {
+	hi, lo := bits.Mul64(u.Lo, v.Lo)
+	p0, p1 := bits.Mul64(u.Hi, v.Lo)
+	p2, p3 := bits.Mul64(u.Lo, v.Hi)
+	hi, c0 := bits.Add64(hi, p1, 0)
+	hi, c1 := bits.Add64(hi, p3, c0)
+	if (u.Hi != 0 && v.Hi != 0) || p0 != 0 || p2 != 0 || c1 != 0 {
+		panic("overflow")
+	}
+	return Uint128{lo, hi}
+}
+
+// MulWrap returns u*v with wraparound semantics; for example,
+// Max.MulWrap(Max) == 1.
+func (u Uint128) MulWrap(v Uint128) Uint128 {
+	hi, lo := bits.Mul64(u.Lo, v.Lo)
+	hi += u.Hi*v.Lo + u.Lo*v.Hi
+	return Uint128{lo, hi}
+}
+
+// Mul64 returns u*v, panicking on overflow.
+func (u Uint128) Mul64(v uint64) Uint128 {
+	hi, lo := bits.Mul64(u.Lo, v)
+	p0, p1 := bits.Mul64(u.Hi, v)
+	hi, c0 := bits.Add64(hi, p1, 0)
+	if p0 != 0 || c0 != 0 {
+		panic("overflow")
+	}
+	return Uint128{lo, hi}
+}
+
+// MulWrap64 returns u*v with wraparound semantics; for example,
+// Max.MulWrap64(2) == Max.Sub64(1).
+func (u Uint128) MulWrap64(v uint64) Uint128 {
+	hi, lo := bits.Mul64(u.Lo, v)
+	hi += u.Hi * v
+	return Uint128{lo, hi}
+}
+
+// Div returns u/v.
+func (u Uint128) Div(v Uint128) Uint128 {
+	q, _ := u.QuoRem(v)
+	return q
+}
+
+// Div64 returns u/v.
+func (u Uint128) Div64(v uint64) Uint128 {
+	q, _ := u.QuoRem64(v)
+	return q
+}
+
+// QuoRem returns q = u/v and r = u%v.
+func (u Uint128) QuoRem(v Uint128) (q, r Uint128) {
+	if v.Hi == 0 {
+		var r64 uint64
+		q, r64 = u.QuoRem64(v.Lo)
+		r = From64(r64)
+	} else {
+		// generate a "trial quotient," guaranteed to be within 1 of the actual
+		// quotient, then adjust.
+		n := uint(bits.LeadingZeros64(v.Hi))
+		v1 := v.Lsh(n)
+		u1 := u.Rsh(1)
+		tq, _ := bits.Div64(u1.Hi, u1.Lo, v1.Hi)
+		tq >>= 63 - n
+		if tq != 0 {
+			tq--
+		}
+		q = From64(tq)
+		// calculate remainder using trial quotient, then adjust if remainder is
+		// greater than divisor
+		r = u.Sub(v.Mul64(tq))
+		if r.Cmp(v) >= 0 {
+			q = q.Add64(1)
+			r = r.Sub(v)
+		}
+	}
+	return
+}
+
+// QuoRem64 returns q = u/v and r = u%v.
+func (u Uint128) QuoRem64(v uint64) (q Uint128, r uint64) {
+	if u.Hi < v {
+		q.Lo, r = bits.Div64(u.Hi, u.Lo, v)
+	} else {
+		q.Hi, r = bits.Div64(0, u.Hi, v)
+		q.Lo, r = bits.Div64(r, u.Lo, v)
+	}
+	return
+}
+
+// Mod returns r = u%v.
+func (u Uint128) Mod(v Uint128) (r Uint128) {
+	_, r = u.QuoRem(v)
+	return
+}
+
+// Mod64 returns r = u%v.
+func (u Uint128) Mod64(v uint64) (r uint64) {
+	_, r = u.QuoRem64(v)
+	return
+}
+
+// Lsh returns u<<n.
+func (u Uint128) Lsh(n uint) (s Uint128) {
+	if n > 64 {
+		s.Lo = 0
+		s.Hi = u.Lo << (n - 64)
+	} else {
+		s.Lo = u.Lo << n
+		s.Hi = u.Hi<<n | u.Lo>>(64-n)
+	}
+	return
+}
+
+// Rsh returns u>>n.
+func (u Uint128) Rsh(n uint) (s Uint128) {
+	if n > 64 {
+		s.Lo = u.Hi >> (n - 64)
+		s.Hi = 0
+	} else {
+		s.Lo = u.Lo>>n | u.Hi<<(64-n)
+		s.Hi = u.Hi >> n
+	}
+	return
+}
+
+// LeadingZeros returns the number of leading zero bits in u; the result is 128
+// for u == 0.
+func (u Uint128) LeadingZeros() int {
+	if u.Hi > 0 {
+		return bits.LeadingZeros64(u.Hi)
+	}
+	return 64 + bits.LeadingZeros64(u.Lo)
+}
+
+// TrailingZeros returns the number of trailing zero bits in u; the result is
+// 128 for u == 0.
+func (u Uint128) TrailingZeros() int {
+	if u.Lo > 0 {
+		return bits.TrailingZeros64(u.Lo)
+	}
+	return 64 + bits.TrailingZeros64(u.Hi)
+}
+
+// OnesCount returns the number of one bits ("population count") in u.
+func (u Uint128) OnesCount() int {
+	return bits.OnesCount64(u.Hi) + bits.OnesCount64(u.Lo)
+}
+
+// RotateLeft returns the value of u rotated left by (k mod 128) bits.
+func (u Uint128) RotateLeft(k int) Uint128 {
+	const n = 128
+	s := uint(k) & (n - 1)
+	return u.Lsh(s).Or(u.Rsh(n - s))
+}
+
+// RotateRight returns the value of u rotated left by (k mod 128) bits.
+func (u Uint128) RotateRight(k int) Uint128 {
+	return u.RotateLeft(-k)
+}
+
+// Reverse returns the value of u with its bits in reversed order.
+func (u Uint128) Reverse() Uint128 {
+	return Uint128{bits.Reverse64(u.Hi), bits.Reverse64(u.Lo)}
+}
+
+// ReverseBytes returns the value of u with its bytes in reversed order.
+func (u Uint128) ReverseBytes() Uint128 {
+	return Uint128{bits.ReverseBytes64(u.Hi), bits.ReverseBytes64(u.Lo)}
+}
+
+// Len returns the minimum number of bits required to represent u; the result is
+// 0 for u == 0.
+func (u Uint128) Len() int {
+	return 128 - u.LeadingZeros()
+}
+
+// String returns the base-10 representation of u as a string.
+func (u Uint128) String() string {
+	if u.IsZero() {
+		return "0"
+	}
+	buf := []byte("0000000000000000000000000000000000000000") // log10(2^128) < 40
+	for i := len(buf); ; i -= 19 {
+		q, r := u.QuoRem64(1e19) // largest power of 10 that fits in a uint64
+		var n int
+		for ; r != 0; r /= 10 {
+			n++
+			buf[i-n] += byte(r % 10)
+		}
+		if q.IsZero() {
+			return string(buf[i-n:])
+		}
+		u = q
+	}
+}
+
+// PutBytes stores u in b in little-endian order. It panics if len(b) < 16.
+func (u Uint128) PutBytes(b []byte) {
+	binary.LittleEndian.PutUint64(b[:8], u.Lo)
+	binary.LittleEndian.PutUint64(b[8:], u.Hi)
+}
+
+// PutBytesBE stores u in b in big-endian order. It panics if len(ip) < 16.
+func (u Uint128) PutBytesBE(b []byte) {
+	binary.BigEndian.PutUint64(b[:8], u.Hi)
+	binary.BigEndian.PutUint64(b[8:], u.Lo)
+}
+
+// AppendBytes appends u to b in little-endian order and returns the extended buffer.
+func (u Uint128) AppendBytes(b []byte) []byte {
+	b = binary.LittleEndian.AppendUint64(b, u.Lo)
+	b = binary.LittleEndian.AppendUint64(b, u.Hi)
+	return b
+}
+
+// AppendBytesBE appends u to b in big-endian order and returns the extended buffer.
+func (u Uint128) AppendBytesBE(b []byte) []byte {
+	b = binary.BigEndian.AppendUint64(b, u.Hi)
+	b = binary.BigEndian.AppendUint64(b, u.Lo)
+	return b
+}
+
+// Big returns u as a *big.Int.
+func (u Uint128) Big() *big.Int {
+	i := new(big.Int).SetUint64(u.Hi)
+	i = i.Lsh(i, 64)
+	i = i.Xor(i, new(big.Int).SetUint64(u.Lo))
+	return i
+}
+
+// Scan implements fmt.Scanner.
+func (u *Uint128) Scan(s fmt.ScanState, ch rune) error {
+	i := new(big.Int)
+	if err := i.Scan(s, ch); err != nil {
+		return err
+	} else if i.Sign() < 0 {
+		return errors.New("value cannot be negative")
+	} else if i.BitLen() > 128 {
+		return errors.New("value overflows Uint128")
+	}
+	u.Lo = i.Uint64()
+	u.Hi = i.Rsh(i, 64).Uint64()
+	return nil
+}
+
+// New returns the Uint128 value (lo,hi).
+func New(lo, hi uint64) Uint128 {
+	return Uint128{lo, hi}
+}
+
+// From64 converts v to a Uint128 value.
+func From64(v uint64) Uint128 {
+	return New(v, 0)
+}
+
+// FromBytes converts b to a Uint128 value.
+func FromBytes(b []byte) Uint128 {
+	return New(
+		binary.LittleEndian.Uint64(b[:8]),
+		binary.LittleEndian.Uint64(b[8:]),
+	)
+}
+
+// FromBytesBE converts big-endian b to a Uint128 value.
+func FromBytesBE(b []byte) Uint128 {
+	return New(
+		binary.BigEndian.Uint64(b[8:]),
+		binary.BigEndian.Uint64(b[:8]),
+	)
+}
+
+// FromBig converts i to a Uint128 value. It panics if i is negative or
+// overflows 128 bits.
+func FromBig(i *big.Int) (u Uint128) {
+	if i.Sign() < 0 {
+		panic("value cannot be negative")
+	} else if i.BitLen() > 128 {
+		panic("value overflows Uint128")
+	}
+	u.Lo = i.Uint64()
+	u.Hi = i.Rsh(i, 64).Uint64()
+	return u
+}
+
+// FromString parses s as a Uint128 value.
+func FromString(s string) (u Uint128, err error) {
+	_, err = fmt.Sscan(s, &u)
+	return
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (u Uint128) MarshalText() ([]byte, error) {
+	return []byte(u.String()), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (u *Uint128) UnmarshalText(b []byte) error {
+	_, err := fmt.Sscan(string(b), u)
+	return err
+}
+./pkg/ring/ring.go
+package ring
+
+import "ca/pkg/integer"
+
+type Computable[T any] interface {
+	Equal(T) bool
+}
+
+type Order[T any] interface {
+	Computable[T]
+	Cmp(T) int
+}
+
+type Ring[T any] interface {
+	Computable[T]
+	Zero() T
+	One() T
+	Add(T) T
+	Sub(T) T
+	Neg() T
+	Mul(T) T
+}
+
+type EuclideanDomain[T any] interface {
+	Ring[T]
+	Norm() integer.Int
+	DivMod(T) (T, T)
+	Div(T) T
+	Mod(T) T
+}
+
+type Field[T any] interface {
+	Ring[T]
+	DivField(T) T
+}
+
+// EuclideanAlgorithm : return a, b so that ax + by = 1
+func EuclideanAlgorithm[T EuclideanDomain[T]](x T, y T) (T, T) {
+	one := integer.One
+	xNorm, yNorm := x.Norm(), y.Norm()
+	if xNorm.Cmp(one) < 1 || yNorm.Cmp(one) < 1 {
+		panic("Euclidean Algorithm only works for norm >= 2")
+	}
+	cmp := xNorm.Cmp(yNorm)
+	if cmp < 0 {
+		// x < y here
+		b, a := EuclideanAlgorithm(y, x)
+		return a, b
+	}
+	// x >= y here
+	q, r := x.DivMod(y) // x = qb + r
+	// ax + by = 1 <=> a(qb + r) + by = 1 <=> ar + (aq + b)y = 1
+	a, b1 := EuclideanAlgorithm(r, y)
+	b := b1.Sub(a.Mul(q))
+	return a, b
+
+}
+./pkg/uint_ntt/uint_ntt.go
+package uint_ntt
+
+import (
+	"math/bits"
+	"strings"
+)
+
+const (
+	B = 1 << 16 // pick base B = 2^d, N * B * B < p so that multiplication won't overflow
+)
+
+// TODO - set N variable and find R on the fly
+
+// Block : polynomial in F_p[X]
+type Block []uint64
+
+func (b Block) get(i int) uint64 {
+	if i >= len(b) {
+		return 0
+	}
+	return b[i]
+}
+
+var zeroBlock []uint64
+
+// UintNTT : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
+type UintNTT struct {
+	Time Block
+}
+
+var Zero UintNTT = FromUint64(0)
+var One UintNTT = FromUint64(1)
+
+func (a UintNTT) Zero() UintNTT {
+	return UintNTT{Time: zeroBlock}
+}
+
+func (a UintNTT) One() UintNTT {
+	return One
+}
+
+func FromUint64(x uint64) UintNTT {
+	return fromTime(Block{x})
+}
+
+func (a UintNTT) Uint64() uint64 {
+	return a.Time[0] + a.Time[1]*B + a.Time[2]*B*B
+}
+
+func fromTime(time Block) UintNTT {
+	// trim time
+	var q, r uint64 = 0, 0
+	for i := 0; i < len(time); i++ {
+		q, r = time[i]/B, time[i]%B
+		time[i] = r
+		if i+1 < len(time) {
+			time[i+1] = time[i+1] + q
+		}
+	}
+	time = append(time, q)
+	for len(time) > 0 && time[len(time)-1] == 0 {
+		time = time[:len(time)-1]
+	}
+	return UintNTT{
+		Time: time,
+	}
+}
+
+func FromString(s string) UintNTT {
+	if s[0:2] != "0x" {
+		panic("string does not start with 0x")
+	}
+	s = strings.ToLower(s[2:])
+
+	if len(s) > 448 {
+		panic("string too long")
+	}
+	// convert string to base16
+	var base16 []byte
+	toBase16 := map[string]byte{
+		"0": 0,
+		"1": 1,
+		"2": 2,
+		"3": 3,
+		"4": 4,
+		"5": 5,
+		"6": 6,
+		"7": 7,
+		"8": 8,
+		"9": 9,
+		"a": 10,
+		"b": 11,
+		"c": 12,
+		"d": 13,
+		"e": 14,
+		"f": 15,
+	}
+	for i := len(s) - 1; i >= 0; i-- {
+		base16 = append(base16, toBase16[string(s[i])])
+	}
+	// convert base16 (2^4) to base 2^16 then trim
+	for len(base16)%4 != 0 {
+		base16 = append(base16, byte(0))
+	}
+
+	time := Block{}
+	for i := 0; i < len(base16); i += 4 {
+		var x uint64 = 0
+		x += uint64(base16[i])
+		x += uint64(base16[i+1]) * 16
+		x += uint64(base16[i+2]) * 16 * 16
+		x += uint64(base16[i+3]) * 16 * 16 * 16
+		time = append(time, x)
+	}
+
+	return fromTime(time)
+}
+
+func (a UintNTT) String() string {
+	// convert base 2^16 to base16 (2^4)
+	var base16 []byte = nil
+	for i := 0; i < len(a.Time); i++ {
+		x := a.Time[i]
+		base16 = append(base16, byte(x%16))
+		x /= 16
+		base16 = append(base16, byte(x%16))
+		x /= 16
+		base16 = append(base16, byte(x%16))
+		x /= 16
+		base16 = append(base16, byte(x%16))
+		x /= 16
+	}
+	// convert base16 to string
+	toChar := map[byte]string{
+		0:  "0",
+		1:  "1",
+		2:  "2",
+		3:  "3",
+		4:  "4",
+		5:  "5",
+		6:  "6",
+		7:  "7",
+		8:  "8",
+		9:  "9",
+		10: "a",
+		11: "b",
+		12: "c",
+		13: "d",
+		14: "e",
+		15: "f",
+	}
+	out := ""
+	if len(base16)%2 != 0 {
+		base16 = append(base16, byte(0))
+	}
+	for i := len(base16) - 1; i >= 0; i-- {
+		ch := toChar[base16[i]]
+		out += ch
+	}
+	out = strings.TrimLeft(out, "0")
+	if len(out) == 0 {
+		out = "0"
+	}
+	return "0x" + out
+}
+
+func (a UintNTT) Add(b UintNTT) UintNTT {
+	l := max(len(a.Time), len(b.Time))
+	time := make(Block, l)
+	for i := 0; i < l; i++ {
+		time[i] = add(a.Time.get(i), b.Time.get(i))
+	}
+	return fromTime(time)
+}
+
+func (a UintNTT) Mul(b UintNTT) UintNTT {
+	aFreq, bFreq := time2freq(a.Time), time2freq(b.Time)
+	l := min(len(aFreq), len(bFreq))
+	freq := Block{}
+	for i := 0; i < l; i++ {
+		freq = append(freq, mul(aFreq.get(i), bFreq.get(i)))
+	}
+	return fromTime(freq2time(freq))
+}
+
+func nextPowerOfTwo(x uint64) uint64 {
+	if x == 0 {
+		return 1
+	}
+	if x > 1<<63 {
+		panic("next power of 2 overflows uint64")
+	}
+	return 1 << (64 - bits.LeadingZeros64(x-1))
+}
+func time2freq(time Block) Block {
+	// extend  into powers of 2
+	l := nextPowerOfTwo(uint64(len(time)))
+	for len(time) < int(l) {
+		time = append(time, 0)
+	}
+
+	ω := getPrimitiveRoot(l)
+	freq := CooleyTukeyFFT(time, ω)
+
+	for len(freq) > 0 && freq[len(freq)-1] == 0 {
+		freq = freq[:len(freq)-1]
+	}
+	return freq
+}
+
+func freq2time(freq Block) Block {
+	// extend  into powers of 2
+	l := nextPowerOfTwo(uint64(len(freq)))
+	for len(freq) < int(l) {
+		freq = append(freq, 0)
+	}
+
+	time := Block{}
+	ω := getPrimitiveRoot(l)
+	for _, f := range CooleyTukeyFFT(freq, inv(ω)) {
+		time = append(time, mul(f, inv(l)))
+	}
+
+	for len(time) > 0 && time[len(time)-1] == 0 {
+		time = time[:len(time)-1]
+	}
+	return time
+}
+./pkg/uint_ntt/dft.go
+package uint_ntt
+
+import (
+	"fmt"
+	"os"
+)
+
+// NaiveDFT : naive implementation of DFT - for reference
+// construct DFT matrix w of size (n, n) with omega as the root of unity
+// return y = wx
+func NaiveDFT(x []uint64, ω uint64) (y []uint64) {
+	n := len(x)
+	_, _ = fmt.Fprintf(os.Stderr, "WARNING : this implementation is for reference, use FFT instead")
+	makeDftMat := func(n int, ω uint64) [][]uint64 {
+		w := make([][]uint64, n)
+		for i := 0; i < n; i++ {
+			w[i] = make([]uint64, n)
+		}
+		for i := 0; i < n; i++ {
+			for j := 0; j < n; j++ {
+				w[i][j] = pow(ω, uint64(i*j))
+			}
+		}
+		return w
+	}
+	y = make([]uint64, n)
+	w := makeDftMat(n, ω)
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			y[i] = add(y[i], mul(w[i][j], x[j]))
+		}
+	}
+	return y
+}
+
+// CooleyTukeyFFT :Cooley-Tukey algorithm
+func CooleyTukeyFFT(x []uint64, ω uint64) (y []uint64) {
+	n := len(x)
+	if n == 1 {
+		return x
+	}
+	if n <= 0 || n%2 != 0 {
+		panic("n must be power of 2")
+	}
+	var e, o []uint64 // even and odd values of x
+	for i := 0; i < n/2; i++ {
+		e = append(e, x[2*i])
+		o = append(o, x[2*i+1])
+	}
+	ω2 := mul(ω, ω)
+	eFFT := CooleyTukeyFFT(e, ω2)
+	oFFT := CooleyTukeyFFT(o, ω2)
+
+	y = make([]uint64, n)
+	var ωn uint64 = 1 // ω^0
+	for i := 0; i < n/2; i++ {
+		t := mul(ωn, oFFT[i])
+		y[i] = add(eFFT[i], t)
+		y[i+n/2] = sub(eFFT[i], t)
+		ωn = mul(ωn, ω)
+	}
+	return y
+}
+./pkg/uint_ntt/fp.go
+package uint_ntt
+
+import (
+	"ca/pkg/vend/uint128"
+)
+
+// p : operations on finite field of order p
+const (
+	// p, g : p = 2^64 - 2^32 + 1, generator g of F_p^\times, g^{p-1} = 1 mod p
+	p, g uint64 = 18446744069414584321, 7
+)
+
+func getPrimitiveRoot(n uint64) uint64 {
+	if (p-1)%n != 0 {
+		panic("n must divide p-1")
+	}
+	return pow(g, (p-1)/n)
+}
+
+// int : Fermat little theorem a^{p-1} = 1 mod p
+func inv(a uint64) uint64 {
+	return pow(a, p-2)
+}
+
+func add(a uint64, b uint64) uint64 {
+	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
+	return aLarge.Add(bLarge).Mod64(p)
+}
+
+func sub(a uint64, b uint64) uint64 {
+	return add(a, p-b%p)
+}
+
+func mul(a uint64, b uint64) uint64 {
+	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
+	return aLarge.Mul(bLarge).Mod64(p)
+}
+
+func pow(a uint64, n uint64) uint64 {
+	a, n = a%p, n%p
+
+	var x uint64 = 1
+	for n > 0 {
+		if n%2 == 1 {
+			x = mul(x, a)
+		}
+		a = mul(a, a)
+		n /= 2
+	}
+	return x
+}
+do you have any comment on this?
