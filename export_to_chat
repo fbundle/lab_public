@@ -1,6 +1,6 @@
 #/!usr/bin/env bash
 
-echo "below is the readme and implementation of a simple functional programming language"
+echo "below is the readme and implementation"
 
 find ./pkg -name "*.go" -type f -print -exec cat {} \;
 

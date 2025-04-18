@@ -1,4 +1,4 @@
-below is the readme and implementation of a simple functional programming language
+below is the readme and implementation
 ./pkg/uint1792/dft.go
 package uint1792
 
