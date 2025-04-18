@@ -8,6 +8,8 @@ import (
 	"ca/pkg/uint1792"
 	"ca/pkg/uint_ntt"
 	"fmt"
+	"os"
+	"strconv"
 )
 
 func testPAdic() {
@@ -30,7 +32,18 @@ func testUint1792() {
 }
 
 func testFib() {
-	fmt.Println(fib.Fib(integer.Zero, uint64(20)))
+	if len(os.Args) < 2 {
+		panic("Usage: go run main.go <integer>")
+		return
+	}
+
+	n, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		panic("Error: argument must be an integer")
+		return
+	}
+
+	fmt.Println(fib.Fib(uint_ntt.Zero, uint64(n)))
 }
 
 func testEA() {
@@ -47,5 +60,5 @@ func testUintNTT() {
 }
 
 func main() {
-	testUintNTT()
+	testFib()
 }
