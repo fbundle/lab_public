@@ -11,7 +11,7 @@ const (
 
 // TODO - set N variable and find R on the fly
 
-// Block : polynomial of degree at most N-1 in F_p[X]
+// Block : polynomial in F_p[X]
 type Block []uint64
 
 func (b Block) get(i int) uint64 {
