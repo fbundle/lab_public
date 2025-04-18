@@ -1,4 +1,4 @@
-package uint1792
+package uint_ntt
 
 import (
 	"ca/pkg/vend/uint128"
@@ -10,7 +10,7 @@ const (
 	p, g uint64 = 18446744069414584321, 7
 )
 
-func findPrimitiveRoot(n uint64) uint64 {
+func getPrimitiveRoot(n uint64) uint64 {
 	if (p-1)%n != 0 {
 		panic("n must divide p-1")
 	}

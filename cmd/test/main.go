@@ -6,6 +6,7 @@ import (
 	"ca/pkg/padic"
 	"ca/pkg/ring"
 	"ca/pkg/uint1792"
+	"ca/pkg/uint_ntt"
 	"fmt"
 )
 
@@ -37,6 +38,14 @@ func testEA() {
 	fmt.Println(a, b)
 }
 
+func testUintNTT() {
+	x := uint_ntt.FromString("0x318346193417412890342342")
+	z := uint_ntt.FromString("0x484723895378245789")
+	y := uint1792.FromString(x.String())
+	_ = z
+	fmt.Println(x, y)
+}
+
 func main() {
-	testUint1792()
+	testUintNTT()
 }
