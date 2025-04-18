@@ -12,7 +12,7 @@ const (
 	B    = 1 << 28 // pick base B = 2^d, N * B * B < P so that multiplication won't overflow
 )
 
-// TODO - set N variable
+// TODO - set N variable and find R on the fly
 
 // Block : polynomial of degree at most N-1 in F_p[X]
 type Block = [N]uint64
