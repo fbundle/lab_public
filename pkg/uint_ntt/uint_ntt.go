@@ -35,7 +35,6 @@ func fromTime(time Block) UintNTT {
 			time[i+1] = add(time[i+1], q)
 		}
 	}
-	// time = append(time, q)
 	time = time.set(len(time), q)
 	time = trimZeros(time)
 	return UintNTT{
@@ -43,6 +42,7 @@ func fromTime(time Block) UintNTT {
 	}
 }
 
+// trimZeros : trim zeros at high degree
 func trimZeros(block Block) Block {
 	for len(block) > 0 && block[len(block)-1] == 0 {
 		block = block[:len(block)-1]
@@ -98,7 +98,6 @@ func FromString(s string) UintNTT {
 		x += uint64(base16[i+2]) * 16 * 16
 		x += uint64(base16[i+3]) * 16 * 16 * 16
 		time = time.set(i/4, x)
-		// time = append(time, x)
 	}
 
 	return fromTime(time)
@@ -170,7 +169,6 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 	aFreq, bFreq := time2freq(a.Time, l), time2freq(b.Time, l)
 	freq := Block{}
 	for i := 0; i < int(l); i++ {
-		// freq = append(freq, mul(aFreq.get(i), bFreq.get(i)))
 		freq = freq.set(i, mul(aFreq.get(i), bFreq.get(i)))
 	}
 	time := freq2time(freq, l)
