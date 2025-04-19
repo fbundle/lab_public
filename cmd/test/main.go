@@ -58,6 +58,7 @@ func testUintNTT() {
 	fmt.Println(x.Add(y))
 	fmt.Println(x.Mul(y))
 	fmt.Println(x.Sub(y))
+	fmt.Println(x.ShiftRight(4))
 }
 
 func main() {

@@ -1533,11 +1533,11 @@ func (a UintNTT) String() string {
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
 	l := max(len(a.Time), len(b.Time))
-	time := make(Block, l)
+	cTime := make(Block, l)
 	for i := 0; i < l; i++ {
-		time[i] = add(a.Time.get(i), b.Time.get(i))
+		cTime[i] = add(a.Time.get(i), b.Time.get(i))
 	}
-	return fromTime(time)
+	return fromTime(cTime)
 }
 
 func (a UintNTT) Mul(b UintNTT) UintNTT {
@@ -1568,6 +1568,20 @@ func (a UintNTT) Sub(b UintNTT) UintNTT {
 	}
 	cTime = cTime[:len(cTime)-1]
 	return fromTime(cTime)
+}
+
+func (a UintNTT) ShiftRight(n int) UintNTT {
+	if n > len(a.Time) {
+		panic("ShiftRight overflow")
+	}
+	l := len(a.Time) - n
+	cTime := make(Block, l)
+	copy(cTime, a.Time[n:])
+	return fromTime(cTime)
+}
+
+func (a UintNTT) PInv(n int) UintNTT {
+	return One
 }
 
 func nextPowerOfTwo(x uint64) uint64 {
