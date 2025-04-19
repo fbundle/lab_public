@@ -1099,8 +1099,7 @@ func (a UintNTT) Uint64() uint64 {
 
 func fromTime(time block) UintNTT {
 	// reduce to base
-	l := time.Len()
-	for i := 0; i < l; i++ {
+	for i := 0; i < time.Len(); i++ {
 		q, r := time.Get(i)/base, time.Get(i)%base
 		time = time.Set(i, r)
 		time = time.Set(i+1, add(time.Get(i+1), q))
