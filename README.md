@@ -11,4 +11,4 @@ implementation of $p$-adic integers
 - (almost) arbitrary precision unsigned integer $[0, 2^{4294967294 \times 16})$ $\sim$ 8GB  
 - multiplication using FFT
 - division using Newton iteration
-- support signed integers by wrapping a sign bit
+- support signed integers by wrapping a sign bit (not sure if can do with 2nd complement)
