@@ -5,8 +5,6 @@ computational algebra
 
 implementation of $p$-adic integers
 
-## uint1792.go
-
 ## uint_ntt.go and int_ntt.go
 
 - my greatest appreciation to [apgoucher](https://cp4space.hatsya.com/2021/09/01/an-efficient-prime-for-number-theoretic-transforms/) to the prime $p = 2^{64} - 2^{32} + 1$ with $g=7$ being the generator of $(\mathbb{Z}/p)^\times$
