@@ -3,6 +3,7 @@ package uint_ntt
 import (
 	"ca/pkg/vec"
 	"math/bits"
+	"sync"
 )
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
@@ -21,8 +22,23 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 		o = o.Set(i, x.Get(2*i+1))
 	}
 	omega_2 := mul(omega, omega)
-	eFFT := CooleyTukeyFFT(e, omega_2)
-	oFFT := CooleyTukeyFFT(o, omega_2)
+	var eFFT, oFFT vec.Vec[uint64]
+	if n >= 8192 {
+		wg := sync.WaitGroup{}
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			eFFT = CooleyTukeyFFT(e, omega_2)
+		}()
+		go func() {
+			defer wg.Done()
+			oFFT = CooleyTukeyFFT(o, omega_2)
+		}()
+		wg.Wait()
+	} else {
+		eFFT = CooleyTukeyFFT(e, omega_2)
+		oFFT = CooleyTukeyFFT(o, omega_2)
+	}
 
 	y := vec.Make[uint64](n)
 	for i := 0; i < n/2; i++ {
