@@ -48,26 +48,21 @@ func nextPowerOfTwo(x uint64) uint64 {
 func time2freq(time block, length uint64) block {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
-	for time.len() < int(l) {
-		time = time.append(0)
-	}
+	time = time.slice(0, int(l)) // extend to length l
 
-	ω := getPrimitiveRoot(l)
-	freq := trimZeros(CooleyTukeyFFT(time, ω))
+	omega := getPrimitiveRoot(l)
+	freq := trimZeros(CooleyTukeyFFT(time, omega))
 	return freq
 }
 
 func freq2time(freq block, length uint64) block {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
-	for freq.len() < int(l) {
-		freq = freq.append(0)
-	}
-
-	ω := getPrimitiveRoot(l)
+	freq = freq.slice(0, int(l)) // extend to length l
+	omega := getPrimitiveRoot(l)
 	il := inv(l)
 
-	time := CooleyTukeyFFT(freq, inv(ω))
+	time := CooleyTukeyFFT(freq, inv(omega))
 	for i := 0; i < time.len(); i++ {
 		f := time.get(i)
 		time = time.set(i, mul(f, il))

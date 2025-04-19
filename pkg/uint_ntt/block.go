@@ -20,11 +20,6 @@ func (b block) clone() block {
 	return c
 }
 
-func (b block) append(v uint64) block {
-	b.data = append(b.data, v)
-	return b
-}
-
 func (b block) len() int {
 	return len(b.data)
 }
@@ -48,5 +43,8 @@ func (b block) set(i int, v uint64) block {
 }
 
 func (b block) slice(beg int, end int) block {
+	for end > b.len()-1 {
+		b.data = append(b.data, 0)
+	}
 	return block{b.data[beg:end]}
 }
