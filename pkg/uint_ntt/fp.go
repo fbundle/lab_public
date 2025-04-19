@@ -10,11 +10,16 @@ const (
 	p, g uint64 = 18446744069414584321, 7
 )
 
+var primitiveRootCache map[uint64]uint64 = map[uint64]uint64{}
+
 func getPrimitiveRoot(n uint64) uint64 {
 	if (p-1)%n != 0 {
 		panic("n must divide p-1")
 	}
-	return pow(g, (p-1)/n)
+	if _, ok := primitiveRootCache[n]; !ok {
+		primitiveRootCache[n] = pow(g, (p-1)/n)
+	}
+	return primitiveRootCache[n]
 }
 
 // int : Fermat little theorem a^{p-1} = 1 mod p

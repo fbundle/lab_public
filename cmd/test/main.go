@@ -5,7 +5,6 @@ import (
 	"ca/pkg/integer"
 	"ca/pkg/padic"
 	"ca/pkg/ring"
-	"ca/pkg/uint1792"
 	"ca/pkg/uint_ntt"
 	"fmt"
 	"os"
