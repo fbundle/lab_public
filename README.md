@@ -16,4 +16,5 @@ implementation of $p$-adic integers
 
 - (almost) arbitrary precision integer ($4294967294 \times 16$ bits $\sim$ 8GB per integer)  
 - multiplication using FFT
-- TODO : division using Newton iteration
+- division using Newton iteration
+- TODO : support negative integers

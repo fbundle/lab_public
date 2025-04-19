@@ -229,7 +229,7 @@ func (a UintNTT) Cmp(b UintNTT) int {
 	return 0
 }
 
-func (a UintNTT) ShiftRight(n int) UintNTT {
+func (a UintNTT) shiftRight(n int) UintNTT {
 	if n > len(a.Time) {
 		return Zero
 	}
@@ -239,8 +239,8 @@ func (a UintNTT) ShiftRight(n int) UintNTT {
 	return fromTime(cTime)
 }
 
-// PInv : let m = 2^n, approx root of f(x) = - a + m / x
-func (a UintNTT) PInv(n int) UintNTT {
+// inv : let m = 2^n, approx root of f(x) = - a + m / x
+func (a UintNTT) inv(n int) UintNTT {
 	if a.IsZero() {
 		panic("division by zero")
 	}
@@ -250,7 +250,7 @@ func (a UintNTT) PInv(n int) UintNTT {
 	// x_{n+1} = 2 x_n - (a x_n^2) / m
 	for {
 		// a / m = a.shiftRight(N/2)
-		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).ShiftRight(n))
+		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(n))
 		if x1.Cmp(x) == 0 {
 			break
 		}
@@ -261,8 +261,13 @@ func (a UintNTT) PInv(n int) UintNTT {
 
 func (a UintNTT) Div(b UintNTT) UintNTT {
 	n := 2 * len(b.Time)
-	x := b.PInv(n)
-	return a.Mul(x).ShiftRight(n)
+	x := b.inv(n)
+	return a.Mul(x).shiftRight(n)
+}
+
+func (a UintNTT) Mod(b UintNTT) UintNTT {
+	x := a.Div(b)
+	return a.Sub(b.Mul(x))
 }
 
 func nextPowerOfTwo(x uint64) uint64 {

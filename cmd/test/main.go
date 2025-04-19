@@ -58,8 +58,8 @@ func testUintNTT() {
 	fmt.Println(x.Add(y))
 	fmt.Println(x.Mul(y))
 	fmt.Println(x.Sub(y))
-	fmt.Println(x.ShiftRight(4))
-	fmt.Println(x.Div(x))
+	z := uint_ntt.FromString("0x539543980a084524")
+	fmt.Println(z.Add(x).Mod(x))
 }
 
 func main() {
