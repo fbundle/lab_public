@@ -1,10 +1,5 @@
 package uint_ntt
 
-const (
-	base  = 1 << 16 // pick base = 2^d, max_n * base * base < p so that multiplication won't overflow
-	max_n = 4294967294
-)
-
 // block : polynomial in F_p[X]
 type block[T any] struct {
 	data []T

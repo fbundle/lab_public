@@ -4,6 +4,10 @@ import (
 	"strings"
 )
 
+const (
+	base = 1 << 16 // pick base = 2^d, max_n * base * base < p so that multiplication won't overflow
+)
+
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
 	time block[uint64]
