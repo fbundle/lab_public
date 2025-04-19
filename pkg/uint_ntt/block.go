@@ -6,45 +6,45 @@ const (
 )
 
 // block : polynomial in F_p[X]
-type block struct {
-	data []uint64 // TODO - optimize this
+type block[T any] struct {
+	data []T
 }
 
-func makeBlock(n int) block {
-	return block{make([]uint64, n)}
+func makeBlock[T any](n int) block[T] {
+	return block[T]{make([]T, n)}
 }
 
-func (b block) clone() block {
-	c := makeBlock(b.len())
+func (b block[T]) clone() block[T] {
+	c := makeBlock[T](b.len())
 	copy(c.data, b.data)
 	return c
 }
 
-func (b block) len() int {
+func (b block[T]) len() int {
 	return len(b.data)
 }
 
-func (b block) get(i int) uint64 {
+func (b block[T]) get(i int) T {
 	if i >= b.len() {
-		return 0
+		var zero T
+		return zero
 	}
 	return b.data[i]
 }
 
-func (b block) set(i int, v uint64) block {
+func (b block[T]) set(i int, v T) block[T] {
 	for i >= b.len() {
-		b.data = append(b.data, 0)
-		if b.len() > max_n {
-			panic("too many blocks")
-		}
+		var zero T
+		b.data = append(b.data, zero)
 	}
 	b.data[i] = v
 	return b
 }
 
-func (b block) slice(beg int, end int) block {
+func (b block[T]) slice(beg int, end int) block[T] {
 	for end > b.len()-1 {
-		b.data = append(b.data, 0)
+		var zero T
+		b.data = append(b.data, zero)
 	}
-	return block{b.data[beg:end]}
+	return block[T]{b.data[beg:end]}
 }

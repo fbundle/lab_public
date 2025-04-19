@@ -5,7 +5,7 @@ import (
 )
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(x block, omega uint64) block {
+func CooleyTukeyFFT(x block[uint64], omega uint64) block[uint64] {
 	n := x.len()
 	if n == 1 {
 		return x
@@ -14,7 +14,7 @@ func CooleyTukeyFFT(x block, omega uint64) block {
 		panic("n must be power of 2")
 	}
 	// even and odd values of x
-	e, o := makeBlock(n/2), makeBlock(n/2)
+	e, o := makeBlock[uint64](n/2), makeBlock[uint64](n/2)
 	for i := 0; i < n/2; i++ {
 		e = e.set(i, x.get(2*i))
 		o = o.set(i, x.get(2*i+1))
@@ -23,7 +23,7 @@ func CooleyTukeyFFT(x block, omega uint64) block {
 	eFFT := CooleyTukeyFFT(e, omega_2)
 	oFFT := CooleyTukeyFFT(o, omega_2)
 
-	y := makeBlock(n)
+	y := makeBlock[uint64](n)
 	var omega_n uint64 = 1 // omega^0
 	for i := 0; i < n/2; i++ {
 		t := mul(omega_n, oFFT.get(i))
@@ -45,7 +45,7 @@ func nextPowerOfTwo(x uint64) uint64 {
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
 
-func time2freq(time block, length uint64) block {
+func time2freq(time block[uint64], length uint64) block[uint64] {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
 	time = time.slice(0, int(l)) // extend to length l
@@ -55,7 +55,7 @@ func time2freq(time block, length uint64) block {
 	return freq
 }
 
-func freq2time(freq block, length uint64) block {
+func freq2time(freq block[uint64], length uint64) block[uint64] {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
 	freq = freq.slice(0, int(l)) // extend to length l
