@@ -189,7 +189,7 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 	return fromTime(time)
 }
 
-func (a UintNTT) Sub(b UintNTT) UintNTT {
+func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 	l := max(len(a.Time), len(b.Time))
 	cTime := make(Block, l)
 	copy(cTime, a.Time)
@@ -200,11 +200,9 @@ func (a UintNTT) Sub(b UintNTT) UintNTT {
 		cTime[i] = x % base
 		cTime[i+1] = x / base
 	}
-	if cTime[len(cTime)-1] < 1 {
-		panic("subtraction overflow")
-	}
+	overflow := cTime[len(cTime)-1] < 1
 	cTime = cTime[:len(cTime)-1]
-	return fromTime(cTime)
+	return fromTime(cTime), overflow
 }
 
 func (a UintNTT) IsZero() bool {
@@ -250,7 +248,10 @@ func (a UintNTT) inv(n int) UintNTT {
 	// x_{n+1} = 2 x_n - (a x_n^2) / m
 	for {
 		// a / m = a.shiftRight(N/2)
-		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(n))
+		x1, overflow := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(n))
+		if overflow {
+			panic("subtraction overflow")
+		}
 		if x1.Cmp(x) == 0 {
 			break
 		}
@@ -267,7 +268,11 @@ func (a UintNTT) Div(b UintNTT) UintNTT {
 
 func (a UintNTT) Mod(b UintNTT) UintNTT {
 	x := a.Div(b)
-	return a.Sub(b.Mul(x))
+	m, overflow := a.Sub(b.Mul(x))
+	if overflow {
+		panic("subtraction overflow")
+	}
+	return m
 }
 
 func nextPowerOfTwo(x uint64) uint64 {
