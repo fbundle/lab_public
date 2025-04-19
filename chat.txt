@@ -10,12 +10,12 @@ func Make[T any](n int) Vec[T] {
 	return Vec[T]{make([]T, n)}
 }
 
-func Map[T1 any, T2 any](v Vec[T1], f func(T1) T2) Vec[T2] {
-	w := Make[T2](v.Len())
+func (v Vec[T]) Iter(f func(int, T) bool) {
 	for i := 0; i < v.Len(); i++ {
-		w = w.Set(i, f(v.Get(i)))
+		if !f(i, v.Get(i)) {
+			break
+		}
 	}
-	return w
 }
 
 func (v Vec[T]) Clone() Vec[T] {
