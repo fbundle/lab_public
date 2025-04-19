@@ -48,20 +48,20 @@ func nextPowerOfTwo(x uint64) uint64 {
 
 func time2freq(time vec.Vec[uint64], length uint64) vec.Vec[uint64] {
 	// extend  into powers of 2
-	l := nextPowerOfTwo(length)
-	time = time.Slice(0, int(l)) // extend to length l
+	n := nextPowerOfTwo(length)
+	time = time.Slice(0, int(n)) // extend to length n
 
-	omega := getPrimitiveRoot(l)
+	omega := getPrimitiveRoot(n)
 	freq := trimZeros(CooleyTukeyFFT(time, omega))
 	return freq
 }
 
 func freq2time(freq vec.Vec[uint64], length uint64) vec.Vec[uint64] {
 	// extend  into powers of 2
-	l := nextPowerOfTwo(length)
-	freq = freq.Slice(0, int(l)) // extend to length l
-	omega := getPrimitiveRoot(l)
-	il := inv(l)
+	n := nextPowerOfTwo(length)
+	freq = freq.Slice(0, int(n)) // extend to length n
+	omega := getPrimitiveRoot(n)
+	il := inv(n)
 
 	time := CooleyTukeyFFT(freq, inv(omega))
 	for i := 0; i < time.Len(); i++ {
