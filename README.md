@@ -12,9 +12,9 @@ implementation of $p$-adic integers
 - multiplication using FFT
 - division using Newton iteration
 
-## uint_ntt.go
+## uint_ntt.go and int_ntt.go
 
 - (almost) arbitrary precision integer ($4294967294 \times 16$ bits $\sim$ 8GB per integer)  
 - multiplication using FFT
 - division using Newton iteration
-- TODO : support negative integers
+- support negative integers

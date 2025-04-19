@@ -43,7 +43,7 @@ func testFib() {
 		return
 	}
 
-	fmt.Println(fib.Fib(uint_ntt.Zero, uint64(n)))
+	fmt.Println(fib.Fib(uint_ntt.UintNTT{}, uint64(n)))
 }
 
 func testEA() {

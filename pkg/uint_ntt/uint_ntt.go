@@ -19,22 +19,17 @@ func (b Block) get(i int) uint64 {
 	return b[i]
 }
 
-var zeroBlock []uint64
-
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
 	Time Block
 }
 
-var Zero UintNTT = FromUint64(0)
-var One UintNTT = FromUint64(1)
-
 func (a UintNTT) Zero() UintNTT {
-	return UintNTT{Time: zeroBlock}
+	return UintNTT{Time: Block{}}
 }
 
 func (a UintNTT) One() UintNTT {
-	return One
+	return FromUint64(1)
 }
 
 func FromUint64(x uint64) UintNTT {
@@ -229,7 +224,7 @@ func (a UintNTT) Cmp(b UintNTT) int {
 
 func (a UintNTT) shiftRight(n int) UintNTT {
 	if n > len(a.Time) {
-		return Zero
+		return UintNTT{}
 	}
 	l := len(a.Time) - n
 	cTime := make(Block, l)
