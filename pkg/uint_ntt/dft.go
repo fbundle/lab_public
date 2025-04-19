@@ -6,6 +6,10 @@ import (
 	"sync"
 )
 
+const (
+	FFT_PARALLEL_THRESHOLD = 8192
+)
+
 // CooleyTukeyFFT :Cooley-Tukey algorithm
 func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	n := x.Len()
@@ -23,7 +27,7 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	}
 	omega_2 := mul(omega, omega)
 	var eFFT, oFFT vec.Vec[uint64]
-	if n >= 8192 {
+	if n >= FFT_PARALLEL_THRESHOLD {
 		wg := sync.WaitGroup{}
 		wg.Add(2)
 		go func() {
