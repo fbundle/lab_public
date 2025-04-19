@@ -41,7 +41,7 @@ func (a UintNTT) Uint64() uint64 {
 }
 
 func fromTime(time Block) UintNTT {
-	// trim time
+	// reduce to base
 	var q, r uint64 = 0, 0
 	for i := 0; i < len(time); i++ {
 		q, r = time[i]/base, time[i]%base
@@ -51,12 +51,17 @@ func fromTime(time Block) UintNTT {
 		}
 	}
 	time = append(time, q)
-	for len(time) > 0 && time[len(time)-1] == 0 {
-		time = time[:len(time)-1]
-	}
+	time = trimZeros(time)
 	return UintNTT{
 		Time: time,
 	}
+}
+
+func trimZeros(block Block) Block {
+	for len(block) > 0 && block[len(block)-1] == 0 {
+		block = block[:len(block)-1]
+	}
+	return block
 }
 
 func FromString(s string) UintNTT {
@@ -289,11 +294,7 @@ func time2freq(time Block, length uint64) Block {
 	}
 
 	ω := getPrimitiveRoot(l)
-	freq := CooleyTukeyFFT(time, ω)
-
-	for len(freq) > 0 && freq[len(freq)-1] == 0 {
-		freq = freq[:len(freq)-1]
-	}
+	freq := trimZeros(CooleyTukeyFFT(time, ω))
 	return freq
 }
 
@@ -310,8 +311,6 @@ func freq2time(freq Block, length uint64) Block {
 		time = append(time, mul(f, inv(l)))
 	}
 
-	for len(time) > 0 && time[len(time)-1] == 0 {
-		time = time[:len(time)-1]
-	}
+	time = trimZeros(time)
 	return time
 }
