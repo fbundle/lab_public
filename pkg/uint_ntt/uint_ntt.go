@@ -198,9 +198,9 @@ func (a UintNTT) Sub(b UintNTT) UintNTT {
 		// x in [0, 2^{32}-1]
 		x := sub(cTime.get(i)+cTime.get(i+1)*base, b.Time.get(i))
 		cTime[i] = x % base
-		cTime[i+1] = x % base
+		cTime[i+1] = x / base
 	}
-	if cTime[len(cTime)-1] >= 1 {
+	if cTime[len(cTime)-1] < 1 {
 		panic("subtraction overflow")
 	}
 	cTime = cTime[:len(cTime)-1]
