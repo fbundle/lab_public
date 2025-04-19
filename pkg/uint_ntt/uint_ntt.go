@@ -37,7 +37,7 @@ func FromUint64(x uint64) UintNTT {
 }
 
 func (a UintNTT) Uint64() uint64 {
-	return a.Time[0] + a.Time[1]*base + a.Time[2]*base*base
+	return a.Time.get(0) + a.Time.get(1)*base + a.Time.get(2)*base*base + a.Time.get(3)*base*base*base
 }
 
 func fromTime(time Block) UintNTT {
