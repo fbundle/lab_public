@@ -6,20 +6,20 @@ import (
 	"sync/atomic"
 )
 
-func Map[T1 any, T2 any](v Vec[T1], f func(T1) T2) {
+func Map[T1 any, T2 any](v Vec[T1], f func(int, T1) T2) {
 	w := Make[T2](v.Len())
 	wg := sync.WaitGroup{}
 	for i := 0; i < v.Len(); i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			w.data[i] = f(v.data[i])
+			w.data[i] = f(i, v.data[i])
 		}(i)
 	}
 	wg.Wait()
 }
 
-func Filter[T any](v Vec[T], f func(T) bool) Vec[T] {
+func Filter[T any](v Vec[T], f func(int, T) bool) Vec[T] {
 	w := Make[T](v.Len())
 	n := atomic.Uint64{}
 	wg := sync.WaitGroup{}
@@ -27,7 +27,7 @@ func Filter[T any](v Vec[T], f func(T) bool) Vec[T] {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			if f(v.data[i]) {
+			if f(i, v.data[i]) {
 				nn := n.Add(1) - 1
 				w.data[nn] = v.data[i]
 			}
@@ -47,7 +47,7 @@ func nextPowerOfTwo(x uint64) uint64 {
 	}
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
-func Reduce[T any](w Vec[T], f func(T, T) T) T {
+func Reduce[T any](w Vec[T], f func(int, int, T, T) T) T {
 	v := w.Clone()
 	v = v.Slice(0, int(nextPowerOfTwo(uint64(v.Len()))))
 
@@ -58,7 +58,7 @@ func Reduce[T any](w Vec[T], f func(T, T) T) T {
 			wg.Add(1)
 			go func(i int, j int) {
 				defer wg.Done()
-				v.data[i] = f(v.data[i], v.data[j])
+				v.data[i] = f(i, j, v.data[i], v.data[j])
 			}(i, j)
 		}
 		wg.Wait()
