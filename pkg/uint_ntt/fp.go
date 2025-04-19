@@ -48,7 +48,7 @@ func mul(a uint64, b uint64) uint64 {
 }
 
 func pow(a uint64, n uint64) uint64 {
-	a, n = a%p, n%p
+	a = a % p
 
 	var x uint64 = 1
 	for n > 0 {
