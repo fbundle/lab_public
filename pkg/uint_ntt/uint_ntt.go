@@ -10,7 +10,7 @@ const (
 
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
-	time block[uint64]
+	time block[uint64] // polynomial in F_p[X]
 }
 
 func (a UintNTT) Zero() UintNTT {

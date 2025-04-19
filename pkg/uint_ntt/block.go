@@ -1,6 +1,6 @@
 package uint_ntt
 
-// block : polynomial in F_p[X]
+// block :
 type block[T any] struct {
 	data []T
 }
