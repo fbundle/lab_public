@@ -1435,6 +1435,7 @@ package uint_ntt
 
 import (
 	"ca/pkg/vend/uint128"
+	"sync"
 )
 
 // p : operations on finite field of order p
@@ -1443,12 +1444,17 @@ const (
 	p, g uint64 = 18446744069414584321, 7
 )
 
-var primitiveRootCache map[uint64]uint64 = map[uint64]uint64{}
+var (
+	primitiveRootCache     = map[uint64]uint64{}
+	primitiveRootCacheLock = sync.Mutex{}
+)
 
 func getPrimitiveRoot(n uint64) uint64 {
 	if (p-1)%n != 0 {
 		panic("n must divide p-1")
 	}
+	primitiveRootCacheLock.Lock()
+	defer primitiveRootCacheLock.Unlock()
 	if _, ok := primitiveRootCache[n]; !ok {
 		primitiveRootCache[n] = pow(g, (p-1)/n)
 	}
