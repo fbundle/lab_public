@@ -1187,12 +1187,11 @@ func (a UintNTT) pinv(n int) UintNTT {
 	if a.IsZero() {
 		panic("division by zero")
 	}
-	two := FromUint64(2)
 	x := FromUint64(1)
 	// Newton iteration
 	for {
-		// x_{n+1} = 2 x_n - (a x_n^2) / m
-		left := two.Mul(x)
+		// x_{n+1} = x_n + x_n - (a x_n^2) / m
+		left := x.Add(x)
 		right := a.Mul(x).Mul(x).shiftRight(n)
 		x1, ok := left.Sub(right)
 		if !ok {
