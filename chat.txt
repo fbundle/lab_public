@@ -1367,14 +1367,11 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	oFFT := CooleyTukeyFFT(o, omega_2)
 
 	y := vec.Make[uint64](n)
-	// var omega_pow uint64 = 1 // omega^0
 	for i := 0; i < n/2; i++ {
-		omega_pow := pow(omega, uint64(i))
 		j := i + n/2
-		t := mul(omega_pow, oFFT.Get(i))
+		t := mul(pow(omega, uint64(i)), oFFT.Get(i))
 		y = y.Set(i, add(eFFT.Get(i), t))
 		y = y.Set(j, sub(eFFT.Get(i), t))
-		// omega_pow = mul(omega_pow, omega)
 	}
 	return y
 }
