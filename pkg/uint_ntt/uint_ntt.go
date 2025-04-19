@@ -8,13 +8,15 @@ const (
 	base = 1 << 16 // pick base = 2^d, max_n * base * base < p so that multiplication won't overflow
 )
 
+type block = vec[uint64]
+
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
-	time vec[uint64] // polynomial in F_p[X]
+	time block // polynomial in F_p[X]
 }
 
 func (a UintNTT) Zero() UintNTT {
-	return UintNTT{time: vec[uint64]{}}
+	return UintNTT{time: block{}}
 }
 
 func (a UintNTT) One() UintNTT {
@@ -29,7 +31,7 @@ func (a UintNTT) Uint64() uint64 {
 	return a.time.get(0) + a.time.get(1)*base + a.time.get(2)*base*base + a.time.get(3)*base*base*base
 }
 
-func fromTime(time vec[uint64]) UintNTT {
+func fromTime(time block) UintNTT {
 	// reduce to base
 	var q, r uint64 = 0, 0
 	for i := 0; i < time.len(); i++ {
@@ -47,11 +49,11 @@ func fromTime(time vec[uint64]) UintNTT {
 }
 
 // trimZeros : trim zeros at high degree
-func trimZeros(block vec[uint64]) vec[uint64] {
-	for block.len() > 0 && block.get(block.len()-1) == 0 {
-		block = block.slice(0, block.len()-1)
+func trimZeros(time block) block {
+	for time.len() > 0 && time.get(time.len()-1) == 0 {
+		time = time.slice(0, time.len()-1)
 	}
-	return block
+	return time
 }
 
 func FromString(s string) UintNTT {
@@ -92,7 +94,7 @@ func FromString(s string) UintNTT {
 		base16 = append(base16, byte(0))
 	}
 
-	time := vec[uint64]{}
+	time := block{}
 	for i := 0; i < len(base16); i += 4 {
 		var x uint64 = 0
 		x += uint64(base16[i])
@@ -169,7 +171,7 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 	l := nextPowerOfTwo(uint64(a.time.len() + b.time.len()))
 
 	aFreq, bFreq := time2freq(a.time, l), time2freq(b.time, l)
-	freq := vec[uint64]{}
+	freq := block{}
 	for i := 0; i < int(l); i++ {
 		freq = freq.set(i, mul(aFreq.get(i), bFreq.get(i)))
 	}

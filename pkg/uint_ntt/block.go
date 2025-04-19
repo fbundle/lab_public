@@ -9,37 +9,45 @@ func makeVec[T any](n int) vec[T] {
 	return vec[T]{make([]T, n)}
 }
 
-func (b vec[T]) clone() vec[T] {
-	c := makeVec[T](b.len())
-	copy(c.data, b.data)
-	return c
+func mapVec[T1 any, T2 any](v vec[T1], f func(T1) T2) vec[T2] {
+	w := makeVec[T2](v.len())
+	for i := 0; i < v.len(); i++ {
+		w = w.set(i, f(v.get(i)))
+	}
+	return w
 }
 
-func (b vec[T]) len() int {
-	return len(b.data)
+func (v vec[T]) clone() vec[T] {
+	w := makeVec[T](v.len())
+	copy(w.data, v.data)
+	return w
 }
 
-func (b vec[T]) get(i int) T {
-	if i >= b.len() {
+func (v vec[T]) len() int {
+	return len(v.data)
+}
+
+func (v vec[T]) get(i int) T {
+	if i >= v.len() {
 		var zero T
 		return zero
 	}
-	return b.data[i]
+	return v.data[i]
 }
 
-func (b vec[T]) set(i int, v T) vec[T] {
-	for i >= b.len() {
+func (v vec[T]) set(i int, x T) vec[T] {
+	for i >= v.len() {
 		var zero T
-		b.data = append(b.data, zero)
+		v.data = append(v.data, zero)
 	}
-	b.data[i] = v
-	return b
+	v.data[i] = x
+	return v
 }
 
-func (b vec[T]) slice(beg int, end int) vec[T] {
-	for end > b.len()-1 {
+func (v vec[T]) slice(beg int, end int) vec[T] {
+	for end > v.len()-1 {
 		var zero T
-		b.data = append(b.data, zero)
+		v.data = append(v.data, zero)
 	}
-	return vec[T]{b.data[beg:end]}
+	return vec[T]{v.data[beg:end]}
 }
