@@ -956,11 +956,11 @@ import (
 
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
-	Time Block
+	time block
 }
 
 func (a UintNTT) Zero() UintNTT {
-	return UintNTT{Time: Block{}}
+	return UintNTT{time: block{}}
 }
 
 func (a UintNTT) One() UintNTT {
@@ -972,10 +972,10 @@ func FromUint64(x uint64) UintNTT {
 }
 
 func (a UintNTT) Uint64() uint64 {
-	return a.Time.get(0) + a.Time.get(1)*base + a.Time.get(2)*base*base + a.Time.get(3)*base*base*base
+	return a.time.get(0) + a.time.get(1)*base + a.time.get(2)*base*base + a.time.get(3)*base*base*base
 }
 
-func fromTime(time Block) UintNTT {
+func fromTime(time block) UintNTT {
 	// reduce to base
 	var q, r uint64 = 0, 0
 	for i := 0; i < time.len(); i++ {
@@ -988,12 +988,12 @@ func fromTime(time Block) UintNTT {
 	time = time.set(time.len(), q)
 	time = trimZeros(time)
 	return UintNTT{
-		Time: time,
+		time: time,
 	}
 }
 
 // trimZeros : trim zeros at high degree
-func trimZeros(block Block) Block {
+func trimZeros(block block) block {
 	for block.len() > 0 && block.get(block.len()-1) == 0 {
 		block = block.slice(0, block.len()-1)
 	}
@@ -1038,7 +1038,7 @@ func FromString(s string) UintNTT {
 		base16 = append(base16, byte(0))
 	}
 
-	time := Block{}
+	time := block{}
 	for i := 0; i < len(base16); i += 4 {
 		var x uint64 = 0
 		x += uint64(base16[i])
@@ -1057,8 +1057,8 @@ func (a UintNTT) String() string {
 	}
 	// convert base 2^16 to base16 (2^4)
 	var base16 []byte = nil
-	for i := 0; i < a.Time.len(); i++ {
-		x := a.Time.get(i)
+	for i := 0; i < a.time.len(); i++ {
+		x := a.time.get(i)
 		base16 = append(base16, byte(x%16))
 		x /= 16
 		base16 = append(base16, byte(x%16))
@@ -1103,19 +1103,19 @@ func (a UintNTT) String() string {
 }
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
-	l := max(a.Time.len(), b.Time.len())
+	l := max(a.time.len(), b.time.len())
 	cTime := makeBlock(l)
 	for i := 0; i < l; i++ {
-		cTime = cTime.set(i, add(a.Time.get(i), b.Time.get(i)))
+		cTime = cTime.set(i, add(a.time.get(i), b.time.get(i)))
 	}
 	return fromTime(cTime)
 }
 
 func (a UintNTT) Mul(b UintNTT) UintNTT {
-	l := nextPowerOfTwo(uint64(a.Time.len() + b.Time.len()))
+	l := nextPowerOfTwo(uint64(a.time.len() + b.time.len()))
 
-	aFreq, bFreq := time2freq(a.Time, l), time2freq(b.Time, l)
-	freq := Block{}
+	aFreq, bFreq := time2freq(a.time, l), time2freq(b.time, l)
+	freq := block{}
 	for i := 0; i < int(l); i++ {
 		freq = freq.set(i, mul(aFreq.get(i), bFreq.get(i)))
 	}
@@ -1126,11 +1126,11 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 // Sub - subtract b from a using long subtraction
 // if a < b, return 2nd complement and false
 func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
-	l := max(a.Time.len(), b.Time.len())
-	cTime := a.Time.clone()
+	l := max(a.time.len(), b.time.len())
+	cTime := a.time.clone()
 	var borrow uint64 = 0 // either zero or one
 	for i := 0; i < l; i++ {
-		x := sub(cTime.get(i)+base, b.Time.get(i)+borrow) // x in [0, 2^{32}-1]
+		x := sub(cTime.get(i)+base, b.time.get(i)+borrow) // x in [0, 2^{32}-1]
 		cTime = cTime.set(i, x%base)
 		borrow = 1 - x/base
 	}
@@ -1138,8 +1138,8 @@ func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 }
 
 func (a UintNTT) IsZero() bool {
-	for i := 0; i < a.Time.len(); i++ {
-		if a.Time.get(i) != 0 {
+	for i := 0; i < a.time.len(); i++ {
+		if a.time.get(i) != 0 {
 			return false
 		}
 	}
@@ -1147,12 +1147,12 @@ func (a UintNTT) IsZero() bool {
 }
 
 func (a UintNTT) Cmp(b UintNTT) int {
-	l := max(a.Time.len(), b.Time.len())
+	l := max(a.time.len(), b.time.len())
 	for i := l - 1; i >= 0; i-- {
-		if a.Time.get(i) > b.Time.get(i) {
+		if a.time.get(i) > b.time.get(i) {
 			return +1
 		}
-		if a.Time.get(i) < b.Time.get(i) {
+		if a.time.get(i) < b.time.get(i) {
 			return -1
 		}
 	}
@@ -1160,10 +1160,10 @@ func (a UintNTT) Cmp(b UintNTT) int {
 }
 
 func (a UintNTT) shiftRight(n int) UintNTT {
-	if n > a.Time.len() {
+	if n > a.time.len() {
 		return UintNTT{}
 	}
-	cTime := a.Time.clone()
+	cTime := a.time.clone()
 	cTime = cTime.slice(n, cTime.len())
 	return fromTime(cTime)
 }
@@ -1195,7 +1195,7 @@ func (a UintNTT) pinv(n int) UintNTT {
 }
 
 func (a UintNTT) Div(b UintNTT) UintNTT {
-	n := max(a.Time.len(), b.Time.len()) + 1 // large enough
+	n := max(a.time.len(), b.time.len()) + 1 // large enough
 	x := b.pinv(n)
 	return a.Mul(x).shiftRight(n)
 }
@@ -1217,7 +1217,7 @@ import (
 )
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(x Block, omega uint64) Block {
+func CooleyTukeyFFT(x block, omega uint64) block {
 	n := x.len()
 	if n == 1 {
 		return x
@@ -1257,7 +1257,7 @@ func nextPowerOfTwo(x uint64) uint64 {
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
 
-func time2freq(time Block, length uint64) Block {
+func time2freq(time block, length uint64) block {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
 	for time.len() < int(l) {
@@ -1269,7 +1269,7 @@ func time2freq(time Block, length uint64) Block {
 	return freq
 }
 
-func freq2time(freq Block, length uint64) Block {
+func freq2time(freq block, length uint64) block {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
 	for freq.len() < int(l) {
@@ -1436,49 +1436,49 @@ const (
 	max_n = 4294967294
 )
 
-// Block : polynomial in F_p[X]
-type Block struct {
-	block []uint64
+// block : polynomial in F_p[X]
+type block struct {
+	data []uint64
 }
 
-func makeBlock(n int) Block {
-	return Block{make([]uint64, n)}
+func makeBlock(n int) block {
+	return block{make([]uint64, n)}
 }
 
-func (b Block) clone() Block {
+func (b block) clone() block {
 	c := makeBlock(b.len())
-	copy(c.block, b.block)
+	copy(c.data, b.data)
 	return c
 }
 
-func (b Block) append(v uint64) Block {
-	b.block = append(b.block, v)
+func (b block) append(v uint64) block {
+	b.data = append(b.data, v)
 	return b
 }
 
-func (b Block) len() int {
-	return len(b.block)
+func (b block) len() int {
+	return len(b.data)
 }
 
-func (b Block) get(i int) uint64 {
+func (b block) get(i int) uint64 {
 	if i >= b.len() {
 		return 0
 	}
-	return b.block[i]
+	return b.data[i]
 }
 
-func (b Block) set(i int, v uint64) Block {
+func (b block) set(i int, v uint64) block {
 	for i >= b.len() {
-		b.block = append(b.block, 0)
+		b.data = append(b.data, 0)
 		if b.len() > max_n {
 			panic("too many blocks")
 		}
 	}
-	b.block[i] = v
+	b.data[i] = v
 	return b
 }
 
-func (b Block) slice(beg int, end int) Block {
-	return Block{b.block[beg:end]}
+func (b block) slice(beg int, end int) block {
+	return block{b.data[beg:end]}
 }
 do you have any comment on this?

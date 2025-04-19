@@ -5,7 +5,7 @@ import (
 )
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(x Block, omega uint64) Block {
+func CooleyTukeyFFT(x block, omega uint64) block {
 	n := x.len()
 	if n == 1 {
 		return x
@@ -45,7 +45,7 @@ func nextPowerOfTwo(x uint64) uint64 {
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
 
-func time2freq(time Block, length uint64) Block {
+func time2freq(time block, length uint64) block {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
 	for time.len() < int(l) {
@@ -57,7 +57,7 @@ func time2freq(time Block, length uint64) Block {
 	return freq
 }
 
-func freq2time(freq Block, length uint64) Block {
+func freq2time(freq block, length uint64) block {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
 	for freq.len() < int(l) {

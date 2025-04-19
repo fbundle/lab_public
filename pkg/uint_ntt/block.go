@@ -5,48 +5,48 @@ const (
 	max_n = 4294967294
 )
 
-// Block : polynomial in F_p[X]
-type Block struct {
-	block []uint64
+// block : polynomial in F_p[X]
+type block struct {
+	data []uint64
 }
 
-func makeBlock(n int) Block {
-	return Block{make([]uint64, n)}
+func makeBlock(n int) block {
+	return block{make([]uint64, n)}
 }
 
-func (b Block) clone() Block {
+func (b block) clone() block {
 	c := makeBlock(b.len())
-	copy(c.block, b.block)
+	copy(c.data, b.data)
 	return c
 }
 
-func (b Block) append(v uint64) Block {
-	b.block = append(b.block, v)
+func (b block) append(v uint64) block {
+	b.data = append(b.data, v)
 	return b
 }
 
-func (b Block) len() int {
-	return len(b.block)
+func (b block) len() int {
+	return len(b.data)
 }
 
-func (b Block) get(i int) uint64 {
+func (b block) get(i int) uint64 {
 	if i >= b.len() {
 		return 0
 	}
-	return b.block[i]
+	return b.data[i]
 }
 
-func (b Block) set(i int, v uint64) Block {
+func (b block) set(i int, v uint64) block {
 	for i >= b.len() {
-		b.block = append(b.block, 0)
+		b.data = append(b.data, 0)
 		if b.len() > max_n {
 			panic("too many blocks")
 		}
 	}
-	b.block[i] = v
+	b.data[i] = v
 	return b
 }
 
-func (b Block) slice(beg int, end int) Block {
-	return Block{b.block[beg:end]}
+func (b block) slice(beg int, end int) block {
+	return block{b.data[beg:end]}
 }
