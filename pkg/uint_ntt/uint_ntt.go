@@ -189,7 +189,7 @@ func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 	l := max(len(a.Time), len(b.Time))
 	cTime := make(Block, l)
 	copy(cTime, a.Time)
-	var borrow uint64 = 0
+	var borrow uint64 = 0 // either zero or one
 	for i := 0; i < l; i++ {
 		// x in [0, 2^{32}-1]
 		x := sub(cTime.get(i)+base, b.Time.get(i)+borrow)
