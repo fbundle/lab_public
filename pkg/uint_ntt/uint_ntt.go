@@ -184,6 +184,7 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 	return fromTime(time)
 }
 
+// Sub - subtract b from a using long subtraction
 func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 	l := max(len(a.Time), len(b.Time))
 	cTime := make(Block, l)
@@ -195,9 +196,8 @@ func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 		cTime[i] = x % base
 		cTime[i+1] = x / base
 	}
-	overflow := cTime[len(cTime)-1] < 1
-	cTime = cTime[:len(cTime)-1]
-	return fromTime(cTime), overflow
+	cTime, tail := cTime[:len(cTime)-1], cTime[len(cTime)-1]
+	return fromTime(cTime), tail == 1
 }
 
 func (a UintNTT) IsZero() bool {
@@ -243,8 +243,8 @@ func (a UintNTT) inv(n int) UintNTT {
 	// x_{n+1} = 2 x_n - (a x_n^2) / m
 	for {
 		// a / m = a.shiftRight(N/2)
-		x1, overflow := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(n))
-		if overflow {
+		x1, ok := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(n))
+		if !ok {
 			panic("subtraction overflow")
 		}
 		if x1.Cmp(x) == 0 {
@@ -263,8 +263,8 @@ func (a UintNTT) Div(b UintNTT) UintNTT {
 
 func (a UintNTT) Mod(b UintNTT) UintNTT {
 	x := a.Div(b)
-	m, overflow := a.Sub(b.Mul(x))
-	if overflow {
+	m, ok := a.Sub(b.Mul(x))
+	if !ok {
 		panic("subtraction overflow")
 	}
 	return m
