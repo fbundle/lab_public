@@ -68,5 +68,5 @@ func testVec() {
 }
 
 func main() {
-	testVec()
+	testUintNTT()
 }

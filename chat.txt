@@ -1099,10 +1099,14 @@ func (a UintNTT) Uint64() uint64 {
 
 func fromTime(time block) UintNTT {
 	// reduce to base
-	for i := 0; i < time.Len(); i++ {
+	originalLen := time.Len()
+	for i := 0; i < originalLen; i++ {
 		q, r := time.Get(i)/base, time.Get(i)%base
 		time = time.Set(i, r)
 		time = time.Set(i+1, add(time.Get(i+1), q))
+	}
+	if time.Len() == 0 {
+		return UintNTT{}
 	}
 	for time.Get(time.Len()-1) >= base {
 		q, r := time.Get(time.Len()-1)/base, time.Get(time.Len()-1)%base
