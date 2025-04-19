@@ -7,7 +7,7 @@ const (
 
 // block : polynomial in F_p[X]
 type block struct {
-	data []uint64
+	data []uint64 // TODO - optimize this
 }
 
 func makeBlock(n int) block {
