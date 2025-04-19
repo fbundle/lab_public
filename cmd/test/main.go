@@ -49,18 +49,7 @@ func testUintNTT() {
 	z := uint_ntt.FromString("0x539543980a084524")
 	fmt.Println(z.Add(x).Mod(x))
 }
-func testUint1792() {
-	x := uint1792.FromString("0x318346193417412890342342")
-	y := uint1792.FromString(x.String())
-	fmt.Println(x, y)
-	fmt.Println(x.Add(y))
-	fmt.Println(x.Mul(y))
-	fmt.Println(x.Sub(y))
-	z := uint1792.FromString("0x539543980a084524")
-	fmt.Println(z.Add(x).Mod(x))
-}
 
 func main() {
-	testUint1792()
 	testUintNTT()
 }
