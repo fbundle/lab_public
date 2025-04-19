@@ -6,23 +6,24 @@ import (
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
 func CooleyTukeyFFT(x Block, omega uint64) Block {
-	n := len(x)
+	n := x.len()
 	if n == 1 {
 		return x
 	}
 	if n <= 0 || n%2 != 0 {
 		panic("n must be power of 2")
 	}
-	var e, o Block // even and odd values of x
+	// even and odd values of x
+	e, o := makeBlock(n/2), makeBlock(n/2)
 	for i := 0; i < n/2; i++ {
-		e = append(e, x.get(2*i))
-		o = append(o, x.get(2*i+1))
+		e = e.set(i, x.get(2*i))
+		o = o.set(i, x.get(2*i+1))
 	}
 	omega_2 := mul(omega, omega)
 	eFFT := CooleyTukeyFFT(e, omega_2)
 	oFFT := CooleyTukeyFFT(o, omega_2)
 
-	y := make(Block, n)
+	y := makeBlock(n)
 	var omega_n uint64 = 1 // omega^0
 	for i := 0; i < n/2; i++ {
 		t := mul(omega_n, oFFT.get(i))
@@ -47,8 +48,8 @@ func nextPowerOfTwo(x uint64) uint64 {
 func time2freq(time Block, length uint64) Block {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
-	for len(time) < int(l) {
-		time = append(time, 0)
+	for time.len() < int(l) {
+		time = time.append(0)
 	}
 
 	ω := getPrimitiveRoot(l)
@@ -59,14 +60,16 @@ func time2freq(time Block, length uint64) Block {
 func freq2time(freq Block, length uint64) Block {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
-	for len(freq) < int(l) {
-		freq = append(freq, 0)
+	for freq.len() < int(l) {
+		freq = freq.append(0)
 	}
 
-	time := Block{}
 	ω := getPrimitiveRoot(l)
 	il := inv(l)
-	for i, f := range CooleyTukeyFFT(freq, inv(ω)) {
+
+	time := CooleyTukeyFFT(freq, inv(ω))
+	for i := 0; i < time.len(); i++ {
+		f := time.get(i)
 		time = time.set(i, mul(f, il))
 	}
 

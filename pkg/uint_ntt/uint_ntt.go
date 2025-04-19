@@ -18,7 +18,7 @@ func (a UintNTT) One() UintNTT {
 }
 
 func FromUint64(x uint64) UintNTT {
-	return fromTime(Block{x})
+	return fromTime(makeBlock(1).set(0, x))
 }
 
 func (a UintNTT) Uint64() uint64 {
@@ -28,14 +28,14 @@ func (a UintNTT) Uint64() uint64 {
 func fromTime(time Block) UintNTT {
 	// reduce to base
 	var q, r uint64 = 0, 0
-	for i := 0; i < len(time); i++ {
-		q, r = time[i]/base, time[i]%base
-		time[i] = r
-		if i+1 < len(time) {
-			time[i+1] = add(time[i+1], q)
+	for i := 0; i < time.len(); i++ {
+		q, r = time.get(i)/base, time.get(i)%base
+		time = time.set(i, r)
+		if i+1 < time.len() {
+			time = time.set(i+1, add(time.get(i+1), q))
 		}
 	}
-	time = time.set(len(time), q)
+	time = time.set(time.len(), q)
 	time = trimZeros(time)
 	return UintNTT{
 		Time: time,
@@ -44,8 +44,8 @@ func fromTime(time Block) UintNTT {
 
 // trimZeros : trim zeros at high degree
 func trimZeros(block Block) Block {
-	for len(block) > 0 && block[len(block)-1] == 0 {
-		block = block[:len(block)-1]
+	for block.len() > 0 && block.get(block.len()-1) == 0 {
+		block = block.slice(0, block.len()-1)
 	}
 	return block
 }
@@ -107,8 +107,8 @@ func (a UintNTT) String() string {
 	}
 	// convert base 2^16 to base16 (2^4)
 	var base16 []byte = nil
-	for i := 0; i < len(a.Time); i++ {
-		x := a.Time[i]
+	for i := 0; i < a.Time.len(); i++ {
+		x := a.Time.get(i)
 		base16 = append(base16, byte(x%16))
 		x /= 16
 		base16 = append(base16, byte(x%16))
@@ -153,16 +153,16 @@ func (a UintNTT) String() string {
 }
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
-	l := max(len(a.Time), len(b.Time))
-	cTime := make(Block, l)
+	l := max(a.Time.len(), b.Time.len())
+	cTime := makeBlock(l)
 	for i := 0; i < l; i++ {
-		cTime[i] = add(a.Time.get(i), b.Time.get(i))
+		cTime = cTime.set(i, add(a.Time.get(i), b.Time.get(i)))
 	}
 	return fromTime(cTime)
 }
 
 func (a UintNTT) Mul(b UintNTT) UintNTT {
-	l := nextPowerOfTwo(uint64(len(a.Time) + len(b.Time)))
+	l := nextPowerOfTwo(uint64(a.Time.len() + b.Time.len()))
 
 	aFreq, bFreq := time2freq(a.Time, l), time2freq(b.Time, l)
 	freq := Block{}
@@ -176,21 +176,20 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 // Sub - subtract b from a using long subtraction
 // if a < b, return 2nd complement and false
 func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
-	l := max(len(a.Time), len(b.Time))
-	cTime := make(Block, l)
-	copy(cTime, a.Time)
+	l := max(a.Time.len(), b.Time.len())
+	cTime := a.Time.clone()
 	var borrow uint64 = 0 // either zero or one
 	for i := 0; i < l; i++ {
 		x := sub(cTime.get(i)+base, b.Time.get(i)+borrow) // x in [0, 2^{32}-1]
-		cTime[i] = x % base
+		cTime = cTime.set(i, x%base)
 		borrow = 1 - x/base
 	}
 	return fromTime(cTime), borrow == 0
 }
 
 func (a UintNTT) IsZero() bool {
-	for i := 0; i < len(a.Time); i++ {
-		if a.Time[i] != 0 {
+	for i := 0; i < a.Time.len(); i++ {
+		if a.Time.get(i) != 0 {
 			return false
 		}
 	}
@@ -198,7 +197,7 @@ func (a UintNTT) IsZero() bool {
 }
 
 func (a UintNTT) Cmp(b UintNTT) int {
-	l := max(len(a.Time), len(b.Time))
+	l := max(a.Time.len(), b.Time.len())
 	for i := l - 1; i >= 0; i-- {
 		if a.Time.get(i) > b.Time.get(i) {
 			return +1
@@ -211,12 +210,11 @@ func (a UintNTT) Cmp(b UintNTT) int {
 }
 
 func (a UintNTT) shiftRight(n int) UintNTT {
-	if n > len(a.Time) {
+	if n > a.Time.len() {
 		return UintNTT{}
 	}
-	l := len(a.Time) - n
-	cTime := make(Block, l)
-	copy(cTime, a.Time[n:])
+	cTime := a.Time.clone()
+	cTime = cTime.slice(n, cTime.len())
 	return fromTime(cTime)
 }
 
@@ -247,7 +245,7 @@ func (a UintNTT) pinv(n int) UintNTT {
 }
 
 func (a UintNTT) Div(b UintNTT) UintNTT {
-	n := max(len(a.Time), len(b.Time)) + 1 // large enough
+	n := max(a.Time.len(), b.Time.len()) + 1 // large enough
 	x := b.pinv(n)
 	return a.Mul(x).shiftRight(n)
 }
