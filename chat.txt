@@ -1438,17 +1438,21 @@ const (
 // Block : polynomial in F_p[X]
 type Block []uint64
 
+func (b Block) len() int {
+	return len(b)
+}
+
 func (b Block) get(i int) uint64 {
-	if i >= len(b) {
+	if i >= b.len() {
 		return 0
 	}
 	return b[i]
 }
 
 func (b Block) set(i int, v uint64) Block {
-	for i >= len(b) {
+	for i >= b.len() {
 		b = append(b, 0)
-		if len(b) > max_n {
+		if b.len() > max_n {
 			panic("too many blocks")
 		}
 	}
