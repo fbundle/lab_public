@@ -5,20 +5,6 @@ import (
 	"strings"
 )
 
-const (
-	base = 1 << 16 // pick base = 2^d, N * base * base < p so that multiplication won't overflow
-)
-
-// Block : polynomial in F_p[X]
-type Block []uint64
-
-func (b Block) get(i int) uint64 {
-	if i >= len(b) {
-		return 0
-	}
-	return b[i]
-}
-
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
 	Time Block
@@ -50,7 +36,8 @@ func fromTime(time Block) UintNTT {
 			time[i+1] = add(time[i+1], q)
 		}
 	}
-	time = append(time, q)
+	// time = append(time, q)
+	time = time.set(len(time), q)
 	time = trimZeros(time)
 	return UintNTT{
 		Time: time,
@@ -111,7 +98,8 @@ func FromString(s string) UintNTT {
 		x += uint64(base16[i+1]) * 16
 		x += uint64(base16[i+2]) * 16 * 16
 		x += uint64(base16[i+3]) * 16 * 16 * 16
-		time = append(time, x)
+		time = time.set(i/4, x)
+		// time = append(time, x)
 	}
 
 	return fromTime(time)
@@ -183,7 +171,8 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 	aFreq, bFreq := time2freq(a.Time, l), time2freq(b.Time, l)
 	freq := Block{}
 	for i := 0; i < int(l); i++ {
-		freq = append(freq, mul(aFreq.get(i), bFreq.get(i)))
+		// freq = append(freq, mul(aFreq.get(i), bFreq.get(i)))
+		freq = freq.set(i, mul(aFreq.get(i), bFreq.get(i)))
 	}
 	time := freq2time(freq, l)
 	return fromTime(time)
@@ -307,8 +296,9 @@ func freq2time(freq Block, length uint64) Block {
 
 	time := Block{}
 	ω := getPrimitiveRoot(l)
-	for _, f := range CooleyTukeyFFT(freq, inv(ω)) {
-		time = append(time, mul(f, inv(l)))
+	il := inv(l)
+	for i, f := range CooleyTukeyFFT(freq, inv(ω)) {
+		time = time.set(i, mul(f, il))
 	}
 
 	time = trimZeros(time)
