@@ -1275,6 +1275,9 @@ func (a UintNTT) IsZero() bool {
 
 func (a UintNTT) Cmp(b UintNTT) int {
 	l := max(a.time.Len(), b.time.Len())
+	if l == 0 {
+		return 0
+	}
 	for i := l - 1; i >= 0; i-- {
 		if a.time.Get(i) > b.time.Get(i) {
 			return +1
