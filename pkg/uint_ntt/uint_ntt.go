@@ -266,6 +266,7 @@ func (a UintNTT) Mod(b UintNTT) UintNTT {
 	x := a.Div(b)
 	m, ok := a.Sub(b.Mul(x))
 	if !ok {
+		// this will not happen
 		panic("subtraction overflow")
 	}
 	return m
