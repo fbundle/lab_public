@@ -51,14 +51,12 @@ func trimZeros(block Block) Block {
 }
 
 func FromString(s string) UintNTT {
+	s = strings.ToLower(s)
 	if s[0:2] != "0x" {
-		panic("string does not start with 0x")
+		panic("string must start with 0x")
 	}
-	s = strings.ToLower(s[2:])
+	s = s[2:]
 
-	if len(s) > 448 {
-		panic("string too long")
-	}
 	// convert string to base16
 	var base16 []byte
 	toBase16 := map[string]byte{
@@ -176,6 +174,7 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 }
 
 // Sub - subtract b from a using long subtraction
+// if a < b, return 2nd complement and false
 func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 	l := max(len(a.Time), len(b.Time))
 	cTime := make(Block, l)
