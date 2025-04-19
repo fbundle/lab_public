@@ -59,6 +59,21 @@ func (a IntNTT) Div(b IntNTT) IntNTT {
 	}
 }
 
+func (a IntNTT) Mod(b IntNTT) IntNTT {
+	if b.Neg || b.IsZero() {
+		panic("only mod positive number")
+	}
+
+	mod := IntNTT{
+		Abs: a.Abs.Mod(b.Abs),
+		Neg: a.Neg,
+	}
+	if mod.Neg {
+		mod = mod.Add(b)
+	}
+	return mod
+}
+
 func (a IntNTT) Equal(b IntNTT) bool {
 	if a.IsZero() && b.IsZero() {
 		return true
