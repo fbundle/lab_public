@@ -53,7 +53,7 @@ import (
 	"sync/atomic"
 )
 
-func Map[T1 any, T2 any](v Vec[T1], f func(int, T1) T2) {
+func Map[T1 any, T2 any](v Vec[T1], f func(i int, x T1) (y T2)) Vec[T2] {
 	w := Make[T2](v.Len())
 	wg := sync.WaitGroup{}
 	for i := 0; i < v.Len(); i++ {
@@ -64,9 +64,10 @@ func Map[T1 any, T2 any](v Vec[T1], f func(int, T1) T2) {
 		}(i)
 	}
 	wg.Wait()
+	return w
 }
 
-func Filter[T any](v Vec[T], f func(int, T) bool) Vec[T] {
+func Filter[T any](v Vec[T], f func(i int, x T) bool) Vec[T] {
 	w := Make[T](v.Len())
 	n := atomic.Uint64{}
 	wg := sync.WaitGroup{}
@@ -94,7 +95,7 @@ func nextPowerOfTwo(x uint64) uint64 {
 	}
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
-func Reduce[T any](w Vec[T], f func(int, int, T, T) T) T {
+func Reduce[T any](w Vec[T], f func(i int, j int, x T, y T) T) T {
 	v := w.Clone()
 	v = v.Slice(0, int(nextPowerOfTwo(uint64(v.Len()))))
 
@@ -109,6 +110,7 @@ func Reduce[T any](w Vec[T], f func(int, int, T, T) T) T {
 			}(i, j)
 		}
 		wg.Wait()
+		v = v.Slice(0, v.Len()/2)
 	}
 	return v.data[0]
 }

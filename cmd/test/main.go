@@ -6,6 +6,7 @@ import (
 	"ca/pkg/padic"
 	"ca/pkg/ring"
 	"ca/pkg/uint_ntt"
+	"ca/pkg/vec"
 	"fmt"
 	"os"
 	"strconv"
@@ -50,6 +51,22 @@ func testUintNTT() {
 	fmt.Println(z.Add(x).Mod(x))
 }
 
+func testVec() {
+	var v vec.Vec[int]
+	v = vec.Map[int, int](vec.Make[int](64), func(i int, x int) int {
+		return 64 - i
+	})
+	fmt.Println(v)
+	v = vec.Filter[int](v, func(i int, v int) bool {
+		return v%2 == 0
+	})
+	fmt.Println(v)
+	z := vec.Reduce(v, func(i int, j int, x int, y int) int {
+		return x + y
+	})
+	fmt.Println(z)
+}
+
 func main() {
-	testUintNTT()
+	testVec()
 }
