@@ -10,14 +10,6 @@ func Make[T any](n int) Vec[T] {
 	return Vec[T]{make([]T, n)}
 }
 
-func (v Vec[T]) Iter(f func(int, T) bool) {
-	for i := 0; i < v.Len(); i++ {
-		if !f(i, v.Get(i)) {
-			break
-		}
-	}
-}
-
 func (v Vec[T]) Clone() Vec[T] {
 	w := Make[T](v.Len())
 	copy(w.data, v.data)
@@ -1221,8 +1213,7 @@ func (a UintNTT) shiftRight(n int) UintNTT {
 	if n > a.time.Len() {
 		return UintNTT{}
 	}
-	cTime := a.time.Clone()
-	cTime = cTime.Slice(n, cTime.Len())
+	cTime := a.time.Slice(n, a.time.Len()).Clone()
 	return fromTime(cTime)
 }
 

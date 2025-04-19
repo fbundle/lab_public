@@ -8,14 +8,6 @@ func Make[T any](n int) Vec[T] {
 	return Vec[T]{make([]T, n)}
 }
 
-func (v Vec[T]) Iter(f func(int, T) bool) {
-	for i := 0; i < v.Len(); i++ {
-		if !f(i, v.Get(i)) {
-			break
-		}
-	}
-}
-
 func (v Vec[T]) Clone() Vec[T] {
 	w := Make[T](v.Len())
 	copy(w.data, v.data)

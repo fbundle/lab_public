@@ -218,8 +218,7 @@ func (a UintNTT) shiftRight(n int) UintNTT {
 	if n > a.time.Len() {
 		return UintNTT{}
 	}
-	cTime := a.time.Clone()
-	cTime = cTime.Slice(n, cTime.Len())
+	cTime := a.time.Slice(n, a.time.Len()).Clone()
 	return fromTime(cTime)
 }
 
