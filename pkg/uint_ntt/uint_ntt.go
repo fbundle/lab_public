@@ -10,11 +10,11 @@ const (
 
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
-	time block[uint64] // polynomial in F_p[X]
+	time vector[uint64] // polynomial in F_p[X]
 }
 
 func (a UintNTT) Zero() UintNTT {
-	return UintNTT{time: block[uint64]{}}
+	return UintNTT{time: vector[uint64]{}}
 }
 
 func (a UintNTT) One() UintNTT {
@@ -29,7 +29,7 @@ func (a UintNTT) Uint64() uint64 {
 	return a.time.get(0) + a.time.get(1)*base + a.time.get(2)*base*base + a.time.get(3)*base*base*base
 }
 
-func fromTime(time block[uint64]) UintNTT {
+func fromTime(time vector[uint64]) UintNTT {
 	// reduce to base
 	var q, r uint64 = 0, 0
 	for i := 0; i < time.len(); i++ {
@@ -47,7 +47,7 @@ func fromTime(time block[uint64]) UintNTT {
 }
 
 // trimZeros : trim zeros at high degree
-func trimZeros(block block[uint64]) block[uint64] {
+func trimZeros(block vector[uint64]) vector[uint64] {
 	for block.len() > 0 && block.get(block.len()-1) == 0 {
 		block = block.slice(0, block.len()-1)
 	}
@@ -92,7 +92,7 @@ func FromString(s string) UintNTT {
 		base16 = append(base16, byte(0))
 	}
 
-	time := block[uint64]{}
+	time := vector[uint64]{}
 	for i := 0; i < len(base16); i += 4 {
 		var x uint64 = 0
 		x += uint64(base16[i])
@@ -169,7 +169,7 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 	l := nextPowerOfTwo(uint64(a.time.len() + b.time.len()))
 
 	aFreq, bFreq := time2freq(a.time, l), time2freq(b.time, l)
-	freq := block[uint64]{}
+	freq := vector[uint64]{}
 	for i := 0; i < int(l); i++ {
 		freq = freq.set(i, mul(aFreq.get(i), bFreq.get(i)))
 	}
