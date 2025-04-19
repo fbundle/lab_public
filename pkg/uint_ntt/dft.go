@@ -14,7 +14,7 @@ func CooleyTukeyFFT(x vector[uint64], omega uint64) vector[uint64] {
 		panic("n must be power of 2")
 	}
 	// even and odd values of x
-	e, o := makeBlock[uint64](n/2), makeBlock[uint64](n/2)
+	e, o := makeVector[uint64](n/2), makeVector[uint64](n/2)
 	for i := 0; i < n/2; i++ {
 		e = e.set(i, x.get(2*i))
 		o = o.set(i, x.get(2*i+1))
@@ -23,7 +23,7 @@ func CooleyTukeyFFT(x vector[uint64], omega uint64) vector[uint64] {
 	eFFT := CooleyTukeyFFT(e, omega_2)
 	oFFT := CooleyTukeyFFT(o, omega_2)
 
-	y := makeBlock[uint64](n)
+	y := makeVector[uint64](n)
 	var omega_n uint64 = 1 // omega^0
 	for i := 0; i < n/2; i++ {
 		t := mul(omega_n, oFFT.get(i))

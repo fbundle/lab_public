@@ -5,12 +5,12 @@ type vector[T any] struct {
 	data []T
 }
 
-func makeBlock[T any](n int) vector[T] {
+func makeVector[T any](n int) vector[T] {
 	return vector[T]{make([]T, n)}
 }
 
 func (b vector[T]) clone() vector[T] {
-	c := makeBlock[T](b.len())
+	c := makeVector[T](b.len())
 	copy(c.data, b.data)
 	return c
 }

@@ -22,7 +22,7 @@ func (a UintNTT) One() UintNTT {
 }
 
 func FromUint64(x uint64) UintNTT {
-	return fromTime(makeBlock[uint64](1).set(0, x))
+	return fromTime(makeVector[uint64](1).set(0, x))
 }
 
 func (a UintNTT) Uint64() uint64 {
@@ -158,7 +158,7 @@ func (a UintNTT) String() string {
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
 	l := max(a.time.len(), b.time.len())
-	cTime := makeBlock[uint64](l)
+	cTime := makeVector[uint64](l)
 	for i := 0; i < l; i++ {
 		cTime = cTime.set(i, add(a.time.get(i), b.time.get(i)))
 	}
