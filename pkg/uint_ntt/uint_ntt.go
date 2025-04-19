@@ -207,9 +207,31 @@ func (a UintNTT) Sub(b UintNTT) UintNTT {
 	return fromTime(cTime)
 }
 
+func (a UintNTT) IsZero() bool {
+	for i := 0; i < len(a.Time); i++ {
+		if a.Time[i] != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func (a UintNTT) Cmp(b UintNTT) int {
+	l := max(len(a.Time), len(b.Time))
+	for i := l - 1; i >= 0; i-- {
+		if a.Time.get(i) > b.Time.get(i) {
+			return +1
+		}
+		if a.Time.get(i) < b.Time.get(i) {
+			return -1
+		}
+	}
+	return 0
+}
+
 func (a UintNTT) ShiftRight(n int) UintNTT {
 	if n > len(a.Time) {
-		panic("ShiftRight overflow")
+		return Zero
 	}
 	l := len(a.Time) - n
 	cTime := make(Block, l)
@@ -217,8 +239,30 @@ func (a UintNTT) ShiftRight(n int) UintNTT {
 	return fromTime(cTime)
 }
 
+// PInv : let m = 2^n, approx root of f(x) = - a + m / x
 func (a UintNTT) PInv(n int) UintNTT {
-	return One
+	if a.IsZero() {
+		panic("division by zero")
+	}
+	two := FromUint64(2)
+	x := FromUint64(1)
+	// Newton iteration
+	// x_{n+1} = 2 x_n - (a x_n^2) / m
+	for {
+		// a / m = a.shiftRight(N/2)
+		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).ShiftRight(n))
+		if x1.Cmp(x) == 0 {
+			break
+		}
+		x = x1
+	}
+	return x
+}
+
+func (a UintNTT) Div(b UintNTT) UintNTT {
+	n := 2 * len(b.Time)
+	x := b.PInv(n)
+	return a.Mul(x).ShiftRight(n)
 }
 
 func nextPowerOfTwo(x uint64) uint64 {
