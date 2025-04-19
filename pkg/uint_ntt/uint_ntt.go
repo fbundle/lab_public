@@ -1,6 +1,7 @@
 package uint_ntt
 
 import (
+	"ca/pkg/vec"
 	"strings"
 )
 
@@ -8,7 +9,7 @@ const (
 	base = 1 << 16 // pick base = 2^d, max_n * base * base < p so that multiplication won't overflow
 )
 
-type block = vec[uint64] // TODO - change to vec[uint16]
+type block = vec.Vec[uint64] // TODO - change to Vec[uint16]
 
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
@@ -24,24 +25,24 @@ func (a UintNTT) One() UintNTT {
 }
 
 func FromUint64(x uint64) UintNTT {
-	return fromTime(makeVec[uint64](1).set(0, x))
+	return fromTime(vec.Make[uint64](1).Set(0, x))
 }
 
 func (a UintNTT) Uint64() uint64 {
-	return a.time.get(0) + a.time.get(1)*base + a.time.get(2)*base*base + a.time.get(3)*base*base*base
+	return a.time.Get(0) + a.time.Get(1)*base + a.time.Get(2)*base*base + a.time.Get(3)*base*base*base
 }
 
 func fromTime(time block) UintNTT {
 	// reduce to base
 	var q, r uint64 = 0, 0
-	for i := 0; i < time.len(); i++ {
-		q, r = time.get(i)/base, time.get(i)%base
-		time = time.set(i, r)
-		if i+1 < time.len() {
-			time = time.set(i+1, add(time.get(i+1), q))
+	for i := 0; i < time.Len(); i++ {
+		q, r = time.Get(i)/base, time.Get(i)%base
+		time = time.Set(i, r)
+		if i+1 < time.Len() {
+			time = time.Set(i+1, add(time.Get(i+1), q))
 		}
 	}
-	time = time.set(time.len(), q)
+	time = time.Set(time.Len(), q)
 	time = trimZeros(time)
 	return UintNTT{
 		time: time,
@@ -50,8 +51,8 @@ func fromTime(time block) UintNTT {
 
 // trimZeros : trim zeros at high degree
 func trimZeros(time block) block {
-	for time.len() > 0 && time.get(time.len()-1) == 0 {
-		time = time.slice(0, time.len()-1)
+	for time.Len() > 0 && time.Get(time.Len()-1) == 0 {
+		time = time.Slice(0, time.Len()-1)
 	}
 	return time
 }
@@ -101,7 +102,7 @@ func FromString(s string) UintNTT {
 		x += uint64(base16[i+1]) * 16
 		x += uint64(base16[i+2]) * 16 * 16
 		x += uint64(base16[i+3]) * 16 * 16 * 16
-		time = time.set(i/4, x)
+		time = time.Set(i/4, x)
 	}
 
 	return fromTime(time)
@@ -113,8 +114,8 @@ func (a UintNTT) String() string {
 	}
 	// convert base 2^16 to base16 (2^4)
 	var base16 []byte = nil
-	for i := 0; i < a.time.len(); i++ {
-		x := a.time.get(i)
+	for i := 0; i < a.time.Len(); i++ {
+		x := a.time.Get(i)
 		base16 = append(base16, byte(x%16))
 		x /= 16
 		base16 = append(base16, byte(x%16))
@@ -159,21 +160,21 @@ func (a UintNTT) String() string {
 }
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
-	l := max(a.time.len(), b.time.len())
-	cTime := makeVec[uint64](l)
+	l := max(a.time.Len(), b.time.Len())
+	cTime := vec.Make[uint64](l)
 	for i := 0; i < l; i++ {
-		cTime = cTime.set(i, add(a.time.get(i), b.time.get(i)))
+		cTime = cTime.Set(i, add(a.time.Get(i), b.time.Get(i)))
 	}
 	return fromTime(cTime)
 }
 
 func (a UintNTT) Mul(b UintNTT) UintNTT {
-	l := nextPowerOfTwo(uint64(a.time.len() + b.time.len()))
+	l := nextPowerOfTwo(uint64(a.time.Len() + b.time.Len()))
 
 	aFreq, bFreq := time2freq(a.time, l), time2freq(b.time, l)
 	freq := block{}
 	for i := 0; i < int(l); i++ {
-		freq = freq.set(i, mul(aFreq.get(i), bFreq.get(i)))
+		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
 	}
 	time := freq2time(freq, l)
 	return fromTime(time)
@@ -182,20 +183,20 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 // Sub - subtract b from a using long subtraction
 // if a < b, return 2nd complement and false
 func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
-	l := max(a.time.len(), b.time.len())
-	cTime := a.time.clone()
+	l := max(a.time.Len(), b.time.Len())
+	cTime := a.time.Clone()
 	var borrow uint64 = 0 // either zero or one
 	for i := 0; i < l; i++ {
-		x := sub(cTime.get(i)+base, b.time.get(i)+borrow) // x in [0, 2^{32}-1]
-		cTime = cTime.set(i, x%base)
+		x := sub(cTime.Get(i)+base, b.time.Get(i)+borrow) // x in [0, 2^{32}-1]
+		cTime = cTime.Set(i, x%base)
 		borrow = 1 - x/base
 	}
 	return fromTime(cTime), borrow == 0
 }
 
 func (a UintNTT) IsZero() bool {
-	for i := 0; i < a.time.len(); i++ {
-		if a.time.get(i) != 0 {
+	for i := 0; i < a.time.Len(); i++ {
+		if a.time.Get(i) != 0 {
 			return false
 		}
 	}
@@ -203,12 +204,12 @@ func (a UintNTT) IsZero() bool {
 }
 
 func (a UintNTT) Cmp(b UintNTT) int {
-	l := max(a.time.len(), b.time.len())
+	l := max(a.time.Len(), b.time.Len())
 	for i := l - 1; i >= 0; i-- {
-		if a.time.get(i) > b.time.get(i) {
+		if a.time.Get(i) > b.time.Get(i) {
 			return +1
 		}
-		if a.time.get(i) < b.time.get(i) {
+		if a.time.Get(i) < b.time.Get(i) {
 			return -1
 		}
 	}
@@ -216,11 +217,11 @@ func (a UintNTT) Cmp(b UintNTT) int {
 }
 
 func (a UintNTT) shiftRight(n int) UintNTT {
-	if n > a.time.len() {
+	if n > a.time.Len() {
 		return UintNTT{}
 	}
-	cTime := a.time.clone()
-	cTime = cTime.slice(n, cTime.len())
+	cTime := a.time.Clone()
+	cTime = cTime.Slice(n, cTime.Len())
 	return fromTime(cTime)
 }
 
@@ -251,7 +252,7 @@ func (a UintNTT) pinv(n int) UintNTT {
 }
 
 func (a UintNTT) Div(b UintNTT) UintNTT {
-	n := max(a.time.len(), b.time.len()) + 1 // large enough
+	n := max(a.time.Len(), b.time.Len()) + 1 // large enough
 	x := b.pinv(n)
 	return a.Mul(x).shiftRight(n)
 }

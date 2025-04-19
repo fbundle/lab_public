@@ -1,0 +1,52 @@
+package vec
+
+type Vec[T any] struct {
+	data []T
+}
+
+func Make[T any](n int) Vec[T] {
+	return Vec[T]{make([]T, n)}
+}
+
+func Map[T1 any, T2 any](v Vec[T1], f func(T1) T2) Vec[T2] {
+	w := Make[T2](v.Len())
+	for i := 0; i < v.Len(); i++ {
+		w = w.Set(i, f(v.Get(i)))
+	}
+	return w
+}
+
+func (v Vec[T]) Clone() Vec[T] {
+	w := Make[T](v.Len())
+	copy(w.data, v.data)
+	return w
+}
+
+func (v Vec[T]) Len() int {
+	return len(v.data)
+}
+
+func (v Vec[T]) Get(i int) T {
+	if i >= v.Len() {
+		var zero T
+		return zero
+	}
+	return v.data[i]
+}
+
+func (v Vec[T]) Set(i int, x T) Vec[T] {
+	for i >= v.Len() {
+		var zero T
+		v.data = append(v.data, zero)
+	}
+	v.data[i] = x
+	return v
+}
+
+func (v Vec[T]) Slice(beg int, end int) Vec[T] {
+	for end > v.Len()-1 {
+		var zero T
+		v.data = append(v.data, zero)
+	}
+	return Vec[T]{v.data[beg:end]}
+}

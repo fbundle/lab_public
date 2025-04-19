@@ -1,12 +1,13 @@
 package uint_ntt
 
 import (
+	"ca/pkg/vec"
 	"math/bits"
 )
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(x vec[uint64], omega uint64) vec[uint64] {
-	n := x.len()
+func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
+	n := x.Len()
 	if n == 1 {
 		return x
 	}
@@ -14,21 +15,21 @@ func CooleyTukeyFFT(x vec[uint64], omega uint64) vec[uint64] {
 		panic("n must be power of 2")
 	}
 	// even and odd values of x
-	e, o := makeVec[uint64](n/2), makeVec[uint64](n/2)
+	e, o := vec.Make[uint64](n/2), vec.Make[uint64](n/2)
 	for i := 0; i < n/2; i++ {
-		e = e.set(i, x.get(2*i))
-		o = o.set(i, x.get(2*i+1))
+		e = e.Set(i, x.Get(2*i))
+		o = o.Set(i, x.Get(2*i+1))
 	}
 	omega_2 := mul(omega, omega)
 	eFFT := CooleyTukeyFFT(e, omega_2)
 	oFFT := CooleyTukeyFFT(o, omega_2)
 
-	y := makeVec[uint64](n)
+	y := vec.Make[uint64](n)
 	var omega_n uint64 = 1 // omega^0
 	for i := 0; i < n/2; i++ {
-		t := mul(omega_n, oFFT.get(i))
-		y = y.set(i, add(eFFT.get(i), t))
-		y.set(i+n/2, sub(eFFT.get(i), t))
+		t := mul(omega_n, oFFT.Get(i))
+		y = y.Set(i, add(eFFT.Get(i), t))
+		y.Set(i+n/2, sub(eFFT.Get(i), t))
 		omega_n = mul(omega_n, omega)
 	}
 	return y
@@ -45,27 +46,27 @@ func nextPowerOfTwo(x uint64) uint64 {
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
 
-func time2freq(time vec[uint64], length uint64) vec[uint64] {
+func time2freq(time vec.Vec[uint64], length uint64) vec.Vec[uint64] {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
-	time = time.slice(0, int(l)) // extend to length l
+	time = time.Slice(0, int(l)) // extend to length l
 
 	omega := getPrimitiveRoot(l)
 	freq := trimZeros(CooleyTukeyFFT(time, omega))
 	return freq
 }
 
-func freq2time(freq vec[uint64], length uint64) vec[uint64] {
+func freq2time(freq vec.Vec[uint64], length uint64) vec.Vec[uint64] {
 	// extend  into powers of 2
 	l := nextPowerOfTwo(length)
-	freq = freq.slice(0, int(l)) // extend to length l
+	freq = freq.Slice(0, int(l)) // extend to length l
 	omega := getPrimitiveRoot(l)
 	il := inv(l)
 
 	time := CooleyTukeyFFT(freq, inv(omega))
-	for i := 0; i < time.len(); i++ {
-		f := time.get(i)
-		time = time.set(i, mul(f, il))
+	for i := 0; i < time.Len(); i++ {
+		f := time.Get(i)
+		time = time.Set(i, mul(f, il))
 	}
 
 	time = trimZeros(time)
