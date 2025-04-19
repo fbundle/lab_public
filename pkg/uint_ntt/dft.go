@@ -2,6 +2,7 @@ package uint_ntt
 
 import (
 	"fmt"
+	"math/bits"
 	"os"
 )
 
@@ -60,4 +61,44 @@ func CooleyTukeyFFT(x []uint64, ω uint64) (y []uint64) {
 		ωn = mul(ωn, ω)
 	}
 	return y
+}
+
+func nextPowerOfTwo(x uint64) uint64 {
+	if x == 0 {
+		return 1
+	}
+	if x > 1<<63 {
+		panic("next power of 2 overflows uint64")
+	}
+	return 1 << (64 - bits.LeadingZeros64(x-1))
+}
+
+func time2freq(time Block, length uint64) Block {
+	// extend  into powers of 2
+	l := nextPowerOfTwo(length)
+	for len(time) < int(l) {
+		time = append(time, 0)
+	}
+
+	ω := getPrimitiveRoot(l)
+	freq := trimZeros(CooleyTukeyFFT(time, ω))
+	return freq
+}
+
+func freq2time(freq Block, length uint64) Block {
+	// extend  into powers of 2
+	l := nextPowerOfTwo(length)
+	for len(freq) < int(l) {
+		freq = append(freq, 0)
+	}
+
+	time := Block{}
+	ω := getPrimitiveRoot(l)
+	il := inv(l)
+	for i, f := range CooleyTukeyFFT(freq, inv(ω)) {
+		time = time.set(i, mul(f, il))
+	}
+
+	time = trimZeros(time)
+	return time
 }
