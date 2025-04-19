@@ -52,50 +52,16 @@ func (a IntNTT) Mul(b IntNTT) IntNTT {
 		Neg: a.sameSign(b),
 	}
 }
+func (a IntNTT) Div(b IntNTT) IntNTT {
+	return IntNTT{
+		Abs: a.Abs.Div(b.Abs),
+		Neg: a.sameSign(b),
+	}
+}
 
 func (a IntNTT) Equal(b IntNTT) bool {
 	if a.IsZero() && b.IsZero() {
 		return true
 	}
 	return a.sameSign(b) && a.Abs.Cmp(b.Abs) == 0
-}
-
-func (a IntNTT) shiftRight(n int) IntNTT {
-	return IntNTT{
-		Abs: a.Abs.shiftRight(n),
-		Neg: a.Neg,
-	}
-}
-
-// inv : let m = 2^{16n}
-// approx root of f(x) = m / x - a using Newton method
-func (a IntNTT) pinv(n int) IntNTT {
-	if a.IsZero() {
-		panic("division by zero")
-	}
-	two := IntNTT{
-		Abs: FromUint64(2),
-		Neg: false,
-	}
-	x := IntNTT{
-		Abs: FromUint64(1),
-		Neg: false,
-	}
-	// Newton iteration
-	// x_{n+1} = 2 x_n - (a x_n^2) / m
-	for {
-		// a / m = a.shiftRight(N/2)
-		x1 := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(n))
-		if x1.Equal(x) {
-			break
-		}
-		x = x1
-	}
-	return a
-}
-
-func (a IntNTT) Div(b IntNTT) IntNTT {
-	n := len(a.Abs.Time) + len(b.Abs.Time)
-	x := b.pinv(n)
-	return a.Mul(x).shiftRight(n)
 }
