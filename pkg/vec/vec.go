@@ -36,7 +36,7 @@ func (v Vec[T]) Set(i int, x T) Vec[T] {
 }
 
 func (v Vec[T]) Slice(beg int, end int) Vec[T] {
-	for end > v.Len()-1 {
+	for end >= v.Len() {
 		var zero T
 		v.data = append(v.data, zero)
 	}

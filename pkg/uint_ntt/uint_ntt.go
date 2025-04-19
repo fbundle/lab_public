@@ -34,12 +34,16 @@ func (a UintNTT) Uint64() uint64 {
 
 func fromTime(time block) UintNTT {
 	// reduce to base
-	var q, r uint64 = 0, 0
 	l := time.Len()
 	for i := 0; i < l; i++ {
-		q, r = time.Get(i)/base, time.Get(i)%base
+		q, r := time.Get(i)/base, time.Get(i)%base
 		time = time.Set(i, r)
 		time = time.Set(i+1, add(time.Get(i+1), q))
+	}
+	for time.Get(time.Len()-1) >= base {
+		q, r := time.Get(time.Len()-1)/base, time.Get(time.Len()-1)%base
+		time = time.Set(time.Len()-1, r)
+		time = time.Set(time.Len(), q)
 	}
 	time = trimZeros(time)
 	return UintNTT{
