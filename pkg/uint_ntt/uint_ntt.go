@@ -38,7 +38,7 @@ func fromTime(time block) UintNTT {
 	for i := 0; i < originalLen; i++ {
 		q, r := time.Get(i)/base, time.Get(i)%base
 		time = time.Set(i, r)
-		time = time.Set(i+1, add(time.Get(i+1), q))
+		time = time.Set(i+1, time.Get(i+1)+q)
 	}
 	if time.Len() == 0 {
 		return UintNTT{}
@@ -168,7 +168,7 @@ func (a UintNTT) Add(b UintNTT) UintNTT {
 	l := max(a.time.Len(), b.time.Len())
 	cTime := vec.Make[uint64](l)
 	for i := 0; i < l; i++ {
-		cTime = cTime.Set(i, add(a.time.Get(i), b.time.Get(i)))
+		cTime = cTime.Set(i, a.time.Get(i)+b.time.Get(i))
 	}
 	return fromTime(cTime)
 }
@@ -192,7 +192,7 @@ func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 	cTime := a.time.Clone()
 	var borrow uint64 = 0 // either zero or one
 	for i := 0; i < l; i++ {
-		x := sub(cTime.Get(i)+base, b.time.Get(i)+borrow) // x in [0, 2^{32}-1]
+		x := (cTime.Get(i) + base) - (b.time.Get(i) + borrow) // x in [0, 2^{32}-1]
 		cTime = cTime.Set(i, x%base)
 		borrow = 1 - x/base
 	}
