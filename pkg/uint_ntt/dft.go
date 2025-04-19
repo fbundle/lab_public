@@ -29,7 +29,7 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	for i := 0; i < n/2; i++ {
 		t := mul(omega_n, oFFT.Get(i))
 		y = y.Set(i, add(eFFT.Get(i), t))
-		y.Set(i+n/2, sub(eFFT.Get(i), t))
+		y = y.Set(i+n/2, sub(eFFT.Get(i), t))
 		omega_n = mul(omega_n, omega)
 	}
 	return y
