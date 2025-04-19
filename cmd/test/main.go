@@ -24,13 +24,6 @@ func testPAdic() {
 	fmt.Println(z.Div(x).Approx(N)) // print 92 / 23 = 4
 }
 
-func testUint1792() {
-	x := uint1792.FromString("0x318346193417412890342342")
-	z := uint1792.FromString("0x484723895378245789")
-	y := uint1792.FromString(x.String())
-	fmt.Println(x.Add(z).Mod(y)) // (x + integer) % x
-}
-
 func testFib() {
 	if len(os.Args) < 2 {
 		panic("Usage: go run main.go <integer>")
@@ -53,15 +46,21 @@ func testEA() {
 
 func testUintNTT() {
 	x := uint_ntt.FromString("0x318346193417412890342342")
-	y := uint_ntt.FromString(x.String())
+	z := uint_ntt.FromString("0x539543980a084524")
+	fmt.Println(z.Add(x).Mod(x))
+}
+func testUint1792() {
+	x := uint1792.FromString("0x318346193417412890342342")
+	y := uint1792.FromString(x.String())
 	fmt.Println(x, y)
 	fmt.Println(x.Add(y))
 	fmt.Println(x.Mul(y))
 	fmt.Println(x.Sub(y))
-	z := uint_ntt.FromString("0x539543980a084524")
+	z := uint1792.FromString("0x539543980a084524")
 	fmt.Println(z.Add(x).Mod(x))
 }
 
 func main() {
+	testUint1792()
 	testUintNTT()
 }

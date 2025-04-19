@@ -189,15 +189,14 @@ func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 	l := max(len(a.Time), len(b.Time))
 	cTime := make(Block, l)
 	copy(cTime, a.Time)
-	cTime = append(cTime, 1) // borrow 1
+	var borrow uint64 = 0
 	for i := 0; i < l; i++ {
 		// x in [0, 2^{32}-1]
-		x := sub(cTime.get(i)+cTime.get(i+1)*base, b.Time.get(i))
+		x := sub(cTime.get(i)+base, b.Time.get(i)+borrow)
 		cTime[i] = x % base
-		cTime[i+1] = x / base
+		borrow = 1 - x/base
 	}
-	cTime, tail := cTime[:len(cTime)-1], cTime[len(cTime)-1]
-	return fromTime(cTime), tail == 1
+	return fromTime(cTime), borrow == 0
 }
 
 func (a UintNTT) IsZero() bool {
@@ -232,20 +231,30 @@ func (a UintNTT) shiftRight(n int) UintNTT {
 	return fromTime(cTime)
 }
 
-// inv : let m = 2^n, approx root of f(x) = - a + m / x
-func (a UintNTT) inv(n int) UintNTT {
+func (a UintNTT) shiftLeft(n int) UintNTT {
+	cTime := make(Block, n+len(a.Time))
+	copy(cTime[n:], a.Time)
+	return fromTime(cTime)
+}
+
+// inv : let m = 2^{16n}
+// approx root of f(x) = m / x - a using Newton method
+// error at most 1
+func (a UintNTT) pinv(n int) UintNTT {
 	if a.IsZero() {
 		panic("division by zero")
 	}
 	two := FromUint64(2)
 	x := FromUint64(1)
 	// Newton iteration
-	// x_{n+1} = 2 x_n - (a x_n^2) / m
 	for {
-		// a / m = a.shiftRight(N/2)
-		x1, ok := two.Mul(x).Sub(a.Mul(x).Mul(x).shiftRight(n))
+		// x_{n+1} = 2 x_n - (a x_n^2) / m
+		left := two.Mul(x)
+		right := a.Mul(x).Mul(x).shiftRight(n)
+		x1, ok := left.Sub(right)
 		if !ok {
-			panic("subtraction overflow")
+			// x is always on the left of the root - this will not happen
+			panic("subtract overflow")
 		}
 		if x1.Cmp(x) == 0 {
 			break
@@ -256,8 +265,8 @@ func (a UintNTT) inv(n int) UintNTT {
 }
 
 func (a UintNTT) Div(b UintNTT) UintNTT {
-	n := 2 * len(b.Time)
-	x := b.inv(n)
+	n := max(len(a.Time), len(b.Time)) + 1 // large enough
+	x := b.pinv(n)
 	return a.Mul(x).shiftRight(n)
 }
 
