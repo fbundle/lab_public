@@ -230,12 +230,6 @@ func (a UintNTT) shiftRight(n int) UintNTT {
 	return fromTime(cTime)
 }
 
-func (a UintNTT) shiftLeft(n int) UintNTT {
-	cTime := make(Block, n+len(a.Time))
-	copy(cTime[n:], a.Time)
-	return fromTime(cTime)
-}
-
 // inv : let m = 2^{16n}
 // approx root of f(x) = m / x - a using Newton method
 // error at most 1
