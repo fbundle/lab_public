@@ -1552,6 +1552,24 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 	return fromTime(time)
 }
 
+func (a UintNTT) Sub(b UintNTT) UintNTT {
+	l := max(len(a.Time), len(b.Time))
+	cTime := make(Block, l)
+	copy(cTime, a.Time)
+	cTime = append(cTime, 1) // borrow 1
+	for i := 0; i < l; i++ {
+		// x in [0, 2^{32}-1]
+		x := sub(cTime.get(i)+cTime.get(i+1)*base, b.Time.get(i))
+		cTime[i] = x % base
+		cTime[i+1] = x % base
+	}
+	if cTime[len(cTime)-1] >= 1 {
+		panic("subtraction overflow")
+	}
+	cTime = cTime[:len(cTime)-1]
+	return fromTime(cTime)
+}
+
 func nextPowerOfTwo(x uint64) uint64 {
 	if x == 0 {
 		return 1
