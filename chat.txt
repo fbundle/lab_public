@@ -3,7 +3,7 @@ below is the readme and implementation
 package vec
 
 type Vec[T any] struct {
-	data []T
+	Data []T
 }
 
 func Make[T any](n int) Vec[T] {
@@ -12,12 +12,12 @@ func Make[T any](n int) Vec[T] {
 
 func (v Vec[T]) Clone() Vec[T] {
 	w := Make[T](v.Len())
-	copy(w.data, v.data)
+	copy(w.Data, v.Data)
 	return w
 }
 
 func (v Vec[T]) Len() int {
-	return len(v.data)
+	return len(v.Data)
 }
 
 func (v Vec[T]) Get(i int) T {
@@ -25,24 +25,24 @@ func (v Vec[T]) Get(i int) T {
 		var zero T
 		return zero
 	}
-	return v.data[i]
+	return v.Data[i]
 }
 
 func (v Vec[T]) Set(i int, x T) Vec[T] {
 	for i >= v.Len() {
 		var zero T
-		v.data = append(v.data, zero)
+		v.Data = append(v.Data, zero)
 	}
-	v.data[i] = x
+	v.Data[i] = x
 	return v
 }
 
 func (v Vec[T]) Slice(beg int, end int) Vec[T] {
 	for end >= v.Len() {
 		var zero T
-		v.data = append(v.data, zero)
+		v.Data = append(v.Data, zero)
 	}
-	return Vec[T]{v.data[beg:end]}
+	return Vec[T]{v.Data[beg:end]}
 }
 ./pkg/vec/functional.go
 package vec
@@ -60,7 +60,7 @@ func Map[T1 any, T2 any](v Vec[T1], f func(i int, x T1) (y T2)) Vec[T2] {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			w.data[i] = f(i, v.data[i])
+			w.Data[i] = f(i, v.Data[i])
 		}(i)
 	}
 	wg.Wait()
@@ -75,9 +75,9 @@ func Filter[T any](v Vec[T], f func(i int, x T) bool) Vec[T] {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			if f(i, v.data[i]) {
+			if f(i, v.Data[i]) {
 				nn := n.Add(1) - 1
-				w.data[nn] = v.data[i]
+				w.Data[nn] = v.Data[i]
 			}
 		}(i)
 	}
@@ -106,13 +106,13 @@ func Reduce[T any](w Vec[T], f func(i int, j int, x T, y T) T) T {
 			wg.Add(1)
 			go func(i int, j int) {
 				defer wg.Done()
-				v.data[i] = f(i, j, v.data[i], v.data[j])
+				v.Data[i] = f(i, j, v.Data[i], v.Data[j])
 			}(i, j)
 		}
 		wg.Wait()
 		v = v.Slice(0, v.Len()/2)
 	}
-	return v.data[0]
+	return v.Data[0]
 }
 ./pkg/padic/padic.go
 package padic
@@ -1343,7 +1343,6 @@ package uint_ntt
 
 import (
 	"ca/pkg/vec"
-	"fmt"
 	"math/bits"
 )
 
@@ -1376,16 +1375,13 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	return y
 }
 
-func FFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
+func CooleyTukeyFFTFunctionalWrapper(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	n := x.Len()
-	z := CooleyTukeyFFT(x, omega)
 	y := vec.Make[uint64](n)
 	f := CooleyTukeyFFTFunctional(x.Get, n, omega)
 	for i := 0; i < n; i++ {
 		y = y.Set(i, f(i))
 	}
-	fmt.Println(z)
-	fmt.Println(y)
 	return y
 }
 
@@ -1396,20 +1392,18 @@ func CooleyTukeyFFTFunctional(x func(int) uint64, n int, omega uint64) func(int)
 	if n <= 0 || n%2 != 0 {
 		panic("n must be power of 2")
 	}
-	e := func(i int) uint64 {
+	e, o := func(i int) uint64 {
 		return x(2 * i)
-	}
-	o := func(i int) uint64 {
+	}, func(i int) uint64 {
 		return x(2*i + 1)
 	}
 	omega_2 := mul(omega, omega)
 	eFFT := CooleyTukeyFFTFunctional(e, n/2, omega_2)
 	oFFT := CooleyTukeyFFTFunctional(o, n/2, omega_2)
 	return func(j int) uint64 {
-		i := j / (n / 2)
-		omega_pow := pow(omega, uint64(i))
-		t := mul(omega_pow, oFFT(i))
-		if j < int(n/2) {
+		i := j % (n / 2)
+		t := mul(pow(omega, uint64(i)), oFFT(i))
+		if j < n/2 {
 			return add(eFFT(i), t)
 		} else {
 			return sub(eFFT(i), t)
@@ -1428,13 +1422,15 @@ func nextPowerOfTwo(x uint64) uint64 {
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
 
+var dft = CooleyTukeyFFTFunctionalWrapper
+
 func time2freq(time vec.Vec[uint64], length uint64) vec.Vec[uint64] {
 	// extend  into powers of 2
 	n := nextPowerOfTwo(length)
 	time = time.Slice(0, int(n)) // extend to length n
 
 	omega := getPrimitiveRoot(n)
-	freq := trimZeros(CooleyTukeyFFT(time, omega))
+	freq := trimZeros(dft(time, omega))
 	return freq
 }
 
@@ -1445,7 +1441,7 @@ func freq2time(freq vec.Vec[uint64], length uint64) vec.Vec[uint64] {
 	omega := getPrimitiveRoot(n)
 	il := inv(n)
 
-	time := CooleyTukeyFFT(freq, inv(omega))
+	time := dft(freq, inv(omega))
 	for i := 0; i < time.Len(); i++ {
 		f := time.Get(i)
 		time = time.Set(i, mul(f, il))

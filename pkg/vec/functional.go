@@ -13,7 +13,7 @@ func Map[T1 any, T2 any](v Vec[T1], f func(i int, x T1) (y T2)) Vec[T2] {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			w.data[i] = f(i, v.data[i])
+			w.Data[i] = f(i, v.Data[i])
 		}(i)
 	}
 	wg.Wait()
@@ -28,9 +28,9 @@ func Filter[T any](v Vec[T], f func(i int, x T) bool) Vec[T] {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			if f(i, v.data[i]) {
+			if f(i, v.Data[i]) {
 				nn := n.Add(1) - 1
-				w.data[nn] = v.data[i]
+				w.Data[nn] = v.Data[i]
 			}
 		}(i)
 	}
@@ -59,11 +59,11 @@ func Reduce[T any](w Vec[T], f func(i int, j int, x T, y T) T) T {
 			wg.Add(1)
 			go func(i int, j int) {
 				defer wg.Done()
-				v.data[i] = f(i, j, v.data[i], v.data[j])
+				v.Data[i] = f(i, j, v.Data[i], v.Data[j])
 			}(i, j)
 		}
 		wg.Wait()
 		v = v.Slice(0, v.Len()/2)
 	}
-	return v.data[0]
+	return v.Data[0]
 }

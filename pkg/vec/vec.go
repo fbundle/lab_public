@@ -1,7 +1,7 @@
 package vec
 
 type Vec[T any] struct {
-	data []T
+	Data []T
 }
 
 func Make[T any](n int) Vec[T] {
@@ -10,12 +10,12 @@ func Make[T any](n int) Vec[T] {
 
 func (v Vec[T]) Clone() Vec[T] {
 	w := Make[T](v.Len())
-	copy(w.data, v.data)
+	copy(w.Data, v.Data)
 	return w
 }
 
 func (v Vec[T]) Len() int {
-	return len(v.data)
+	return len(v.Data)
 }
 
 func (v Vec[T]) Get(i int) T {
@@ -23,22 +23,22 @@ func (v Vec[T]) Get(i int) T {
 		var zero T
 		return zero
 	}
-	return v.data[i]
+	return v.Data[i]
 }
 
 func (v Vec[T]) Set(i int, x T) Vec[T] {
 	for i >= v.Len() {
 		var zero T
-		v.data = append(v.data, zero)
+		v.Data = append(v.Data, zero)
 	}
-	v.data[i] = x
+	v.Data[i] = x
 	return v
 }
 
 func (v Vec[T]) Slice(beg int, end int) Vec[T] {
 	for end >= v.Len() {
 		var zero T
-		v.data = append(v.data, zero)
+		v.Data = append(v.Data, zero)
 	}
-	return Vec[T]{v.data[beg:end]}
+	return Vec[T]{v.Data[beg:end]}
 }

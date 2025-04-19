@@ -2,7 +2,6 @@ package uint_ntt
 
 import (
 	"ca/pkg/vec"
-	"fmt"
 	"math/bits"
 )
 
@@ -35,16 +34,13 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	return y
 }
 
-func FFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
+func CooleyTukeyFFTFunctionalWrapper(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	n := x.Len()
-	z := CooleyTukeyFFT(x, omega)
 	y := vec.Make[uint64](n)
 	f := CooleyTukeyFFTFunctional(x.Get, n, omega)
 	for i := 0; i < n; i++ {
 		y = y.Set(i, f(i))
 	}
-	fmt.Println(z)
-	fmt.Println(y)
 	return y
 }
 
@@ -55,20 +51,18 @@ func CooleyTukeyFFTFunctional(x func(int) uint64, n int, omega uint64) func(int)
 	if n <= 0 || n%2 != 0 {
 		panic("n must be power of 2")
 	}
-	e := func(i int) uint64 {
+	e, o := func(i int) uint64 {
 		return x(2 * i)
-	}
-	o := func(i int) uint64 {
+	}, func(i int) uint64 {
 		return x(2*i + 1)
 	}
 	omega_2 := mul(omega, omega)
 	eFFT := CooleyTukeyFFTFunctional(e, n/2, omega_2)
 	oFFT := CooleyTukeyFFTFunctional(o, n/2, omega_2)
 	return func(j int) uint64 {
-		i := j / (n / 2)
-		omega_pow := pow(omega, uint64(i))
-		t := mul(omega_pow, oFFT(i))
-		if j < int(n/2) {
+		i := j % (n / 2)
+		t := mul(pow(omega, uint64(i)), oFFT(i))
+		if j < n/2 {
 			return add(eFFT(i), t)
 		} else {
 			return sub(eFFT(i), t)
@@ -87,13 +81,15 @@ func nextPowerOfTwo(x uint64) uint64 {
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
 
+var dft = CooleyTukeyFFTFunctionalWrapper
+
 func time2freq(time vec.Vec[uint64], length uint64) vec.Vec[uint64] {
 	// extend  into powers of 2
 	n := nextPowerOfTwo(length)
 	time = time.Slice(0, int(n)) // extend to length n
 
 	omega := getPrimitiveRoot(n)
-	freq := trimZeros(CooleyTukeyFFT(time, omega))
+	freq := trimZeros(dft(time, omega))
 	return freq
 }
 
@@ -104,7 +100,7 @@ func freq2time(freq vec.Vec[uint64], length uint64) vec.Vec[uint64] {
 	omega := getPrimitiveRoot(n)
 	il := inv(n)
 
-	time := CooleyTukeyFFT(freq, inv(omega))
+	time := dft(freq, inv(omega))
 	for i := 0; i < time.Len(); i++ {
 		f := time.Get(i)
 		time = time.Set(i, mul(f, il))
