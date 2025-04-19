@@ -9,7 +9,6 @@ import (
 	"ca/pkg/vec"
 	"fmt"
 	"os"
-	"runtime"
 	"strconv"
 )
 
@@ -69,6 +68,5 @@ func testVec() {
 }
 
 func main() {
-	runtime.GOMAXPROCS(16)
-	testFib()
+	testUintNTT()
 }
