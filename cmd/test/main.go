@@ -36,7 +36,7 @@ func testFib() {
 		return
 	}
 
-	fmt.Println(fib.Fib(uint_ntt.UintNTT{}, uint64(n)))
+	_ = fib.Fib(uint_ntt.UintNTT{}, uint64(n))
 }
 
 func testEA() {
