@@ -1032,8 +1032,6 @@ type EuclideanDomain[T any] interface {
 	Ring[T]
 	Norm() integer.Int
 	DivMod(T) (T, T)
-	Div(T) T
-	Mod(T) T
 }
 
 type Field[T any] interface {
