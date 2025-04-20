@@ -18,9 +18,13 @@ type AdditiveGroup[T any] interface {
 	Neg() T
 }
 
-type MultiplicativeMonoid[T any] interface {
-	One() T
+type MultiplicativeSemiGroup[T any] interface {
 	Mul(T) T
+}
+
+type MultiplicativeMonoid[T any] interface {
+	MultiplicativeSemiGroup[T]
+	One() T
 }
 
 type Ring[T any] interface {
