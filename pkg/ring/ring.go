@@ -2,17 +2,17 @@ package ring
 
 import "ca/pkg/integer"
 
-type Computable[T any] interface {
+type Set[T any] interface {
 	Equal(T) bool
 }
 
 type Order[T any] interface {
-	Computable[T]
+	Set[T]
 	Cmp(T) int
 }
 
 type Ring[T any] interface {
-	Computable[T]
+	Set[T]
 	Zero() T
 	One() T
 	Add(T) T
