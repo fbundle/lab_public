@@ -68,5 +68,5 @@ func testVec() {
 }
 
 func main() {
-	testFib()
+	testEA()
 }
