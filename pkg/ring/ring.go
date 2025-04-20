@@ -11,14 +11,22 @@ type Order[T any] interface {
 	Cmp(T) int
 }
 
-type Ring[T any] interface {
-	Set[T]
+type AdditiveGroup[T any] interface {
 	Zero() T
-	One() T
 	Add(T) T
 	Sub(T) T
 	Neg() T
+}
+
+type MultiplicativeMonoid[T any] interface {
+	One() T
 	Mul(T) T
+}
+
+type Ring[T any] interface {
+	Set[T]
+	AdditiveGroup[T]
+	MultiplicativeMonoid[T]
 }
 
 type EuclideanDomain[T any] interface {
