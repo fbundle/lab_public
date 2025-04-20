@@ -6,11 +6,6 @@ type Set[T any] interface {
 	Equal(T) bool
 }
 
-type Order[T any] interface {
-	Set[T]
-	Cmp(T) int
-}
-
 type AdditiveGroup[T any] interface {
 	Zero() T
 	Add(T) T
@@ -31,6 +26,11 @@ type Ring[T any] interface {
 	Set[T]
 	AdditiveGroup[T]
 	MultiplicativeMonoid[T]
+}
+
+type Order[T any] interface {
+	Set[T]
+	Cmp(T) int
 }
 
 type EuclideanDomain[T any] interface {
