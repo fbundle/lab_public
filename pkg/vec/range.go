@@ -19,3 +19,10 @@ func (s Range) Get(i int) int {
 	}
 	return s.Beg + i*s.Step
 }
+
+func (s Range) Iterate() Iter[int] {
+	return MakeIterFromFunc[int](func(i int) (value int, remain bool) {
+		value = s.Get(i)
+		return value, value < s.End
+	})
+}

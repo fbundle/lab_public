@@ -52,22 +52,22 @@ func testUintNTT() {
 }
 
 func testVec() {
-	vec.MakeRange()
-	var v vec.Vec[int]
-	v = vec.Map[int, int](vec.MakeVec[int](64), func(i int, x int) int {
-		return 64 - i
+	i := vec.Map[int, int](vec.Range{Beg: 0, End: 64}.Iterate(), func(x int) (y int) {
+		return 64 - x
 	})
+	i, v := vec.ViewIter(i)
 	fmt.Println(v)
-	v = vec.Filter[int](v, func(i int, v int) bool {
+	i = vec.Filter[int](i, func(v int) bool {
 		return v%2 == 0
 	})
+	i, v = vec.ViewIter(i)
 	fmt.Println(v)
-	z := vec.Reduce(v, func(i int, j int, x int, y int) int {
+	z := vec.Reduce(i, func(i int, j int, x int, y int) int {
 		return x + y
 	})
 	fmt.Println(z)
 }
 
 func main() {
-	testEA()
+	testVec()
 }

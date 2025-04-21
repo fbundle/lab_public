@@ -14,6 +14,18 @@ func MakeVec[T any](n int) Vec[T] {
 	return Vec[T]{make([]T, n)}
 }
 
+func MakeVecFromIter[T any](iter Iter[T]) Vec[T] {
+	v := MakeVec[T](0)
+	for {
+		value, remain := iter.Next()
+		if !remain {
+			break
+		}
+		v = v.Set(v.Len(), value)
+	}
+	return v
+}
+
 func (v Vec[T]) Clone() Vec[T] {
 	w := MakeVec[T](v.Len())
 	copy(w.Data, v.Data)
@@ -60,8 +72,7 @@ func (v Vec[T]) SliceRange(beg int, end int, step int) Vec[T] {
 }
 
 func (v Vec[T]) Iterate() Iter[T] {
-	i := 0
-	return MakeIterFromFunc(func() (value T, remain bool) {
+	return MakeIterFromFunc(func(i int) (value T, remain bool) {
 		if i >= v.Len() {
 			return Zero[T](), false
 		}

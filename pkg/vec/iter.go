@@ -5,15 +5,20 @@ type Iter[T any] interface {
 }
 
 type iterFunc[T any] struct {
-	f func() (value T, remain bool)
+	i int
+	f func(i int) (value T, remain bool)
 }
 
 func (i *iterFunc[T]) Next() (value T, remain bool) {
-	return i.f()
+	i.i++
+	return i.f(i.i - 1)
 }
 
-func MakeIterFromFunc[T any](f func() (value T, remain bool)) Iter[T] {
-	return &iterFunc[T]{f: f}
+func MakeIterFromFunc[T any](f func(i int) (value T, remain bool)) Iter[T] {
+	return &iterFunc[T]{
+		i: 0,
+		f: f,
+	}
 }
 
 type chanIter[T any] struct {
@@ -27,4 +32,9 @@ func (c *chanIter[T]) Next() (value T, remain bool) {
 
 func MakeChanIter[T any](ch chan T) Iter[T] {
 	return &chanIter[T]{ch: ch}
+}
+
+func ViewIter[T any](i Iter[T]) (j Iter[T], v Vec[T]) {
+	v = MakeVecFromIter(i)
+	return v.Iterate(), v
 }

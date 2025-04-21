@@ -5,11 +5,11 @@ import (
 	"sync"
 )
 
-func Map[T1 any, T2 any](v Iter[T1], f func(i int, x T1) (y T2)) Iter[T2] {
+func Map[T1 any, T2 any](v Iter[T1], f func(x T1) (y T2)) Iter[T2] {
 	outCh := make(chan T2, 1)
 	go func(outCh chan T2) {
 		wg := sync.WaitGroup{}
-		for i := 0; ; i++ {
+		for {
 			value, remain := v.Next()
 			if !remain {
 				break
@@ -17,7 +17,7 @@ func Map[T1 any, T2 any](v Iter[T1], f func(i int, x T1) (y T2)) Iter[T2] {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				outCh <- f(i, value)
+				outCh <- f(value)
 			}()
 		}
 		wg.Wait()
@@ -26,11 +26,11 @@ func Map[T1 any, T2 any](v Iter[T1], f func(i int, x T1) (y T2)) Iter[T2] {
 	return MakeChanIter[T2](outCh)
 }
 
-func Filter[T any](v Iter[T], f func(i int, x T) bool) Iter[T] {
+func Filter[T any](v Iter[T], f func(x T) bool) Iter[T] {
 	outCh := make(chan T, 1)
 	go func(outCh chan T) {
 		wg := sync.WaitGroup{}
-		for i := 0; ; i++ {
+		for {
 			value, remain := v.Next()
 			if !remain {
 				break
@@ -38,7 +38,7 @@ func Filter[T any](v Iter[T], f func(i int, x T) bool) Iter[T] {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if f(i, value) {
+				if f(value) {
 					outCh <- value
 				}
 			}()
@@ -59,8 +59,8 @@ func nextPowerOfTwo(x uint64) uint64 {
 	}
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
-func Reduce[T any](w Vec[T], f func(i int, j int, x T, y T) T) T {
-	v := w.Clone()
+func Reduce[T any](w Iter[T], f func(i int, j int, x T, y T) T) T {
+	v := MakeVecFromIter(w)
 	v = v.Slice(0, int(nextPowerOfTwo(uint64(v.Len()))))
 
 	for v.Len() > 1 {
