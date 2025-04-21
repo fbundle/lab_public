@@ -3,6 +3,7 @@ package main
 import (
 	"ca/pkg/fib"
 	"ca/pkg/integer"
+	"ca/pkg/iter"
 	"ca/pkg/padic"
 	"ca/pkg/ring"
 	"ca/pkg/uint_ntt"
@@ -55,19 +56,33 @@ func testVec() {
 	i := vec.Map[int, int](vec.Range{Beg: 0, End: 64}.Iterate(), func(x int) (y int) {
 		return 64 - x
 	})
-	i, v := vec.ViewIter(i)
-	fmt.Println(v)
+	//i, v := vec.ViewIter(i)
+	//fmt.Println(v)
 	i = vec.Filter[int](i, func(v int) bool {
 		return v%2 == 0
 	})
-	i, v = vec.ViewIter(i)
-	fmt.Println(v)
+	//i, v = vec.ViewIter(i)
+	//fmt.Println(v)
 	z := vec.Reduce(i, func(i int, j int, x int, y int) int {
 		return x + y
 	})
 	fmt.Println(z)
 }
 
+func testIter() {
+	i := iter.MakeIteratorFromSlice([]any{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+	im := iter.MakeIteratorMore(i)
+	im = im.Apply(func(x any) (any, bool) {
+		xx := x.(int)
+		return xx + 100, true
+	}).Apply(func(x any) (any, bool) {
+		xx := x.(int)
+		return xx, xx%2 == 0
+	})
+	s := iter.MakeSliceFromIterator(im)
+	fmt.Println(s)
+}
+
 func main() {
-	testVec()
+	testIter()
 }
