@@ -15,7 +15,7 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 		panic("n must be power of 2")
 	}
 	// even and odd values of x
-	e, o := vec.Make[uint64](n/2), vec.Make[uint64](n/2)
+	e, o := vec.MakeVec[uint64](n/2), vec.MakeVec[uint64](n/2)
 	for i := 0; i < n/2; i++ {
 		e = e.Set(i, x.Get(2*i))
 		o = o.Set(i, x.Get(2*i+1))
@@ -25,7 +25,7 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	eFFT := CooleyTukeyFFT(e, omega_2)
 	oFFT := CooleyTukeyFFT(o, omega_2)
 
-	y := vec.Make[uint64](n)
+	y := vec.MakeVec[uint64](n)
 	for i := 0; i < n/2; i++ {
 		j := i + n/2
 		t := mul(pow(omega, uint64(i)), oFFT.Get(i))
@@ -53,7 +53,7 @@ func IterativeCooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 		}
 		return reversed
 	}
-	reversed := vec.Make[uint64](n)
+	reversed := vec.MakeVec[uint64](n)
 	for i := 0; i < n; i++ {
 		rev := reverseBits(uint32(i), logN)
 		reversed = reversed.Set(i, x.Get(int(rev)))

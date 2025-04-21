@@ -6,8 +6,8 @@ import (
 	"sync/atomic"
 )
 
-func Map[T1 any, T2 any](v Vec[T1], f func(i int, x T1) (y T2)) Vec[T2] {
-	w := Make[T2](v.Len())
+func Map[T1 any, T2 any](v Iter[T1], f func(i int, x T1) (y T2)) Iter[T2] {
+	w := MakeVec[T2](v.Len())
 	wg := sync.WaitGroup{}
 	for i := 0; i < v.Len(); i++ {
 		wg.Add(1)
@@ -21,7 +21,7 @@ func Map[T1 any, T2 any](v Vec[T1], f func(i int, x T1) (y T2)) Vec[T2] {
 }
 
 func Filter[T any](v Vec[T], f func(i int, x T) bool) Vec[T] {
-	w := Make[T](v.Len())
+	w := MakeVec[T](v.Len())
 	n := atomic.Uint64{}
 	wg := sync.WaitGroup{}
 	for i := 0; i < v.Len(); i++ {

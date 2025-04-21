@@ -10,12 +10,12 @@ type Vec[T any] struct {
 	Data []T
 }
 
-func Make[T any](n int) Vec[T] {
+func MakeVec[T any](n int) Vec[T] {
 	return Vec[T]{make([]T, n)}
 }
 
 func (v Vec[T]) Clone() Vec[T] {
-	w := Make[T](v.Len())
+	w := MakeVec[T](v.Len())
 	copy(w.Data, v.Data)
 	return w
 }
@@ -44,4 +44,27 @@ func (v Vec[T]) Slice(beg int, end int) Vec[T] {
 		v.Data = append(v.Data, Zero[T]())
 	}
 	return Vec[T]{v.Data[beg:end]}
+}
+
+func (v Vec[T]) SliceRange(beg int, end int, step int) Vec[T] {
+	s := Range{
+		Beg:  beg,
+		End:  end,
+		Step: step,
+	}
+	ret := MakeVec[T](s.Len())
+	for i := 0; i < s.Len(); i++ {
+		ret.Data[i] = v.Get(s.Get(i))
+	}
+	return ret
+}
+
+func (v Vec[T]) Iterate() Iter[T] {
+	i := 0
+	return MakeIterFromFunc(func() (value T, remain bool) {
+		if i >= v.Len() {
+			return Zero[T](), false
+		}
+		return v.Get(i), true
+	})
 }

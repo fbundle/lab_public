@@ -53,7 +53,7 @@ func testUintNTT() {
 
 func testVec() {
 	var v vec.Vec[int]
-	v = vec.Map[int, int](vec.Make[int](64), func(i int, x int) int {
+	v = vec.Map[int, int](vec.MakeVec[int](64), func(i int, x int) int {
 		return 64 - i
 	})
 	fmt.Println(v)

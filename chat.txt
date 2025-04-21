@@ -12,12 +12,12 @@ type Vec[T any] struct {
 	Data []T
 }
 
-func Make[T any](n int) Vec[T] {
+func MakeVec[T any](n int) Vec[T] {
 	return Vec[T]{make([]T, n)}
 }
 
 func (v Vec[T]) Clone() Vec[T] {
-	w := Make[T](v.Len())
+	w := MakeVec[T](v.Len())
 	copy(w.Data, v.Data)
 	return w
 }
@@ -47,6 +47,84 @@ func (v Vec[T]) Slice(beg int, end int) Vec[T] {
 	}
 	return Vec[T]{v.Data[beg:end]}
 }
+
+func (v Vec[T]) SliceRange(beg int, end int, step int) Vec[T] {
+	s := Range{
+		Beg:  beg,
+		End:  end,
+		Step: step,
+	}
+	ret := MakeVec[T](s.Len())
+	for i := 0; i < s.Len(); i++ {
+		ret.Data[i] = v.Get(s.Get(i))
+	}
+	return ret
+}
+
+func (v Vec[T]) Iterate() Iter[T] {
+	i := 0
+	return MakeIterFromFunc(func() (value T, remain bool) {
+		if i >= v.Len() {
+			return Zero[T](), false
+		}
+		return v.Get(i), true
+	})
+}
+./pkg/vec/iter.go
+package vec
+
+type Iter[T any] interface {
+	Next() (value T, remain bool)
+}
+
+type iterFunc[T any] struct {
+	f func() (value T, remain bool)
+}
+
+func (i *iterFunc[T]) Next() (value T, remain bool) {
+	return i.f()
+}
+
+func MakeIterFromFunc[T any](f func() (value T, remain bool)) Iter[T] {
+	return &iterFunc[T]{f: f}
+}
+
+type chanIter[T any] struct {
+	ch chan T
+}
+
+func (c *chanIter[T]) Next() (value T, remain bool) {
+	value, remain = <-c.ch
+	return value, remain
+}
+
+func MakeChanIter[T any](ch chan T) Iter[T] {
+	return &chanIter[T]{ch: ch}
+}
+./pkg/vec/range.go
+package vec
+
+type Range struct {
+	Beg  int
+	End  int
+	Step int
+}
+
+func MakeRange(beg int, end int, step int) Range {
+	return Range{beg, end, step}
+}
+
+func (s Range) Len() int {
+	return (s.End - s.Beg) % s.Step
+}
+
+func (s Range) Get(i int) int {
+	return s.Beg + i*s.Step
+}
+
+func (s Range) Slice() {
+
+}
 ./pkg/vec/functional.go
 package vec
 
@@ -56,8 +134,8 @@ import (
 	"sync/atomic"
 )
 
-func Map[T1 any, T2 any](v Vec[T1], f func(i int, x T1) (y T2)) Vec[T2] {
-	w := Make[T2](v.Len())
+func Map[T1 any, T2 any](v Iter[T1], f func(i int, x T1) (y T2)) Iter[T2] {
+	w := MakeVec[T2](v.Len())
 	wg := sync.WaitGroup{}
 	for i := 0; i < v.Len(); i++ {
 		wg.Add(1)
@@ -71,7 +149,7 @@ func Map[T1 any, T2 any](v Vec[T1], f func(i int, x T1) (y T2)) Vec[T2] {
 }
 
 func Filter[T any](v Vec[T], f func(i int, x T) bool) Vec[T] {
-	w := Make[T](v.Len())
+	w := MakeVec[T](v.Len())
 	n := atomic.Uint64{}
 	wg := sync.WaitGroup{}
 	for i := 0; i < v.Len(); i++ {
@@ -1103,7 +1181,7 @@ func (a UintNTT) One() UintNTT {
 }
 
 func FromUint64(x uint64) UintNTT {
-	return fromTime(vec.Make[uint64](1).Set(0, x))
+	return fromTime(vec.MakeVec[uint64](1).Set(0, x))
 }
 
 func (a UintNTT) Uint64() uint64 {
@@ -1244,7 +1322,7 @@ func (a UintNTT) String() string {
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
 	l := max(a.time.Len(), b.time.Len())
-	cTime := vec.Make[uint64](l)
+	cTime := vec.MakeVec[uint64](l)
 	for i := 0; i < l; i++ {
 		cTime = cTime.Set(i, a.time.Get(i)+b.time.Get(i))
 	}
@@ -1369,7 +1447,7 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 		panic("n must be power of 2")
 	}
 	// even and odd values of x
-	e, o := vec.Make[uint64](n/2), vec.Make[uint64](n/2)
+	e, o := vec.MakeVec[uint64](n/2), vec.MakeVec[uint64](n/2)
 	for i := 0; i < n/2; i++ {
 		e = e.Set(i, x.Get(2*i))
 		o = o.Set(i, x.Get(2*i+1))
@@ -1379,7 +1457,7 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	eFFT := CooleyTukeyFFT(e, omega_2)
 	oFFT := CooleyTukeyFFT(o, omega_2)
 
-	y := vec.Make[uint64](n)
+	y := vec.MakeVec[uint64](n)
 	for i := 0; i < n/2; i++ {
 		j := i + n/2
 		t := mul(pow(omega, uint64(i)), oFFT.Get(i))
@@ -1407,7 +1485,7 @@ func IterativeCooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 		}
 		return reversed
 	}
-	reversed := vec.Make[uint64](n)
+	reversed := vec.MakeVec[uint64](n)
 	for i := 0; i < n; i++ {
 		rev := reverseBits(uint32(i), logN)
 		reversed = reversed.Set(i, x.Get(int(rev)))
