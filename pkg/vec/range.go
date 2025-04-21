@@ -6,18 +6,16 @@ type Range struct {
 	Step int
 }
 
-func MakeRange(beg int, end int, step int) Range {
-	return Range{beg, end, step}
-}
-
 func (s Range) Len() int {
+	if s.Step == 0 {
+		s.Step = 1
+	}
 	return (s.End - s.Beg) % s.Step
 }
 
 func (s Range) Get(i int) int {
+	if s.Step == 0 {
+		s.Step = 1
+	}
 	return s.Beg + i*s.Step
-}
-
-func (s Range) Slice() {
-
 }
