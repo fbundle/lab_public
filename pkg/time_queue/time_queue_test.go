@@ -1,9 +1,9 @@
 package time_queue_test
 
 import (
+	"ca/pkg/time_queue"
 	"context"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/time_queue"
 	"math/rand"
 	"testing"
 	"time"

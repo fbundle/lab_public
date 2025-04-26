@@ -2,10 +2,10 @@ package main
 
 import (
 	"bufio"
+	"ca/pkg/relay"
+	"ca/pkg/relay/proto/gen/relay_pb"
 	"flag"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay/proto/gen/relay_pb"
 	"os"
 	"strings"
 )

@@ -1,9 +1,9 @@
 package relay
 
 import (
+	"ca/pkg/relay/proto/gen/relay_pb"
 	"errors"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay/proto/gen/relay_pb"
 	"net"
 )
 

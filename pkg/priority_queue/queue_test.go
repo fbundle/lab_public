@@ -1,8 +1,8 @@
 package priority_queue_test
 
 import (
+	"ca/pkg/priority_queue"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/priority_queue"
 	"testing"
 )
 

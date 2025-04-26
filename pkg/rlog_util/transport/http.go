@@ -2,11 +2,11 @@ package transport
 
 import (
 	"bytes"
+	"ca/pkg/rlog/rpc"
+	rlog_codec "ca/pkg/rlog_util/codec"
 	"context"
 	"encoding/base64"
 	"github.com/gin-gonic/gin"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
-	rlog_codec "github.com/khanh-nguyen-code/go_util/pkg/rlog_util/codec"
 	"io/ioutil"
 	"log"
 	"net/http"

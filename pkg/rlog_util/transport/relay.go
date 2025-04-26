@@ -1,12 +1,12 @@
 package transport
 
 import (
+	"ca/pkg/relay"
+	"ca/pkg/relay/proto/gen/relay_pb"
+	"ca/pkg/rlog/rpc"
+	rlog_codec "ca/pkg/rlog_util/codec"
+	"ca/pkg/uuid"
 	"encoding/json"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay/proto/gen/relay_pb"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
-	rlog_codec "github.com/khanh-nguyen-code/go_util/pkg/rlog_util/codec"
-	"github.com/khanh-nguyen-code/go_util/pkg/uuid"
 	"sync"
 )
 

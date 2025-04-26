@@ -2,10 +2,10 @@ package kvstore_client
 
 import (
 	"bytes"
+	"ca/pkg/rlog_util/kvstore"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog_util/kvstore"
 	"io/ioutil"
 	"net/http"
 	"strconv"

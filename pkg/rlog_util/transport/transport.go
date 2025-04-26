@@ -1,7 +1,7 @@
 package transport
 
 import (
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
+	"ca/pkg/rlog/rpc"
 )
 
 type Transport interface {

@@ -1,9 +1,9 @@
 package codec
 
 import (
+	"ca/pkg/rlog"
+	"ca/pkg/rlog_util/codec/proto/gen/rlog_pb"
 	"errors"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog_util/codec/proto/gen/rlog_pb"
 	"google.golang.org/protobuf/proto"
 )
 

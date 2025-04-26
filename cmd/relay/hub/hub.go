@@ -1,9 +1,9 @@
 package main
 
 import (
+	"ca/pkg/relay"
 	"flag"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay"
 )
 
 var listenAddr *string

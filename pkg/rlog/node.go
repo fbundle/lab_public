@@ -1,9 +1,9 @@
 package rlog
 
 import (
+	"ca/pkg/rlog/rpc"
 	"context"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
 	"sync"
 	"time"
 )

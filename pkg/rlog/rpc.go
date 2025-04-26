@@ -1,8 +1,8 @@
 package rlog
 
 import (
+	"ca/pkg/rlog/rpc"
 	"context"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
 	"sync/atomic"
 )
 

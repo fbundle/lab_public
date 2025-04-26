@@ -1,11 +1,11 @@
 package rlog_test
 
 import (
+	rlog "ca/pkg/rlog"
+	"ca/pkg/rlog/rpc"
 	"context"
 	"encoding/json"
 	"fmt"
-	rlog "github.com/khanh-nguyen-code/go_util/pkg/rlog"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
 	"math/rand"
 	"strconv"
 	"sync/atomic"

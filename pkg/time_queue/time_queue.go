@@ -1,8 +1,8 @@
 package time_queue
 
 import (
+	pq "ca/pkg/priority_queue"
 	"context"
-	pq "github.com/khanh-nguyen-code/go_util/pkg/priority_queue"
 	"sync"
 	"time"
 )

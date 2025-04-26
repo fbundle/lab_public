@@ -154,8 +154,8 @@ func New(items ...*Item) Queue {
 package priority_queue_test
 
 import (
+	"ca/pkg/priority_queue"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/priority_queue"
 	"testing"
 )
 
@@ -2201,10 +2201,10 @@ package kvstore_client
 
 import (
 	"bytes"
+	"ca/pkg/rlog_util/kvstore"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog_util/kvstore"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -2845,7 +2845,7 @@ func EuclideanAlgorithm[T EuclideanDomain[T]](x T, y T) (T, T) {
 package transport
 
 import (
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
+	"ca/pkg/rlog/rpc"
 )
 
 type Transport interface {
@@ -2858,11 +2858,11 @@ package transport
 
 import (
 	"bytes"
+	"ca/pkg/rlog/rpc"
+	rlog_codec "ca/pkg/rlog_util/codec"
 	"context"
 	"encoding/base64"
 	"github.com/gin-gonic/gin"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
-	rlog_codec "github.com/khanh-nguyen-code/go_util/pkg/rlog_util/codec"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -2985,12 +2985,12 @@ func getListenAddress(address string) string {
 package transport
 
 import (
+	"ca/pkg/relay"
+	"ca/pkg/relay/proto/gen/relay_pb"
+	"ca/pkg/rlog/rpc"
+	rlog_codec "ca/pkg/rlog_util/codec"
+	"ca/pkg/uuid"
 	"encoding/json"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay/proto/gen/relay_pb"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
-	rlog_codec "github.com/khanh-nguyen-code/go_util/pkg/rlog_util/codec"
-	"github.com/khanh-nguyen-code/go_util/pkg/uuid"
 	"sync"
 )
 
@@ -4261,9 +4261,9 @@ func file_rlog_proto_init() {
 package codec
 
 import (
+	"ca/pkg/rlog"
+	"ca/pkg/rlog_util/codec/proto/gen/rlog_pb"
 	"errors"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog_util/codec/proto/gen/rlog_pb"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -4827,9 +4827,9 @@ func (h *hub) handle(conn *net.TCPConn) {
 package relay
 
 import (
+	"ca/pkg/relay/proto/gen/relay_pb"
 	"encoding/binary"
 	"errors"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay/proto/gen/relay_pb"
 	"google.golang.org/protobuf/proto"
 	"io"
 )
@@ -4878,9 +4878,9 @@ func marshalAndWrite(writer io.Writer, m *relay_pb.Message) error {
 package relay
 
 import (
+	"ca/pkg/relay/proto/gen/relay_pb"
 	"errors"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay/proto/gen/relay_pb"
 	"net"
 )
 
@@ -5595,8 +5595,8 @@ type UpdateResponseRestore struct {
 package rlog
 
 import (
+	"ca/pkg/rlog/rpc"
 	"context"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
 	"sync/atomic"
 )
 
@@ -5636,7 +5636,7 @@ func batchRPC(router rpc.Router, cluster ClusterState, requestConstructor reques
 package rlog
 
 import (
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
+	"ca/pkg/rlog/rpc"
 	"time"
 )
 
@@ -5738,11 +5738,11 @@ type ClusterState struct {
 package rlog_test
 
 import (
+	rlog "ca/pkg/rlog"
+	"ca/pkg/rlog/rpc"
 	"context"
 	"encoding/json"
 	"fmt"
-	rlog "github.com/khanh-nguyen-code/go_util/pkg/rlog"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
 	"math/rand"
 	"strconv"
 	"sync/atomic"
@@ -5970,9 +5970,9 @@ func WaitThenCancel(call *Call, ctx context.Context) {
 package rlog
 
 import (
+	"ca/pkg/rlog/rpc"
 	"context"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
 	"sync"
 	"time"
 )
@@ -6349,9 +6349,9 @@ func (n *Node) processHeader(receiver NodeId, promise ProposalId, acceptId LogId
 package time_queue_test
 
 import (
+	"ca/pkg/time_queue"
 	"context"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/time_queue"
 	"math/rand"
 	"testing"
 	"time"
@@ -6440,8 +6440,8 @@ func TestTimer_Put(t *testing.T) {
 package time_queue
 
 import (
+	pq "ca/pkg/priority_queue"
 	"context"
-	pq "github.com/khanh-nguyen-code/go_util/pkg/priority_queue"
 	"sync"
 	"time"
 )

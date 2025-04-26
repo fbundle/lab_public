@@ -1,9 +1,9 @@
 package relay
 
 import (
+	"ca/pkg/relay/proto/gen/relay_pb"
 	"encoding/binary"
 	"errors"
-	"github.com/khanh-nguyen-code/go_util/pkg/relay/proto/gen/relay_pb"
 	"google.golang.org/protobuf/proto"
 	"io"
 )
