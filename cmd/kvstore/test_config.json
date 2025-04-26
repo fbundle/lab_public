@@ -1,0 +1,26 @@
+{
+  "relay": "127.0.0.1:5010",
+  "rpc_timeout_ms": 100,
+  "compaction_block": 2,
+  "compaction_ratio": 2,
+  "retry_until_update":2,
+  "min_retry_timeout_ms": 50,
+  "max_retry_timeout_ms": 2000,
+  "update_interval_ms": 10000,
+  "restart_timeout_ms": 10000,
+  "cluster": [
+    {
+      "name": "node_0",
+      "port": 3000
+
+    },
+    {
+      "name": "node_1",
+      "port": 3001
+    },
+    {
+      "name": "node_2",
+      "port": 3002
+    }
+  ]
+}

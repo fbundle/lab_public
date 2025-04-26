@@ -124,7 +124,792 @@ func (im *iteratorMore) Apply(f Morphism) IteratorMore {
 	im.ms = append(im.ms, f)
 	return im
 }
-./pkg/vec/vec.go
+./pkg/priority_queue/queue.go
+package priority_queue
+
+type Item struct {
+	Value    interface{}
+	Priority int
+	index    int // The index this item in the heap.
+}
+
+type Queue interface {
+	Push(item *Item)
+	Update(item *Item)
+	Pop() *Item
+	Len() int
+	Peek() *Item
+}
+
+func New(items ...*Item) Queue {
+	q := make([]*Item, 0, len(items))
+	copy(q, items)
+	// update index
+	for i := range q {
+		q[i].index = i
+	}
+	return (*queue)(&q)
+}
+./pkg/priority_queue/queue_test.go
+package priority_queue_test
+
+import (
+	"fmt"
+	"github.com/khanh-nguyen-code/go_util/pkg/priority_queue"
+	"testing"
+)
+
+func TestQueue(t *testing.T) {
+	q := priority_queue.New()
+	q.Push(&priority_queue.Item{
+		Value:    nil,
+		Priority: 1,
+	})
+	q.Push(&priority_queue.Item{
+		Value:    nil,
+		Priority: 3,
+	})
+	i := &priority_queue.Item{
+		Value:    nil,
+		Priority: 2,
+	}
+	q.Push(i)
+
+	fmt.Println(q.Pop())
+	i.Priority = 5
+	q.Update(i)
+
+	fmt.Println(q.Pop())
+	fmt.Println(q.Pop())
+}
+./pkg/priority_queue/queue_inner.go
+package priority_queue
+
+import (
+	"container/heap"
+)
+
+type items []*Item
+
+func (items items) Len() int {
+	return len(items)
+}
+
+func (items items) Less(i int, j int) bool {
+	return items[i].Priority < items[j].Priority
+}
+
+func (items items) Swap(i int, j int) {
+	items[i], items[j] = items[j], items[i]
+	items[i].index = i // update index after swap
+	items[j].index = j // update index after swap
+}
+
+func (items *items) Push(x interface{}) {
+	item := x.(*Item)
+	item.index = len(*items)
+	*items = append(*items, item)
+}
+
+func (items *items) Pop() interface{} {
+	out := (*items)[len(*items)-1]
+	out.index = -1 // for safety
+
+	(*items)[len(*items)-1] = nil // avoid memory leak
+	*items = (*items)[:len(*items)-1]
+
+	return out
+}
+
+type queue items
+
+func (q *queue) Push(item *Item) {
+	heap.Push((*items)(q), item)
+}
+
+func (q *queue) Update(item *Item) {
+	heap.Fix((*items)(q), item.index)
+}
+
+func (q *queue) Pop() *Item {
+	if q.Len() == 0 {
+		return nil
+	}
+	return heap.Pop((*items)(q)).(*Item)
+}
+
+func (q *queue) Len() int {
+	return len(*(*items)(q))
+}
+
+func (q *queue) Peek() *Item {
+	if q.Len() == 0 {
+		return nil
+	}
+	return (*(*items)(q))[0]
+}
+./pkg/logger/logger.go
+package logger
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"runtime"
+	"strings"
+	"time"
+)
+
+const (
+	timeLayout = "2006/01/02 15:04:05"
+)
+
+type Logger interface {
+	Now() context
+}
+
+type context interface {
+	Info(format string, args ...interface{})
+	Error(format string, args ...interface{})
+	WithField(key string, val interface{}) context
+}
+
+func NewLogger(info func(string), err func(string)) Logger {
+	return &logger{
+		info: info,
+		err:  err,
+	}
+}
+func NewDefaultLogger() Logger {
+	return &logger{
+		info: func(msg string) {
+			_, _ = fmt.Fprintf(os.Stdout, msg)
+		},
+		err: func(msg string) {
+			_, _ = fmt.Fprintf(os.Stderr, msg)
+		},
+	}
+}
+
+type logger struct {
+	info func(string)
+	err  func(string)
+}
+
+func (l *logger) Now() context {
+	_, file, line, _ := runtime.Caller(1)
+	return &loggerCtx{
+		l:      l,
+		now:    time.Now(),
+		kvList: []*kv{{"caller", fmt.Sprintf("%s:%d", file, line)}},
+	}
+}
+
+type kv struct {
+	key string
+	val interface{}
+}
+
+type loggerCtx struct {
+	l      *logger
+	now    time.Time
+	kvList []*kv
+}
+
+func (c *loggerCtx) toLog(msg string) string {
+	kvStrList := make([]string, 0, len(c.kvList))
+	for _, kv := range c.kvList {
+		b, _ := json.Marshal(kv.val)
+		s := string(b)
+		kvStrList = append(kvStrList, fmt.Sprintf("%s=%s", kv.key, s))
+	}
+	if len(msg) > 0 && msg[len(msg)-1] != '\n' {
+		msg += "\n"
+	}
+	return fmt.Sprintf("%s|%s|%s", c.now.Format(timeLayout), strings.Join(kvStrList, "|"), msg)
+}
+
+func (c *loggerCtx) Info(format string, args ...interface{}) {
+	if c.l.info != nil {
+		c.l.info(c.toLog(fmt.Sprintf(format, args...)))
+	}
+}
+
+func (c *loggerCtx) Error(format string, args ...interface{}) {
+	if c.l.err != nil {
+		c.l.err(c.toLog(fmt.Sprintf(format, args...)))
+	}
+}
+
+func (c *loggerCtx) WithField(key string, val interface{}) context {
+	c.kvList = append(c.kvList, &kv{key, val})
+	return c
+}
+./pkg/logger/logger_test.go
+package logger_test
+
+import (
+	"bytes"
+	"fmt"
+	"github.com/khanh-nguyen-code/go_util/pkg/logger"
+	"os"
+	"testing"
+)
+
+func TestLogger(t *testing.T) {
+	l := logger.NewDefaultLogger()
+	l.Now().Info("hello")
+	l.Now().WithField("foo", 123).Error("good bye")
+
+	b := bytes.NewBuffer(make([]byte, 0))
+	info := func(msg string) {
+		b.Write([]byte(msg))
+		_, _ = fmt.Fprintf(os.Stdout, msg)
+	}
+	err := func(msg string) {
+		b.Write([]byte(msg))
+		_, _ = fmt.Fprintf(os.Stderr, msg)
+	}
+	l = logger.NewLogger(info, err)
+	l.Now().Info("hello")
+	l.Now().WithField("foo", 123).Error("good bye")
+}
+./pkg/proto/stream.go
+package proto
+
+import (
+	"io"
+)
+
+const (
+	separator = '\n'
+)
+
+func (p *proto) NewEncoder(w io.Writer) Encoder {
+	return &encoder{w: w}
+}
+
+type Encoder interface {
+	Encode(m interface{}) error
+}
+type encoder struct {
+	p *proto
+	w io.Writer
+}
+
+func (enc *encoder) Encode(m interface{}) error {
+	b, err := enc.p.Marshal(m)
+	if err != nil {
+		return err
+	}
+	_, err = enc.w.Write(append(b, separator))
+	return err
+}
+
+func (p *proto) NewDecoder(r io.Reader) Decoder {
+	return &decoder{r: r}
+}
+
+type Decoder interface {
+	Decode() (interface{}, error)
+}
+
+type decoder struct {
+	p *proto
+	r io.Reader
+}
+
+func (dec *decoder) Decode() (interface{}, error) {
+	b, err := readUntil(dec.r, separator)
+	if err != nil {
+		return nil, err
+	}
+	return dec.p.Unmarshal(b)
+}
+./pkg/proto/util.go
+package proto
+
+import (
+	"errors"
+	"io"
+	"reflect"
+)
+
+func mustBePtrOfStruct(i interface{}) error {
+	if reflect.TypeOf(i).Kind() != reflect.Ptr {
+		return errors.New("must be pointer to struct")
+	}
+	if reflect.TypeOf(i).Elem().Kind() != reflect.Struct {
+		return errors.New("must be pointer to struct")
+	}
+	return nil
+}
+
+// readUntil : read bytes from reader
+// messages are separated by separator or io.EOF
+// if err is io.EOF, b is empty
+func readUntil(reader io.Reader, separator byte) (b []byte, err error) {
+	buf := make([]byte, 1)
+	n := 0
+	for {
+		n, err = reader.Read(buf)
+		if err == nil && buf[0] == separator {
+			break
+		}
+		b = append(b, buf[:n]...)
+		if err != nil {
+			break
+		}
+	}
+	if len(b) > 0 && err == io.EOF {
+		err = nil
+	}
+	return b, err
+}
+./pkg/proto/proto_test.go
+package proto_test
+
+import (
+	"fmt"
+	"github.com/khanh-nguyen-code/go_util/pkg/proto"
+	"reflect"
+	"testing"
+)
+
+type structA struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
+
+type structB struct {
+	Value float64 `json:"value"`
+}
+
+type header struct {
+	Sender string `json:"sender"`
+}
+
+func TestProtoOk(t *testing.T) {
+	p := proto.NewProto()
+	p.MustRegister("struct_a", &structA{})
+	expected := &structA{
+		Name: "hello",
+		Age:  12,
+	}
+	b, err := p.Marshal(expected)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(string(b))
+	i, err := p.Unmarshal(b)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	actual := i.(*structA)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Error("wrong")
+		return
+	}
+}
+
+func TestProtoErr(t *testing.T) {
+	p := proto.NewProto()
+	_, err := p.Marshal(&structB{Value: 1.3})
+	if err == nil {
+		t.Error("error expected")
+		return
+	}
+}
+./pkg/proto/stream_test.go
+package proto_test
+
+import (
+	"bytes"
+	"fmt"
+	"github.com/khanh-nguyen-code/go_util/pkg/proto"
+	"io"
+	"testing"
+)
+
+type Message struct {
+	Data string `json:"data"`
+}
+
+var protoStream proto.Proto
+
+func init() {
+	protoStream = proto.NewProto()
+	protoStream.MustRegister("message", &Message{})
+}
+
+func TestStream(t *testing.T) {
+	var b = bytes.NewBuffer([]byte{})
+
+	e := protoStream.NewEncoder(b)
+	d := protoStream.NewDecoder(b)
+
+	_ = e.Encode(&Message{Data: "hello"})
+	_ = e.Encode(&Message{Data: "this is khanh"})
+	for {
+		m, err := d.Decode()
+		if err == io.EOF {
+			return
+		}
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		fmt.Println(m)
+	}
+}
+./pkg/proto/proto.go
+package proto
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"reflect"
+)
+
+type message struct {
+	Type    Type        `json:"type"`
+	Payload interface{} `json:"payload"`
+}
+
+type Type string
+
+type Proto interface {
+	MustRegister(mType Type, mPayload interface{})
+	Marshal(m interface{}) (b []byte, err error)
+	Unmarshal(b []byte) (m interface{}, err error)
+	NewEncoder(w io.Writer) Encoder
+	NewDecoder(r io.Reader) Decoder
+}
+
+func NewProto() Proto {
+	return &proto{
+		protoMap: make(map[Type]interface{}),
+	}
+}
+
+type proto struct {
+	protoMap map[Type]interface{}
+}
+
+func (p *proto) MustRegister(mType Type, mPayload interface{}) {
+	if err := mustBePtrOfStruct(mPayload); err != nil {
+		panic(err)
+	}
+	if ptr, ok := p.protoMap[mType]; ok {
+		if reflect.TypeOf(mPayload) != reflect.TypeOf(ptr) {
+			panic(fmt.Errorf("type exists %s", mType))
+		}
+	} else {
+		p.protoMap[mType] = mPayload
+	}
+}
+
+func (p *proto) Marshal(payload interface{}) (b []byte, err error) {
+	if err := mustBePtrOfStruct(payload); err != nil {
+		panic(err)
+	}
+	for mType, mPayload := range p.protoMap {
+		if reflect.TypeOf(mPayload) == reflect.TypeOf(payload) {
+			m := &message{
+				Type:    mType,
+				Payload: payload,
+			}
+			return json.Marshal(m)
+		}
+	}
+	return nil, fmt.Errorf("type was not registered")
+}
+
+func (p *proto) Unmarshal(b []byte) (payload interface{}, err error) {
+	h := &message{
+		Type: "",
+	}
+	err = json.Unmarshal(b, h)
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := p.protoMap[h.Type]; !ok {
+		return nil, fmt.Errorf("unknown type %s\n", string(b))
+	}
+	m := &message{
+		Payload: reflect.New(reflect.TypeOf(p.protoMap[h.Type]).Elem()).Interface(),
+	}
+	err = json.Unmarshal(b, m)
+	if err != nil {
+		return nil, err
+	}
+	return m.Payload, nil
+}
+./pkg/file/file.go
+package file
+
+import (
+	"io"
+	"io/ioutil"
+	"os"
+)
+
+type File interface {
+	// Read :
+	Read() ([]byte, error)
+	// Write :
+	Write([]byte) error
+	// Sync :
+	Sync() error
+	// Close :
+	Close() error
+}
+
+func New(path string) (File, error) {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		return nil, err
+	}
+	return &file{
+		file: f,
+	}, nil
+}
+
+type file struct {
+	file *os.File
+}
+
+func (f *file) Close() error {
+	return f.file.Close()
+}
+
+func (f *file) Sync() error {
+	return f.file.Sync()
+}
+
+func (f *file) Read() ([]byte, error) {
+	_, err := f.file.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadAll(f.file)
+}
+
+func (f *file) Write(b []byte) error {
+	_, err := f.file.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
+	}
+	err = f.file.Truncate(0)
+	if err != nil {
+		return err
+	}
+	_, err = f.file.Write(b)
+	return err
+}
+./pkg/codec/xml.go
+package codec
+
+import (
+	"encoding/xml"
+)
+
+func NewXmlCodec() Codec {
+	return &xmlCodec{}
+}
+
+type xmlCodec struct{}
+
+func (c *xmlCodec) Marshal(o interface{}) (b []byte, err error) {
+	return xml.Marshal(o)
+}
+
+func (c *xmlCodec) Unmarshal(b []byte, o interface{}) (err error) {
+	return xml.Unmarshal(b, o)
+}
+./pkg/codec/yaml.go
+package codec
+
+import (
+	"github.com/go-yaml/yaml"
+)
+
+func NewYamlCodec() Codec {
+	return &yamlCodec{}
+}
+
+type yamlCodec struct{}
+
+func (c *yamlCodec) Marshal(o interface{}) (b []byte, err error) {
+	return yaml.Marshal(o)
+}
+
+func (c *yamlCodec) Unmarshal(b []byte, o interface{}) (err error) {
+	return yaml.Unmarshal(b, o)
+}
+./pkg/codec/json.go
+package codec
+
+import "encoding/json"
+
+func NewJsonCodec() Codec {
+	return &jsonCodec{}
+}
+
+type jsonCodec struct{}
+
+func (c *jsonCodec) Marshal(o interface{}) (b []byte, err error) {
+	return json.Marshal(o)
+}
+
+func (c *jsonCodec) Unmarshal(b []byte, o interface{}) (err error) {
+	return json.Unmarshal(b, o)
+}
+./pkg/codec/codec.go
+package codec
+
+type Codec interface {
+	Marshal(o interface{}) (b []byte, err error)
+	Unmarshal(b []byte, o interface{}) (err error)
+}
+./pkg/dispatcher/go_dispatcher.go
+package dispatcher
+
+func NewGoDispatcher() Dispatcher {
+	return &goDispatcher{}
+}
+
+type goDispatcher struct{}
+
+func (d *goDispatcher) Dispatch(task func()) bool {
+	go task()
+	return true
+}
+./pkg/dispatcher/dispatcher.go
+package dispatcher
+
+type Dispatcher interface {
+	Dispatch(func()) bool
+}
+./pkg/dispatcher/queue_dispatcher.go
+package dispatcher
+
+func NewQueueDispatcher(waitCount int, runCount int) Dispatcher {
+	d := &queueDispatcher{
+		waitQueue: make(chan func(), waitCount),
+		runSlot:   make(chan struct{}, runCount),
+	}
+	go func() {
+		for task := range d.waitQueue {
+			d.runSlot <- struct{}{}
+			go func(task func()) {
+				defer func() {
+					<-d.runSlot
+				}()
+				task()
+			}(task)
+		}
+	}()
+	return d
+}
+
+type queueDispatcher struct {
+	waitQueue chan func()
+	runSlot   chan struct{}
+}
+
+func (d *queueDispatcher) Dispatch(task func()) (ok bool) {
+	select {
+	case d.waitQueue <- task:
+		return true
+	default:
+		return false
+	}
+}
+./pkg/paxos/acceptor.go
+package paxos
+
+type Record struct {
+	RecordID RecordID `json:"record_id"`
+	PromiseID ProposalID `json:"promise_id"`
+	Value interface{} `json:"value"`
+}
+
+func newRecord() *Record {
+	return &Record{
+		PromiseID: 0,
+		Value: nil,
+	}
+}
+
+type Acceptor struct {
+	RecordMap map[RecordID]*Record
+}
+
+func (a *Acceptor) HandlePrepareRequest(req *PrepareRequest) *PrepareResponse {
+	var rec *Record
+	if rec, ok := a.RecordMap[req.RecordID]; !ok {
+		rec = newRecord()
+		a.RecordMap[req.RecordID] = rec
+	}
+
+	if rec.PromiseID <= req.ProposalID{
+		rec.PromiseID = req.ProposalID
+	}
+
+	return &PrepareResponse{
+		RecordID: req.RecordID,
+		PromiseID: rec.PromiseID,
+		Value: Value,
+	}
+}
+
+func (a *Acceptor) HandleAcceptRequest(req *AcceptRequest) {
+	var rec *Record
+	if rec, ok := a.RecordMap[req.RecordID]; !ok {
+		rec = newRecord()
+		a.RecordMap[req.RecordID] = rec
+	}
+	if rec.PromiseID <= req.ProposalID {
+		rec.PromiseID = req.ProposalID
+		rec.Value = req.Value
+	}
+}
+./pkg/paxos/message.go
+package paxos
+
+type ProposalID = uint64
+type RecordID = uint64
+
+type PrepareRequest struct {
+	RecordID RecordID `json:"record_id"`
+	ProposalID ProposalID `json:"proposal_id"`
+}
+
+type PrepareResponse struct {
+	RecordID RecordID `json:"record_id"`
+	PromiseID ProposalID `json:promise_id`
+	Value interface{} `json:value`
+}
+
+type AcceptRequest struct {
+	RecordID RecordID `json:"record_id"`
+	ProposalID ProposalID `json:"proposal_id"`
+	Value interface{} `json:"value"`
+}
+./pkg/paxos/rpc.go
+type RPC interface {
+	Broadcast(message interface{})
+	Recv() <-chan interface{}
+}
+
+func NewRPC()./pkg/paxos/proposer.go
+func Propose(recordID RecordID, value Value) {
+	
+}./pkg/vec/vec.go
 package vec
 
 // Zero : return Zero value of a type
@@ -632,6 +1417,649 @@ func invmod(a int, n int) int {
 	// ax + ny = 1
 	return mod(x, n)
 }
+./pkg/sat/formula.go
+package sat
+
+type Variable = int
+
+type Literal = int
+
+type Clause = []Literal
+
+type Formula []Clause
+
+func (formula Formula) NumClause() int {
+	return len(formula)
+}
+
+func (formula Formula) NumVariable() int {
+	numVar := 0
+	for _, clause := range formula {
+		for _, literal := range clause {
+			variable := abs(literal)
+			if numVar < variable {
+				numVar = variable
+			}
+		}
+	}
+	return numVar
+}
+./pkg/sat/solver.go
+package sat
+
+import (
+	"context"
+	"time"
+)
+
+type ContextKey int
+
+const (
+	ContextKeySatisfiable ContextKey = 0
+	ContextKeyAssignment  ContextKey = 1
+)
+
+type Value = int
+
+const (
+	ValueTrue    Value = 1
+	ValueUnknown Value = 0
+	ValueFalse   Value = -1
+)
+
+type Assignment []Value
+
+func NewAssignment(numVariable int) Assignment {
+	return make(Assignment, numVariable+1)
+}
+
+type solverCtx struct {
+	ctx context.Context
+	r   Value
+	a   Assignment
+}
+
+func (c *solverCtx) Deadline() (deadline time.Time, ok bool) {
+	return c.ctx.Deadline()
+}
+
+func (c *solverCtx) Done() <-chan struct{} {
+	return c.ctx.Done()
+}
+
+func (c *solverCtx) Err() error {
+	return c.ctx.Err()
+}
+
+func (c *solverCtx) Value(key interface{}) interface{} {
+	if ctxKey, ok := key.(ContextKey); ok {
+		switch ctxKey {
+		case ContextKeySatisfiable:
+			return c.r
+		case ContextKeyAssignment:
+			return c.a
+		default:
+			return nil
+		}
+	}
+	return c.ctx.Value(key)
+}
+./pkg/sat/ppsz.go
+package sat
+
+import (
+	"context"
+	"math/rand"
+	"runtime"
+	"sync"
+)
+
+func SolvePPSZ(parentCtx context.Context, formula Formula, assumption Assignment) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(parentCtx)
+	c := &solverCtx{
+		ctx: ctx,
+		r:   ValueUnknown,
+		a:   nil,
+	}
+	r := rand.New(rand.NewSource(1234))
+	mu := &sync.Mutex{}
+	concurrent := runtime.NumCPU()
+	for j := 0; j < concurrent; j++ {
+		go func() {
+			defer cancel()
+			numVariable := formula.NumVariable()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+				s := &bcpState{
+					Formula:    formula,
+					Assignment: NewAssignment(numVariable),
+				}
+				if assumption != nil {
+					copy(s.Assignment, assumption)
+				}
+				for {
+					// bcp
+					haveChance, _ := s.Next()
+					if !haveChance {
+						break
+					}
+					// check success
+					var zeroVariableList []int
+					for i := 1; i < len(s.Assignment); i++ {
+						if s.Assignment[i] == ValueUnknown {
+							zeroVariableList = append(zeroVariableList, i)
+						}
+					}
+					if len(zeroVariableList) == 0 {
+						c.r = ValueTrue
+						c.a = s.Assignment
+						return
+					}
+					// guess
+					mu.Lock()
+					guess := zeroVariableList[r.Intn(len(zeroVariableList))]
+					if r.Float32() < 0.5 {
+						guess *= -1
+					}
+					mu.Unlock()
+					s.Assignment[abs(guess)] = sign(guess)
+				}
+			}
+		}()
+	}
+	return c, cancel
+}
+./pkg/sat/bcp.go
+package sat
+
+type bcpState struct {
+	Formula    Formula
+	Assignment Assignment
+}
+
+func (s *bcpState) Verify() bool {
+	for _, clause := range s.Formula {
+		if value, _, _ := s.clauseValue(clause); value != ValueTrue {
+			return false
+		}
+	}
+	return true
+}
+
+// Next : perform bcp Boolean Constraint propagation
+func (s *bcpState) Next() (haveChance bool, activated []Literal) {
+	for {
+		unitProp := false
+		for _, clause := range s.Formula {
+			value, zeroCount, zeroFirstIdx := s.clauseValue(clause)
+			if value == ValueFalse {
+				return false, activated
+			}
+			if value == ValueTrue {
+				continue
+			}
+			if value == ValueUnknown && zeroCount == 1 {
+				activateLiteral := clause[zeroFirstIdx]
+				s.Assignment[abs(activateLiteral)] = sign(activateLiteral)
+				activated = append(activated, activateLiteral)
+				unitProp = true
+			}
+		}
+		if !unitProp {
+			break
+		}
+	}
+	return true, activated
+}
+
+func (s *bcpState) literalValue(literal Literal) Value {
+	return s.Assignment[abs(literal)] * sign(literal)
+}
+
+// clauseValue:
+// value : 1 if clause is sat, -1 if clause is unsat, 0 if unknown
+// zeroCount : number of unknown literals (only when value=0)
+// zeroFirstIdx : index of the first unknown literal (only when value=0)
+func (s *bcpState) clauseValue(clause Clause) (value Value, zeroCount int, zeroFirstIdx int) {
+	zeroFirstIdx = -1
+	for idx, literal := range clause {
+		v := s.literalValue(literal)
+		if v == ValueTrue {
+			return ValueTrue, 0, 0
+		}
+		if v == ValueUnknown {
+			zeroCount++
+			if zeroFirstIdx == -1 {
+				zeroFirstIdx = idx
+			}
+		}
+	}
+	if zeroCount > 0 {
+		return ValueUnknown, zeroCount, zeroFirstIdx
+	}
+	return ValueFalse, 0, 0
+}
+./pkg/sat/ppsz_test.go
+package sat_test
+
+import (
+	"context"
+	"fmt"
+	"github.com/khanh-nguyen-code/go_util/pkg/sat"
+	"math/rand"
+	"testing"
+	"time"
+)
+
+func TestPPSZ(t *testing.T) {
+	// x1 true, x2 false
+	// (x1 or x2) and (not x2 or x3) and not x3
+	formula := [][]int{
+		{1, 2},
+		{-2, 3},
+		{-3},
+	}
+	ctx, cancel := sat.SolvePPSZ(context.Background(), formula, nil)
+	defer cancel()
+	<-ctx.Done()
+	fmt.Println(ctx.Value(sat.ContextKeySatisfiable))
+	fmt.Println(ctx.Value(sat.ContextKeyAssignment))
+}
+
+func TestPPSZTimeout(t *testing.T) {
+	numVariable := 1000
+	numClause := 4 * numVariable
+	var formula [][]int
+	for i := 0; i < numClause; i++ {
+		v1, v2, v3 := rand.Intn(numVariable)+1, rand.Intn(numVariable)+1, rand.Intn(numVariable)+1
+		s1, s2, s3 := 1, 1, 1
+		if rand.Intn(2) == 0 {
+			s1 = -1
+		}
+		if rand.Intn(2) == 0 {
+			s2 = -1
+		}
+		if rand.Intn(2) == 0 {
+			s3 = -1
+		}
+		formula = append(formula, []int{v1 * s1, v2 * s2, v3 * s3})
+	}
+	timeout, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	ctx, cancel := sat.SolvePPSZ(timeout, formula, nil)
+	defer cancel()
+	<-ctx.Done()
+	fmt.Println(ctx.Value(sat.ContextKeySatisfiable))
+	fmt.Println(ctx.Value(sat.ContextKeyAssignment))
+}
+./pkg/sat/util.go
+package sat
+
+func abs(x int) int {
+	switch {
+	case x > 0:
+		return x
+	case x < 0:
+		return -x
+	default:
+		return 0
+	}
+}
+
+func sign(x int) int {
+	switch {
+	case x > 0:
+		return +1
+	case x < 0:
+		return -1
+	default:
+		return 0
+	}
+}
+./pkg/sat/cdcl_test.go
+package sat_test
+
+import (
+	"context"
+	"fmt"
+	"github.com/khanh-nguyen-code/go_util/pkg/sat"
+	"math/rand"
+	"testing"
+	"time"
+)
+
+func TestCDCL(t *testing.T) {
+	// x1 true, x2 false
+	// (x1 or x2) and (not x2 or x3) and not x3
+	formula := [][]int{
+		{1, 2},
+		{-2, 3},
+		{-3},
+	}
+	ctx, cancel := sat.SolveCDCL(context.Background(), formula, nil)
+	defer cancel()
+	<-ctx.Done()
+	fmt.Println(ctx.Value(sat.ContextKeySatisfiable))
+	fmt.Println(ctx.Value(sat.ContextKeyAssignment))
+}
+
+func TestCDCLTimeout(t *testing.T) {
+	numVariable := 1000
+	numClause := 4 * numVariable
+	var formula [][]int
+	for i := 0; i < numClause; i++ {
+		v1, v2, v3 := rand.Intn(numVariable)+1, rand.Intn(numVariable)+1, rand.Intn(numVariable)+1
+		s1, s2, s3 := 1, 1, 1
+		if rand.Intn(2) == 0 {
+			s1 = -1
+		}
+		if rand.Intn(2) == 0 {
+			s2 = -1
+		}
+		if rand.Intn(2) == 0 {
+			s3 = -1
+		}
+		formula = append(formula, []int{v1 * s1, v2 * s2, v3 * s3})
+	}
+	timeout, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	ctx, cancel := sat.SolveCDCL(timeout, formula, nil)
+	defer cancel()
+	<-ctx.Done()
+	fmt.Println(ctx.Value(sat.ContextKeySatisfiable))
+	fmt.Println(ctx.Value(sat.ContextKeyAssignment))
+}
+./pkg/sat/dimacs.go
+package sat
+
+import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"io"
+	"strconv"
+)
+
+func Parse(r io.Reader) (formula Formula, err error) {
+	numVariables := -1
+	numClauses := 0
+
+	var current []Literal
+
+	scanner := bufio.NewScanner(r)
+	read := 0
+	for scanner.Scan() {
+		raw := scanner.Bytes()
+
+		if len(raw) == 0 {
+			continue
+		}
+
+		if numVariables == -1 {
+			switch raw[0] {
+			case 'c':
+			case 'p':
+				fields := bytes.Fields(raw)
+				if len(fields) != 4 {
+					return nil, fmt.Errorf(
+						"problem line should have 4 fields whitespace separated: %q", raw)
+				}
+
+				if string(fields[1]) != "cnf" {
+					return nil, fmt.Errorf(
+						"problem type must be 'cnf', got: %q", fields[1])
+				}
+
+				vars, err := strconv.Atoi(string(fields[2]))
+				if err != nil {
+					return nil, fmt.Errorf(
+						"error converting variable count %q: %s", fields[2], err)
+				}
+
+				clauses, err := strconv.Atoi(string(fields[3]))
+				if err != nil {
+					return nil, fmt.Errorf(
+						"error converting clauses count %q: %s", fields[3], err)
+				}
+
+				numVariables = vars
+				numClauses = clauses
+
+			default:
+				return nil, fmt.Errorf(
+					"invalid start of line character: %q", raw[0])
+			}
+
+			continue
+		}
+
+		fields := bytes.Fields(raw)
+
+		end := false
+		for _, raw := range fields {
+			val, err := strconv.Atoi(string(raw))
+			if err != nil {
+				return nil, fmt.Errorf(
+					"invalid literal %q", raw)
+			}
+
+			if val == 0 {
+				end = true
+				break
+			}
+
+			current = append(current, val)
+		}
+
+		if end {
+			formula = append(formula, current)
+			current = nil
+
+			read++
+			if read >= numClauses {
+				break
+			}
+		}
+	}
+
+	return formula, nil
+}
+./pkg/sat/cdcl.go
+package sat
+
+import (
+	"context"
+	"github.com/irifrance/gini"
+	"github.com/irifrance/gini/z"
+)
+
+func lit2zLit(l Literal) z.Lit {
+	switch {
+	case l > 0:
+		return z.Var(abs(l)).Pos()
+	case l < 0:
+		return z.Var(abs(l)).Neg()
+	default:
+		panic("l must not be 0")
+	}
+}
+func SolveCDCL(parentCtx context.Context, formula Formula, assumption Assignment) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(parentCtx)
+	c := &solverCtx{
+		ctx: ctx,
+		r:   ValueUnknown,
+		a:   nil,
+	}
+	go func() {
+		defer cancel()
+		g := gini.NewVc(formula.NumVariable(), formula.NumClause())
+		for _, clause := range formula {
+			if len(clause) == 0 {
+				continue
+			}
+			for _, lit := range clause {
+				g.Add(lit2zLit(lit))
+			}
+			g.Add(z.LitNull)
+		}
+		assumptionLitList := make([]z.Lit, 0)
+		for v := 1; v < len(assumption); v++ {
+			if assumption[v] == ValueUnknown {
+				continue
+			}
+			assumptionLitList = append(assumptionLitList, lit2zLit(v*assumption[v]))
+		}
+		g.Assume(assumptionLitList...)
+		s := g.GoSolve()
+		go func() {
+			<-ctx.Done()
+			s.Stop()
+		}()
+		switch s.Wait() {
+		case 1:
+			c.r = ValueTrue
+		case -1:
+			c.r = ValueFalse
+		case 0:
+			c.r = ValueUnknown
+		default:
+			panic("unexpected output from gini")
+		}
+		if c.r == ValueTrue {
+			c.a = NewAssignment(formula.NumVariable())
+			for v := 1; v < len(c.a); v++ {
+				if g.Value(lit2zLit(v)) {
+					c.a[v] = ValueTrue
+				} else {
+					c.a[v] = ValueFalse
+				}
+			}
+		}
+	}()
+	return c, cancel
+}
+./pkg/sat/verifier.go
+package sat
+
+func Verify(formula Formula, assignment Assignment) bool {
+	s := &bcpState{
+		Formula:    formula,
+		Assignment: assignment,
+	}
+	return s.Verify()
+}
+./pkg/feature_toggle/feature_toggle.go
+package feature_toggle
+
+type Loader interface {
+	Load(key interface{}) bool
+}
+
+type Toggle interface {
+	Exec()
+	If(key interface{}, task func(), alt func()) Toggle
+}
+
+func Set(loader Loader) {
+	defaultToggle.loader = loader
+}
+
+func If(key interface{}, task func(), alt func()) Toggle {
+	return defaultToggle.If(key, task, alt)
+}
+
+var defaultToggle = &toggle{
+	loader: nil,
+	parent: nil,
+	task:   nil,
+}
+
+type toggle struct {
+	loader Loader
+	parent *toggle
+	task   func()
+}
+
+func (t *toggle) Exec() {
+	if t.parent != nil {
+		t.parent.Exec()
+	}
+	if t.task != nil {
+		t.task()
+	}
+}
+
+func (t *toggle) If(key interface{}, task func(), alt func()) Toggle {
+	chosen := alt
+	if t.loader != nil && t.loader.Load(key) {
+		chosen = task
+	}
+	return &toggle{
+		loader: t.loader,
+		parent: t,
+		task:   chosen,
+	}
+}
+./pkg/feature_toggle/feature_toggle_test.go
+package feature_toggle_test
+
+import (
+	"fmt"
+	ft "github.com/khanh-nguyen-code/go_util/pkg/feature_toggle"
+	"sync"
+	"testing"
+)
+
+type storage struct {
+	s *sync.Map
+}
+
+func (s *storage) Load(key interface{}) bool {
+	if val, ok := s.s.Load(key); ok {
+		if b, ok := val.(bool); ok && b {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *storage) Set(key interface{}) {
+	s.s.Store(key, true)
+}
+func (s *storage) Del(key interface{}) {
+	s.s.Delete(key)
+}
+
+func TestFeatureToggle(t *testing.T) {
+	s := &storage{s: &sync.Map{}}
+	ft.Set(s)
+	fmt.Println("set feature_1")
+	s.Set("feature_1")
+	ft.If("feature_1", func() {
+		fmt.Println("feature_1 is enable")
+	}, func() {
+		fmt.Println("feature_1 is disable")
+	}).If("feature_2", func() {
+		fmt.Println("feature_2 is enable")
+	}, func() {
+		fmt.Println("feature_2 is disable")
+	}).Exec()
+	fmt.Println("del feature_1")
+	s.Del("feature_1")
+	ft.If("feature_1", func() {
+		fmt.Println("feature_1 is enable")
+	}, func() {
+		fmt.Println("feature_1 is disable")
+	}).If("feature_2", func() {
+		fmt.Println("feature_2 is enable")
+	}, func() {
+		fmt.Println("feature_2 is disable")
+	}).Exec()
+}
 ./pkg/fib/fib.go
 package fib
 
@@ -767,6 +2195,104 @@ func (a Int) Equal(b Int) bool {
 
 func (a Int) Norm() Int {
 	return Int{(&big.Int{}).Abs(a.bigint)}
+}
+./pkg/kvstore_client/client.go
+package kvstore_client
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/khanh-nguyen-code/go_util/pkg/rlog_util/kvstore"
+	"io/ioutil"
+	"net/http"
+	"strconv"
+)
+
+type Client interface {
+	Get(ctx context.Context, key string) (version uint64, value string, err error)
+	Set(ctx context.Context, key string, version uint64, value string) error
+	Del(ctx context.Context, key string, version uint64) error
+}
+
+func New(path string) Client {
+	return &client{path: path}
+}
+
+type client struct {
+	path string
+}
+
+func (c *client) Get(ctx context.Context, path string) (version uint64, value string, err error) {
+	if len(path) == 0 || path[0] != '/' {
+		path = "/" + path
+	}
+	req, err := http.NewRequest(
+		http.MethodGet,
+		c.path+path,
+		nil,
+	)
+	if err != nil {
+		return 0, "", err
+	}
+	res, err := http.DefaultClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return 0, "", err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		err = fmt.Errorf("status_code_%d", res.StatusCode)
+		return 0, "", err
+	}
+	b, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return 0, "", err
+	}
+	e := kvstore.Entry{}
+	err = json.Unmarshal(b, &e)
+	return e.Version, e.Value, err
+}
+func (c *client) Set(ctx context.Context, path string, version uint64, value string) error {
+	if len(path) == 0 || path[0] != '/' {
+		path = "/" + path
+	}
+	req, err := http.NewRequest(
+		http.MethodPost,
+		c.path+path+"?version="+strconv.Itoa(int(version)),
+		bytes.NewBuffer([]byte(value)),
+	)
+	if err != nil {
+		return err
+	}
+	res, err := http.DefaultClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("status_code_%d", res.StatusCode)
+	}
+	return nil
+}
+func (c *client) Del(ctx context.Context, key string, version uint64) error {
+	req, err := http.NewRequest(
+		http.MethodDelete,
+		c.path+"/"+key+"?version="+strconv.Itoa(int(version)),
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	res, err := http.DefaultClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("status_code_%d", res.StatusCode)
+	}
+	return nil
 }
 ./pkg/vend/uint128/uint128.go
 // Package uint128 : https://pkg.go.dev/lukechampine.com/uint128?utm_source=godoc
@@ -1314,6 +2840,2149 @@ func EuclideanAlgorithm[T EuclideanDomain[T]](x T, y T) (T, T) {
 	b := b1.Sub(a.Mul(q))
 	return a, b
 
+}
+./pkg/rlog_util/transport/transport.go
+package transport
+
+import (
+	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
+)
+
+type Transport interface {
+	ListenAndServe(handler rpc.Handler) error
+	Router(receiver rpc.Address) rpc.Handler
+	Close() error
+}
+./pkg/rlog_util/transport/http.go
+package transport
+
+import (
+	"bytes"
+	"context"
+	"encoding/base64"
+	"github.com/gin-gonic/gin"
+	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
+	rlog_codec "github.com/khanh-nguyen-code/go_util/pkg/rlog_util/codec"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strings"
+)
+
+const (
+	protoScheme     = "http://"
+	transportPath   = "/transport"
+	transportMethod = http.MethodPost
+)
+
+func NewHttp(host rpc.Address) Transport {
+	return &httpTransport{
+		host:   host,
+		server: nil,
+	}
+}
+
+type httpTransport struct {
+	host   rpc.Address
+	server *http.Server
+}
+
+func (s *httpTransport) Close() error {
+	return s.server.Close()
+}
+
+func (s *httpTransport) ListenAndServe(handler rpc.Handler) error {
+	e := gin.New()
+	e.Handle(transportMethod, transportPath, func(c *gin.Context) {
+		b, err := ioutil.ReadAll(c.Request.Body)
+		defer c.Request.Body.Close()
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+		b, err = base64.StdEncoding.DecodeString(string(b))
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+		request, err := rlog_codec.Unmarshal(b)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+		call := &rpc.Call{
+			Request: request,
+		}
+		rpc.WaitThenCancel(call, c.Request.Context())
+		handler(call)
+		<-call.Done()
+		b, err = rlog_codec.Marshal(call.Response)
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		s := base64.StdEncoding.EncodeToString(b)
+		c.String(http.StatusOK, s)
+	})
+
+	s.server = &http.Server{
+		Addr:    getListenAddress(s.host),
+		Handler: e,
+	}
+	return s.server.ListenAndServe()
+}
+
+func (s *httpTransport) Router(receiver rpc.Address) rpc.Handler {
+	return func(call *rpc.Call) {
+		response := func() interface{} {
+			b, err := rlog_codec.Marshal(call.Request)
+			if err != nil {
+				return nil
+			}
+			s := base64.StdEncoding.EncodeToString(b)
+			req, err := http.NewRequest(transportMethod, protoScheme+receiver+transportPath, bytes.NewBuffer([]byte(s)))
+			if err != nil {
+				return nil
+			}
+			client := &http.Client{}
+			ctx, cancel := context.WithCancel(context.Background())
+			req = req.WithContext(ctx)
+			go func() {
+				<-call.Done()
+				cancel()
+			}()
+			res, err := client.Do(req)
+			if err != nil {
+				return nil
+			}
+			if res.StatusCode != http.StatusOK {
+				log.Println(res.StatusCode)
+				return nil
+			}
+			b, err = ioutil.ReadAll(res.Body)
+			if err != nil {
+				return nil
+			}
+			defer res.Body.Close()
+			b, err = base64.StdEncoding.DecodeString(string(b))
+			if err != nil {
+				return nil
+			}
+			response, err := rlog_codec.Unmarshal(b)
+			if err != nil {
+				response = nil
+				return nil
+			}
+			return response
+		}()
+		call.Write(response)
+	}
+}
+func getListenAddress(address string) string {
+	return ":" + strings.SplitN(address, ":", 2)[1]
+}
+./pkg/rlog_util/transport/relay.go
+package transport
+
+import (
+	"encoding/json"
+	"github.com/khanh-nguyen-code/go_util/pkg/relay"
+	"github.com/khanh-nguyen-code/go_util/pkg/relay/proto/gen/relay_pb"
+	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
+	rlog_codec "github.com/khanh-nguyen-code/go_util/pkg/rlog_util/codec"
+	"github.com/khanh-nguyen-code/go_util/pkg/uuid"
+	"sync"
+)
+
+type message struct {
+	Uuid    string `json:"uuid"`
+	Payload []byte `json:"payload"`
+}
+
+func NewRelay(agent relay.Peer) Transport {
+	return &relayTransport{
+		agent:      agent,
+		watchChMap: sync.Map{},
+	}
+}
+
+type relayTransport struct {
+	agent      relay.Peer
+	watchChMap sync.Map // map[uuid]chan []byte
+}
+
+func (r *relayTransport) Close() error {
+	return r.agent.Close()
+}
+func (r *relayTransport) ListenAndServe(handler rpc.Handler) error {
+	return r.agent.DialAndServe(func(m *relay_pb.Message) {
+		go func() {
+			reqMsg := &message{}
+			err := json.Unmarshal(m.Payload, reqMsg)
+			if err != nil {
+				return
+			}
+			if val, loaded := r.watchChMap.LoadAndDelete(reqMsg.Uuid); loaded {
+				watchCh := val.(chan []byte)
+				watchCh <- reqMsg.Payload
+				close(watchCh)
+				return
+			}
+			if isRequest(reqMsg.Uuid) {
+				resBytes := func() []byte {
+					req, err := rlog_codec.Unmarshal(reqMsg.Payload)
+					if err != nil {
+						return nil
+					}
+					call := &rpc.Call{
+						Request:  req,
+						Response: nil,
+					}
+					handler(call)
+					<-call.Done()
+					b, err := rlog_codec.Marshal(call.Response)
+					if err != nil {
+						return nil
+					}
+					return b
+				}()
+				resMsg := &message{
+					Uuid:    toResponseUuid(reqMsg.Uuid),
+					Payload: resBytes,
+				}
+				b, err := json.Marshal(resMsg)
+				if err != nil {
+					return
+				}
+				err = r.agent.Write(&relay_pb.Message{
+					Receiver: m.Sender,
+					Payload:  b,
+				})
+				if err != nil {
+					return
+				}
+			}
+		}()
+	})
+}
+
+func (r *relayTransport) Router(receiver rpc.Address) rpc.Handler {
+	return func(call *rpc.Call) {
+		response := func() interface{} {
+			reqBytes, err := rlog_codec.Marshal(call.Request)
+			if err != nil {
+				return nil
+			}
+			reqId := makeRequestUuid()
+			resId := toResponseUuid(reqId)
+			watchCh := make(chan []byte, 1)
+			r.watchChMap.Store(resId, watchCh)
+			defer func() {
+				r.watchChMap.Delete(resId)
+			}()
+			reqMsg := &message{
+				Uuid:    reqId,
+				Payload: reqBytes,
+			}
+			b, err := json.Marshal(reqMsg)
+			if err != nil {
+				return nil
+			}
+			err = r.agent.Write(&relay_pb.Message{
+				Receiver: receiver,
+				Payload:  b,
+			})
+			if err != nil {
+				return nil
+			}
+			select {
+			case <-call.Done():
+				return nil
+			case resBytes := <-watchCh:
+				response, err := rlog_codec.Unmarshal(resBytes)
+				if err != nil {
+					response = nil
+					return nil
+				}
+				return response
+			}
+		}()
+		call.Write(response)
+	}
+}
+
+func isRequest(id string) bool {
+	return id[:3] == "req"
+}
+
+func makeRequestUuid() string {
+	return "req" + uuid.New()
+}
+
+func toResponseUuid(reqId string) string {
+	return "res" + reqId[3:]
+}
+./pkg/rlog_util/codec/proto/gen/rlog_pb/rlog.pb.go
+// Code generated by protoc-gen-go. DO NOT EDIT.
+// versions:
+// 	protoc-gen-go v1.26.0
+// 	protoc        v3.19.3
+// source: rlog.proto
+
+package rlog_pb
+
+import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
+)
+
+const (
+	// Verify that this generated code is sufficiently up-to-date.
+	_ = protoimpl.EnforceVersion(20 - protoimpl.MinVersion)
+	// Verify that runtime/protoimpl is sufficiently up-to-date.
+	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
+)
+
+type Type int32
+
+const (
+	Type_UNKNOWN_MESSAGE         Type = 0
+	Type_PREPARE_REQUEST         Type = 1
+	Type_PREPARE_RESPONSE        Type = 2
+	Type_ACCEPT_REQUEST          Type = 3
+	Type_ACCEPT_RESPONSE         Type = 4
+	Type_DECIDE_REQUEST          Type = 5
+	Type_DECIDE_RESPONSE         Type = 6
+	Type_UPDATE_REQUEST          Type = 7
+	Type_UPDATE_RESPONSE         Type = 8
+	Type_UPDATE_RESPONSE_DECIDE  Type = 9
+	Type_UPDATE_RESPONSE_RESTORE Type = 10
+)
+
+// Enum value maps for Type.
+var (
+	Type_name = map[int32]string{
+		0:  "UNKNOWN_MESSAGE",
+		1:  "PREPARE_REQUEST",
+		2:  "PREPARE_RESPONSE",
+		3:  "ACCEPT_REQUEST",
+		4:  "ACCEPT_RESPONSE",
+		5:  "DECIDE_REQUEST",
+		6:  "DECIDE_RESPONSE",
+		7:  "UPDATE_REQUEST",
+		8:  "UPDATE_RESPONSE",
+		9:  "UPDATE_RESPONSE_DECIDE",
+		10: "UPDATE_RESPONSE_RESTORE",
+	}
+	Type_value = map[string]int32{
+		"UNKNOWN_MESSAGE":         0,
+		"PREPARE_REQUEST":         1,
+		"PREPARE_RESPONSE":        2,
+		"ACCEPT_REQUEST":          3,
+		"ACCEPT_RESPONSE":         4,
+		"DECIDE_REQUEST":          5,
+		"DECIDE_RESPONSE":         6,
+		"UPDATE_REQUEST":          7,
+		"UPDATE_RESPONSE":         8,
+		"UPDATE_RESPONSE_DECIDE":  9,
+		"UPDATE_RESPONSE_RESTORE": 10,
+	}
+)
+
+func (x Type) Enum() *Type {
+	p := new(Type)
+	*p = x
+	return p
+}
+
+func (x Type) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Type) Descriptor() protoreflect.EnumDescriptor {
+	return file_rlog_proto_enumTypes[0].Descriptor()
+}
+
+func (Type) Type() protoreflect.EnumType {
+	return &file_rlog_proto_enumTypes[0]
+}
+
+func (x Type) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Type.Descriptor instead.
+func (Type) EnumDescriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{0}
+}
+
+type Message struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Type                  Type                   `protobuf:"varint,1,opt,name=type,proto3,enum=rlog.Type" json:"type,omitempty"`
+	PrepareRequest        *PrepareRequest        `protobuf:"bytes,2,opt,name=prepare_request,json=prepareRequest,proto3,oneof" json:"prepare_request,omitempty"`
+	PrepareResponse       *PrepareResponse       `protobuf:"bytes,3,opt,name=prepare_response,json=prepareResponse,proto3,oneof" json:"prepare_response,omitempty"`
+	AcceptRequest         *AcceptRequest         `protobuf:"bytes,4,opt,name=accept_request,json=acceptRequest,proto3,oneof" json:"accept_request,omitempty"`
+	AcceptResponse        *AcceptResponse        `protobuf:"bytes,5,opt,name=accept_response,json=acceptResponse,proto3,oneof" json:"accept_response,omitempty"`
+	DecideRequest         *DecideRequest         `protobuf:"bytes,6,opt,name=decide_request,json=decideRequest,proto3,oneof" json:"decide_request,omitempty"`
+	DecideResponse        *DecideResponse        `protobuf:"bytes,7,opt,name=decide_response,json=decideResponse,proto3,oneof" json:"decide_response,omitempty"`
+	UpdateRequest         *UpdateRequest         `protobuf:"bytes,8,opt,name=update_request,json=updateRequest,proto3,oneof" json:"update_request,omitempty"`
+	UpdateResponse        *UpdateResponse        `protobuf:"bytes,9,opt,name=update_response,json=updateResponse,proto3,oneof" json:"update_response,omitempty"`
+	UpdateResponseDecide  *UpdateResponseDecide  `protobuf:"bytes,10,opt,name=update_response_decide,json=updateResponseDecide,proto3,oneof" json:"update_response_decide,omitempty"`
+	UpdateResponseRestore *UpdateResponseRestore `protobuf:"bytes,11,opt,name=update_response_restore,json=updateResponseRestore,proto3,oneof" json:"update_response_restore,omitempty"`
+}
+
+func (x *Message) Reset() {
+	*x = Message{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[0]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Message) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Message) ProtoMessage() {}
+
+func (x *Message) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[0]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Message.ProtoReflect.Descriptor instead.
+func (*Message) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Message) GetType() Type {
+	if x != nil {
+		return x.Type
+	}
+	return Type_UNKNOWN_MESSAGE
+}
+
+func (x *Message) GetPrepareRequest() *PrepareRequest {
+	if x != nil {
+		return x.PrepareRequest
+	}
+	return nil
+}
+
+func (x *Message) GetPrepareResponse() *PrepareResponse {
+	if x != nil {
+		return x.PrepareResponse
+	}
+	return nil
+}
+
+func (x *Message) GetAcceptRequest() *AcceptRequest {
+	if x != nil {
+		return x.AcceptRequest
+	}
+	return nil
+}
+
+func (x *Message) GetAcceptResponse() *AcceptResponse {
+	if x != nil {
+		return x.AcceptResponse
+	}
+	return nil
+}
+
+func (x *Message) GetDecideRequest() *DecideRequest {
+	if x != nil {
+		return x.DecideRequest
+	}
+	return nil
+}
+
+func (x *Message) GetDecideResponse() *DecideResponse {
+	if x != nil {
+		return x.DecideResponse
+	}
+	return nil
+}
+
+func (x *Message) GetUpdateRequest() *UpdateRequest {
+	if x != nil {
+		return x.UpdateRequest
+	}
+	return nil
+}
+
+func (x *Message) GetUpdateResponse() *UpdateResponse {
+	if x != nil {
+		return x.UpdateResponse
+	}
+	return nil
+}
+
+func (x *Message) GetUpdateResponseDecide() *UpdateResponseDecide {
+	if x != nil {
+		return x.UpdateResponseDecide
+	}
+	return nil
+}
+
+func (x *Message) GetUpdateResponseRestore() *UpdateResponseRestore {
+	if x != nil {
+		return x.UpdateResponseRestore
+	}
+	return nil
+}
+
+type PrepareRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ProposalId uint64 `protobuf:"varint,1,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
+	FromId     uint64 `protobuf:"varint,2,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
+}
+
+func (x *PrepareRequest) Reset() {
+	*x = PrepareRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PrepareRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PrepareRequest) ProtoMessage() {}
+
+func (x *PrepareRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PrepareRequest.ProtoReflect.Descriptor instead.
+func (*PrepareRequest) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *PrepareRequest) GetProposalId() uint64 {
+	if x != nil {
+		return x.ProposalId
+	}
+	return 0
+}
+
+func (x *PrepareRequest) GetFromId() uint64 {
+	if x != nil {
+		return x.FromId
+	}
+	return 0
+}
+
+type PrepareResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Promise  uint64   `protobuf:"varint,1,opt,name=promise,proto3" json:"promise,omitempty"`
+	AcceptId uint64   `protobuf:"varint,2,opt,name=accept_id,json=acceptId,proto3" json:"accept_id,omitempty"`
+	Success  bool     `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
+	Accepted *uint64  `protobuf:"varint,4,opt,name=accepted,proto3,oneof" json:"accepted,omitempty"`
+	Entries  []string `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
+}
+
+func (x *PrepareResponse) Reset() {
+	*x = PrepareResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PrepareResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PrepareResponse) ProtoMessage() {}
+
+func (x *PrepareResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PrepareResponse.ProtoReflect.Descriptor instead.
+func (*PrepareResponse) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PrepareResponse) GetPromise() uint64 {
+	if x != nil {
+		return x.Promise
+	}
+	return 0
+}
+
+func (x *PrepareResponse) GetAcceptId() uint64 {
+	if x != nil {
+		return x.AcceptId
+	}
+	return 0
+}
+
+func (x *PrepareResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *PrepareResponse) GetAccepted() uint64 {
+	if x != nil && x.Accepted != nil {
+		return *x.Accepted
+	}
+	return 0
+}
+
+func (x *PrepareResponse) GetEntries() []string {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+type AcceptRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ProposalId uint64   `protobuf:"varint,1,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
+	FromId     uint64   `protobuf:"varint,2,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
+	Entries    []string `protobuf:"bytes,3,rep,name=entries,proto3" json:"entries,omitempty"`
+}
+
+func (x *AcceptRequest) Reset() {
+	*x = AcceptRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AcceptRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AcceptRequest) ProtoMessage() {}
+
+func (x *AcceptRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AcceptRequest.ProtoReflect.Descriptor instead.
+func (*AcceptRequest) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *AcceptRequest) GetProposalId() uint64 {
+	if x != nil {
+		return x.ProposalId
+	}
+	return 0
+}
+
+func (x *AcceptRequest) GetFromId() uint64 {
+	if x != nil {
+		return x.FromId
+	}
+	return 0
+}
+
+func (x *AcceptRequest) GetEntries() []string {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+type AcceptResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Promise  uint64 `protobuf:"varint,1,opt,name=promise,proto3" json:"promise,omitempty"`
+	AcceptId uint64 `protobuf:"varint,2,opt,name=accept_id,json=acceptId,proto3" json:"accept_id,omitempty"`
+	Success  bool   `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
+}
+
+func (x *AcceptResponse) Reset() {
+	*x = AcceptResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AcceptResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AcceptResponse) ProtoMessage() {}
+
+func (x *AcceptResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AcceptResponse.ProtoReflect.Descriptor instead.
+func (*AcceptResponse) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AcceptResponse) GetPromise() uint64 {
+	if x != nil {
+		return x.Promise
+	}
+	return 0
+}
+
+func (x *AcceptResponse) GetAcceptId() uint64 {
+	if x != nil {
+		return x.AcceptId
+	}
+	return 0
+}
+
+func (x *AcceptResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type DecideRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	FromId  uint64   `protobuf:"varint,1,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
+	Entries []string `protobuf:"bytes,2,rep,name=entries,proto3" json:"entries,omitempty"`
+}
+
+func (x *DecideRequest) Reset() {
+	*x = DecideRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DecideRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecideRequest) ProtoMessage() {}
+
+func (x *DecideRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecideRequest.ProtoReflect.Descriptor instead.
+func (*DecideRequest) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *DecideRequest) GetFromId() uint64 {
+	if x != nil {
+		return x.FromId
+	}
+	return 0
+}
+
+func (x *DecideRequest) GetEntries() []string {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+type DecideResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *DecideResponse) Reset() {
+	*x = DecideResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DecideResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecideResponse) ProtoMessage() {}
+
+func (x *DecideResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecideResponse.ProtoReflect.Descriptor instead.
+func (*DecideResponse) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{6}
+}
+
+type UpdateRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	DecidedId uint64 `protobuf:"varint,1,opt,name=decided_id,json=decidedId,proto3" json:"decided_id,omitempty"`
+}
+
+func (x *UpdateRequest) Reset() {
+	*x = UpdateRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UpdateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateRequest) ProtoMessage() {}
+
+func (x *UpdateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateRequest.ProtoReflect.Descriptor instead.
+func (*UpdateRequest) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UpdateRequest) GetDecidedId() uint64 {
+	if x != nil {
+		return x.DecidedId
+	}
+	return 0
+}
+
+type UpdateResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *UpdateResponse) Reset() {
+	*x = UpdateResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UpdateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateResponse) ProtoMessage() {}
+
+func (x *UpdateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateResponse.ProtoReflect.Descriptor instead.
+func (*UpdateResponse) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{8}
+}
+
+type UpdateResponseDecide struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	FromId  uint64   `protobuf:"varint,1,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
+	Entries []string `protobuf:"bytes,2,rep,name=entries,proto3" json:"entries,omitempty"`
+}
+
+func (x *UpdateResponseDecide) Reset() {
+	*x = UpdateResponseDecide{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UpdateResponseDecide) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateResponseDecide) ProtoMessage() {}
+
+func (x *UpdateResponseDecide) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateResponseDecide.ProtoReflect.Descriptor instead.
+func (*UpdateResponseDecide) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *UpdateResponseDecide) GetFromId() uint64 {
+	if x != nil {
+		return x.FromId
+	}
+	return 0
+}
+
+func (x *UpdateResponseDecide) GetEntries() []string {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+type UpdateResponseRestore struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Snapshot  []byte   `protobuf:"bytes,1,opt,name=snapshot,proto3,oneof" json:"snapshot,omitempty"`
+	StartId   *uint64  `protobuf:"varint,2,opt,name=start_id,json=startId,proto3,oneof" json:"start_id,omitempty"`
+	DecidedId *uint64  `protobuf:"varint,3,opt,name=decided_id,json=decidedId,proto3,oneof" json:"decided_id,omitempty"`
+	Entries   []string `protobuf:"bytes,4,rep,name=entries,proto3" json:"entries,omitempty"`
+}
+
+func (x *UpdateResponseRestore) Reset() {
+	*x = UpdateResponseRestore{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_rlog_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UpdateResponseRestore) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateResponseRestore) ProtoMessage() {}
+
+func (x *UpdateResponseRestore) ProtoReflect() protoreflect.Message {
+	mi := &file_rlog_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateResponseRestore.ProtoReflect.Descriptor instead.
+func (*UpdateResponseRestore) Descriptor() ([]byte, []int) {
+	return file_rlog_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *UpdateResponseRestore) GetSnapshot() []byte {
+	if x != nil {
+		return x.Snapshot
+	}
+	return nil
+}
+
+func (x *UpdateResponseRestore) GetStartId() uint64 {
+	if x != nil && x.StartId != nil {
+		return *x.StartId
+	}
+	return 0
+}
+
+func (x *UpdateResponseRestore) GetDecidedId() uint64 {
+	if x != nil && x.DecidedId != nil {
+		return *x.DecidedId
+	}
+	return 0
+}
+
+func (x *UpdateResponseRestore) GetEntries() []string {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+var File_rlog_proto protoreflect.FileDescriptor
+
+var file_rlog_proto_rawDesc = []byte{
+	0x0a, 0x0a, 0x72, 0x6c, 0x6f, 0x67, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x04, 0x72, 0x6c,
+	0x6f, 0x67, 0x22, 0xc9, 0x07, 0x0a, 0x07, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x1e,
+	0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0a, 0x2e, 0x72,
+	0x6c, 0x6f, 0x67, 0x2e, 0x54, 0x79, 0x70, 0x65, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x12, 0x42,
+	0x0a, 0x0f, 0x70, 0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x5f, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x72, 0x6c, 0x6f, 0x67, 0x2e, 0x50,
+	0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52,
+	0x0e, 0x70, 0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x88,
+	0x01, 0x01, 0x12, 0x45, 0x0a, 0x10, 0x70, 0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x5f, 0x72, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x72,
+	0x6c, 0x6f, 0x67, 0x2e, 0x50, 0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x48, 0x01, 0x52, 0x0f, 0x70, 0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x88, 0x01, 0x01, 0x12, 0x3f, 0x0a, 0x0e, 0x61, 0x63, 0x63,
+	0x65, 0x70, 0x74, 0x5f, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x13, 0x2e, 0x72, 0x6c, 0x6f, 0x67, 0x2e, 0x41, 0x63, 0x63, 0x65, 0x70, 0x74, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x02, 0x52, 0x0d, 0x61, 0x63, 0x63, 0x65, 0x70, 0x74,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x88, 0x01, 0x01, 0x12, 0x42, 0x0a, 0x0f, 0x61, 0x63,
+	0x63, 0x65, 0x70, 0x74, 0x5f, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x18, 0x05, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x72, 0x6c, 0x6f, 0x67, 0x2e, 0x41, 0x63, 0x63, 0x65, 0x70,
+	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x03, 0x52, 0x0e, 0x61, 0x63, 0x63,
+	0x65, 0x70, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x88, 0x01, 0x01, 0x12, 0x3f,
+	0x0a, 0x0e, 0x64, 0x65, 0x63, 0x69, 0x64, 0x65, 0x5f, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x72, 0x6c, 0x6f, 0x67, 0x2e, 0x44, 0x65,
+	0x63, 0x69, 0x64, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x04, 0x52, 0x0d, 0x64,
+	0x65, 0x63, 0x69, 0x64, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x88, 0x01, 0x01, 0x12,
+	0x42, 0x0a, 0x0f, 0x64, 0x65, 0x63, 0x69, 0x64, 0x65, 0x5f, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x72, 0x6c, 0x6f, 0x67, 0x2e,
+	0x44, 0x65, 0x63, 0x69, 0x64, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x05,
+	0x52, 0x0e, 0x64, 0x65, 0x63, 0x69, 0x64, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x88, 0x01, 0x01, 0x12, 0x3f, 0x0a, 0x0e, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x72, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x18, 0x08, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x72, 0x6c,
+	0x6f, 0x67, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x48, 0x06, 0x52, 0x0d, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x88, 0x01, 0x01, 0x12, 0x42, 0x0a, 0x0f, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x72,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e,
+	0x72, 0x6c, 0x6f, 0x67, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x48, 0x07, 0x52, 0x0e, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x88, 0x01, 0x01, 0x12, 0x55, 0x0a, 0x16, 0x75, 0x70, 0x64, 0x61,
+	0x74, 0x65, 0x5f, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x5f, 0x64, 0x65, 0x63, 0x69,
+	0x64, 0x65, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x72, 0x6c, 0x6f, 0x67, 0x2e,
+	0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x44, 0x65,
+	0x63, 0x69, 0x64, 0x65, 0x48, 0x08, 0x52, 0x14, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x44, 0x65, 0x63, 0x69, 0x64, 0x65, 0x88, 0x01, 0x01, 0x12,
+	0x58, 0x0a, 0x17, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x5f, 0x72, 0x65, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x1b, 0x2e, 0x72, 0x6c, 0x6f, 0x67, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x65, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x48, 0x09, 0x52,
+	0x15, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52,
+	0x65, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x88, 0x01, 0x01, 0x42, 0x12, 0x0a, 0x10, 0x5f, 0x70, 0x72,
+	0x65, 0x70, 0x61, 0x72, 0x65, 0x5f, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x42, 0x13, 0x0a,
+	0x11, 0x5f, 0x70, 0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x5f, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x42, 0x11, 0x0a, 0x0f, 0x5f, 0x61, 0x63, 0x63, 0x65, 0x70, 0x74, 0x5f, 0x72, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x42, 0x12, 0x0a, 0x10, 0x5f, 0x61, 0x63, 0x63, 0x65, 0x70, 0x74,
+	0x5f, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x11, 0x0a, 0x0f, 0x5f, 0x64, 0x65,
+	0x63, 0x69, 0x64, 0x65, 0x5f, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x42, 0x12, 0x0a, 0x10,
+	0x5f, 0x64, 0x65, 0x63, 0x69, 0x64, 0x65, 0x5f, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x42, 0x11, 0x0a, 0x0f, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x72, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x42, 0x12, 0x0a, 0x10, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x72,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x19, 0x0a, 0x17, 0x5f, 0x75, 0x70, 0x64, 0x61,
+	0x74, 0x65, 0x5f, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x5f, 0x64, 0x65, 0x63, 0x69,
+	0x64, 0x65, 0x42, 0x1a, 0x0a, 0x18, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x72, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x5f, 0x72, 0x65, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x22, 0x4a,
+	0x0a, 0x0e, 0x50, 0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x1f, 0x0a, 0x0b, 0x70, 0x72, 0x6f, 0x70, 0x6f, 0x73, 0x61, 0x6c, 0x5f, 0x69, 0x64, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0a, 0x70, 0x72, 0x6f, 0x70, 0x6f, 0x73, 0x61, 0x6c, 0x49,
+	0x64, 0x12, 0x17, 0x0a, 0x07, 0x66, 0x72, 0x6f, 0x6d, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x04, 0x52, 0x06, 0x66, 0x72, 0x6f, 0x6d, 0x49, 0x64, 0x22, 0xaa, 0x01, 0x0a, 0x0f, 0x50,
+	0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18,
+	0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6d, 0x69, 0x73, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52,
+	0x07, 0x70, 0x72, 0x6f, 0x6d, 0x69, 0x73, 0x65, 0x12, 0x1b, 0x0a, 0x09, 0x61, 0x63, 0x63, 0x65,
+	0x70, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x08, 0x61, 0x63, 0x63,
+	0x65, 0x70, 0x74, 0x49, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x12,
+	0x1f, 0x0a, 0x08, 0x61, 0x63, 0x63, 0x65, 0x70, 0x74, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x04, 0x48, 0x00, 0x52, 0x08, 0x61, 0x63, 0x63, 0x65, 0x70, 0x74, 0x65, 0x64, 0x88, 0x01, 0x01,
+	0x12, 0x18, 0x0a, 0x07, 0x65, 0x6e, 0x74, 0x72, 0x69, 0x65, 0x73, 0x18, 0x05, 0x20, 0x03, 0x28,
+	0x09, 0x52, 0x07, 0x65, 0x6e, 0x74, 0x72, 0x69, 0x65, 0x73, 0x42, 0x0b, 0x0a, 0x09, 0x5f, 0x61,
+	0x63, 0x63, 0x65, 0x70, 0x74, 0x65, 0x64, 0x22, 0x63, 0x0a, 0x0d, 0x41, 0x63, 0x63, 0x65, 0x70,
+	0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x70, 0x72, 0x6f, 0x70,
+	0x6f, 0x73, 0x61, 0x6c, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0a, 0x70,
+	0x72, 0x6f, 0x70, 0x6f, 0x73, 0x61, 0x6c, 0x49, 0x64, 0x12, 0x17, 0x0a, 0x07, 0x66, 0x72, 0x6f,
+	0x6d, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06, 0x66, 0x72, 0x6f, 0x6d,
+	0x49, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x65, 0x6e, 0x74, 0x72, 0x69, 0x65, 0x73, 0x18, 0x03, 0x20,
+	0x03, 0x28, 0x09, 0x52, 0x07, 0x65, 0x6e, 0x74, 0x72, 0x69, 0x65, 0x73, 0x22, 0x61, 0x0a, 0x0e,
+	0x41, 0x63, 0x63, 0x65, 0x70, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18,
+	0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6d, 0x69, 0x73, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52,
+	0x07, 0x70, 0x72, 0x6f, 0x6d, 0x69, 0x73, 0x65, 0x12, 0x1b, 0x0a, 0x09, 0x61, 0x63, 0x63, 0x65,
+	0x70, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x08, 0x61, 0x63, 0x63,
+	0x65, 0x70, 0x74, 0x49, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x22,
+	0x42, 0x0a, 0x0d, 0x44, 0x65, 0x63, 0x69, 0x64, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x17, 0x0a, 0x07, 0x66, 0x72, 0x6f, 0x6d, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x04, 0x52, 0x06, 0x66, 0x72, 0x6f, 0x6d, 0x49, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x65, 0x6e, 0x74,
+	0x72, 0x69, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x07, 0x65, 0x6e, 0x74, 0x72,
+	0x69, 0x65, 0x73, 0x22, 0x10, 0x0a, 0x0e, 0x44, 0x65, 0x63, 0x69, 0x64, 0x65, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x2e, 0x0a, 0x0d, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1d, 0x0a, 0x0a, 0x64, 0x65, 0x63, 0x69, 0x64, 0x65,
+	0x64, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x09, 0x64, 0x65, 0x63, 0x69,
+	0x64, 0x65, 0x64, 0x49, 0x64, 0x22, 0x10, 0x0a, 0x0e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x49, 0x0a, 0x14, 0x55, 0x70, 0x64, 0x61, 0x74,
+	0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x44, 0x65, 0x63, 0x69, 0x64, 0x65, 0x12,
+	0x17, 0x0a, 0x07, 0x66, 0x72, 0x6f, 0x6d, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04,
+	0x52, 0x06, 0x66, 0x72, 0x6f, 0x6d, 0x49, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x65, 0x6e, 0x74, 0x72,
+	0x69, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x07, 0x65, 0x6e, 0x74, 0x72, 0x69,
+	0x65, 0x73, 0x22, 0xbf, 0x01, 0x0a, 0x15, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x65, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x12, 0x1f, 0x0a, 0x08,
+	0x73, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x48, 0x00,
+	0x52, 0x08, 0x73, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x88, 0x01, 0x01, 0x12, 0x1e, 0x0a,
+	0x08, 0x73, 0x74, 0x61, 0x72, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x48,
+	0x01, 0x52, 0x07, 0x73, 0x74, 0x61, 0x72, 0x74, 0x49, 0x64, 0x88, 0x01, 0x01, 0x12, 0x22, 0x0a,
+	0x0a, 0x64, 0x65, 0x63, 0x69, 0x64, 0x65, 0x64, 0x5f, 0x69, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x04, 0x48, 0x02, 0x52, 0x09, 0x64, 0x65, 0x63, 0x69, 0x64, 0x65, 0x64, 0x49, 0x64, 0x88, 0x01,
+	0x01, 0x12, 0x18, 0x0a, 0x07, 0x65, 0x6e, 0x74, 0x72, 0x69, 0x65, 0x73, 0x18, 0x04, 0x20, 0x03,
+	0x28, 0x09, 0x52, 0x07, 0x65, 0x6e, 0x74, 0x72, 0x69, 0x65, 0x73, 0x42, 0x0b, 0x0a, 0x09, 0x5f,
+	0x73, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x42, 0x0b, 0x0a, 0x09, 0x5f, 0x73, 0x74, 0x61,
+	0x72, 0x74, 0x5f, 0x69, 0x64, 0x42, 0x0d, 0x0a, 0x0b, 0x5f, 0x64, 0x65, 0x63, 0x69, 0x64, 0x65,
+	0x64, 0x5f, 0x69, 0x64, 0x2a, 0xfa, 0x01, 0x0a, 0x04, 0x54, 0x79, 0x70, 0x65, 0x12, 0x13, 0x0a,
+	0x0f, 0x55, 0x4e, 0x4b, 0x4e, 0x4f, 0x57, 0x4e, 0x5f, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45,
+	0x10, 0x00, 0x12, 0x13, 0x0a, 0x0f, 0x50, 0x52, 0x45, 0x50, 0x41, 0x52, 0x45, 0x5f, 0x52, 0x45,
+	0x51, 0x55, 0x45, 0x53, 0x54, 0x10, 0x01, 0x12, 0x14, 0x0a, 0x10, 0x50, 0x52, 0x45, 0x50, 0x41,
+	0x52, 0x45, 0x5f, 0x52, 0x45, 0x53, 0x50, 0x4f, 0x4e, 0x53, 0x45, 0x10, 0x02, 0x12, 0x12, 0x0a,
+	0x0e, 0x41, 0x43, 0x43, 0x45, 0x50, 0x54, 0x5f, 0x52, 0x45, 0x51, 0x55, 0x45, 0x53, 0x54, 0x10,
+	0x03, 0x12, 0x13, 0x0a, 0x0f, 0x41, 0x43, 0x43, 0x45, 0x50, 0x54, 0x5f, 0x52, 0x45, 0x53, 0x50,
+	0x4f, 0x4e, 0x53, 0x45, 0x10, 0x04, 0x12, 0x12, 0x0a, 0x0e, 0x44, 0x45, 0x43, 0x49, 0x44, 0x45,
+	0x5f, 0x52, 0x45, 0x51, 0x55, 0x45, 0x53, 0x54, 0x10, 0x05, 0x12, 0x13, 0x0a, 0x0f, 0x44, 0x45,
+	0x43, 0x49, 0x44, 0x45, 0x5f, 0x52, 0x45, 0x53, 0x50, 0x4f, 0x4e, 0x53, 0x45, 0x10, 0x06, 0x12,
+	0x12, 0x0a, 0x0e, 0x55, 0x50, 0x44, 0x41, 0x54, 0x45, 0x5f, 0x52, 0x45, 0x51, 0x55, 0x45, 0x53,
+	0x54, 0x10, 0x07, 0x12, 0x13, 0x0a, 0x0f, 0x55, 0x50, 0x44, 0x41, 0x54, 0x45, 0x5f, 0x52, 0x45,
+	0x53, 0x50, 0x4f, 0x4e, 0x53, 0x45, 0x10, 0x08, 0x12, 0x1a, 0x0a, 0x16, 0x55, 0x50, 0x44, 0x41,
+	0x54, 0x45, 0x5f, 0x52, 0x45, 0x53, 0x50, 0x4f, 0x4e, 0x53, 0x45, 0x5f, 0x44, 0x45, 0x43, 0x49,
+	0x44, 0x45, 0x10, 0x09, 0x12, 0x1b, 0x0a, 0x17, 0x55, 0x50, 0x44, 0x41, 0x54, 0x45, 0x5f, 0x52,
+	0x45, 0x53, 0x50, 0x4f, 0x4e, 0x53, 0x45, 0x5f, 0x52, 0x45, 0x53, 0x54, 0x4f, 0x52, 0x45, 0x10,
+	0x0a, 0x42, 0x0d, 0x5a, 0x0b, 0x67, 0x65, 0x6e, 0x2f, 0x72, 0x6c, 0x6f, 0x67, 0x5f, 0x70, 0x62,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+}
+
+var (
+	file_rlog_proto_rawDescOnce sync.Once
+	file_rlog_proto_rawDescData = file_rlog_proto_rawDesc
+)
+
+func file_rlog_proto_rawDescGZIP() []byte {
+	file_rlog_proto_rawDescOnce.Do(func() {
+		file_rlog_proto_rawDescData = protoimpl.X.CompressGZIP(file_rlog_proto_rawDescData)
+	})
+	return file_rlog_proto_rawDescData
+}
+
+var file_rlog_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_rlog_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_rlog_proto_goTypes = []interface{}{
+	(Type)(0),                     // 0: rlog.Type
+	(*Message)(nil),               // 1: rlog.Message
+	(*PrepareRequest)(nil),        // 2: rlog.PrepareRequest
+	(*PrepareResponse)(nil),       // 3: rlog.PrepareResponse
+	(*AcceptRequest)(nil),         // 4: rlog.AcceptRequest
+	(*AcceptResponse)(nil),        // 5: rlog.AcceptResponse
+	(*DecideRequest)(nil),         // 6: rlog.DecideRequest
+	(*DecideResponse)(nil),        // 7: rlog.DecideResponse
+	(*UpdateRequest)(nil),         // 8: rlog.UpdateRequest
+	(*UpdateResponse)(nil),        // 9: rlog.UpdateResponse
+	(*UpdateResponseDecide)(nil),  // 10: rlog.UpdateResponseDecide
+	(*UpdateResponseRestore)(nil), // 11: rlog.UpdateResponseRestore
+}
+var file_rlog_proto_depIdxs = []int32{
+	0,  // 0: rlog.Message.type:type_name -> rlog.Type
+	2,  // 1: rlog.Message.prepare_request:type_name -> rlog.PrepareRequest
+	3,  // 2: rlog.Message.prepare_response:type_name -> rlog.PrepareResponse
+	4,  // 3: rlog.Message.accept_request:type_name -> rlog.AcceptRequest
+	5,  // 4: rlog.Message.accept_response:type_name -> rlog.AcceptResponse
+	6,  // 5: rlog.Message.decide_request:type_name -> rlog.DecideRequest
+	7,  // 6: rlog.Message.decide_response:type_name -> rlog.DecideResponse
+	8,  // 7: rlog.Message.update_request:type_name -> rlog.UpdateRequest
+	9,  // 8: rlog.Message.update_response:type_name -> rlog.UpdateResponse
+	10, // 9: rlog.Message.update_response_decide:type_name -> rlog.UpdateResponseDecide
+	11, // 10: rlog.Message.update_response_restore:type_name -> rlog.UpdateResponseRestore
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
+}
+
+func init() { file_rlog_proto_init() }
+func file_rlog_proto_init() {
+	if File_rlog_proto != nil {
+		return
+	}
+	if !protoimpl.UnsafeEnabled {
+		file_rlog_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Message); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rlog_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PrepareRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rlog_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PrepareResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rlog_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AcceptRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rlog_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AcceptResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rlog_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DecideRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rlog_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DecideResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rlog_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpdateRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rlog_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpdateResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rlog_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpdateResponseDecide); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_rlog_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpdateResponseRestore); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+	}
+	file_rlog_proto_msgTypes[0].OneofWrappers = []interface{}{}
+	file_rlog_proto_msgTypes[2].OneofWrappers = []interface{}{}
+	file_rlog_proto_msgTypes[10].OneofWrappers = []interface{}{}
+	type x struct{}
+	out := protoimpl.TypeBuilder{
+		File: protoimpl.DescBuilder{
+			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
+			RawDescriptor: file_rlog_proto_rawDesc,
+			NumEnums:      1,
+			NumMessages:   11,
+			NumExtensions: 0,
+			NumServices:   0,
+		},
+		GoTypes:           file_rlog_proto_goTypes,
+		DependencyIndexes: file_rlog_proto_depIdxs,
+		EnumInfos:         file_rlog_proto_enumTypes,
+		MessageInfos:      file_rlog_proto_msgTypes,
+	}.Build()
+	File_rlog_proto = out.File
+	file_rlog_proto_rawDesc = nil
+	file_rlog_proto_goTypes = nil
+	file_rlog_proto_depIdxs = nil
+}
+./pkg/rlog_util/codec/codec.go
+package codec
+
+import (
+	"errors"
+	"github.com/khanh-nguyen-code/go_util/pkg/rlog"
+	"github.com/khanh-nguyen-code/go_util/pkg/rlog_util/codec/proto/gen/rlog_pb"
+	"google.golang.org/protobuf/proto"
+)
+
+var (
+	errTypeUnknown = errors.New("type unknown")
+)
+
+func Marshal(r interface{}) ([]byte, error) {
+	if r == nil {
+		return nil, nil
+	}
+	var m proto.Message
+	switch r := r.(type) {
+	case *rlog.PrepareRequest:
+		m = &rlog_pb.Message{
+			Type: rlog_pb.Type_PREPARE_REQUEST,
+			PrepareRequest: &rlog_pb.PrepareRequest{
+				ProposalId: uint64(r.ProposalId),
+				FromId:     uint64(r.FromId),
+			},
+		}
+	case *rlog.PrepareResponse:
+		var accepted uint64
+		var entries []string
+		if r.Success {
+			accepted = uint64(r.Accepted)
+			entries = r.Entries
+		}
+		m = &rlog_pb.Message{
+			Type: rlog_pb.Type_PREPARE_RESPONSE,
+			PrepareResponse: &rlog_pb.PrepareResponse{
+				Promise:  uint64(r.Promise),
+				AcceptId: uint64(r.AcceptId),
+				Success:  r.Success,
+				Accepted: &accepted,
+				Entries:  entries,
+			},
+		}
+	case *rlog.AcceptRequest:
+		m = &rlog_pb.Message{
+			Type: rlog_pb.Type_ACCEPT_REQUEST,
+			AcceptRequest: &rlog_pb.AcceptRequest{
+				ProposalId: uint64(r.ProposalId),
+				FromId:     uint64(r.FromId),
+				Entries:    r.Entries,
+			},
+		}
+	case *rlog.AcceptResponse:
+		m = &rlog_pb.Message{
+			Type: rlog_pb.Type_ACCEPT_RESPONSE,
+			AcceptResponse: &rlog_pb.AcceptResponse{
+				Promise:  uint64(r.Promise),
+				AcceptId: uint64(r.AcceptId),
+				Success:  r.Success,
+			},
+		}
+	case *rlog.DecideRequest:
+		m = &rlog_pb.Message{
+			Type: rlog_pb.Type_DECIDE_REQUEST,
+			DecideRequest: &rlog_pb.DecideRequest{
+				FromId:  uint64(r.FromId),
+				Entries: r.Entries,
+			},
+		}
+	case *rlog.DecideResponse:
+		m = &rlog_pb.Message{
+			Type:           rlog_pb.Type_DECIDE_RESPONSE,
+			DecideResponse: &rlog_pb.DecideResponse{},
+		}
+	case *rlog.UpdateRequest:
+		m = &rlog_pb.Message{
+			Type: rlog_pb.Type_UPDATE_REQUEST,
+			UpdateRequest: &rlog_pb.UpdateRequest{
+				DecidedId: uint64(r.DecidedId),
+			},
+		}
+	case *rlog.UpdateResponse:
+		m = &rlog_pb.Message{
+			Type:           rlog_pb.Type_UPDATE_RESPONSE,
+			UpdateResponse: &rlog_pb.UpdateResponse{},
+		}
+	case *rlog.UpdateResponseDecide:
+		m = &rlog_pb.Message{
+			Type: rlog_pb.Type_UPDATE_RESPONSE_DECIDE,
+			UpdateResponseDecide: &rlog_pb.UpdateResponseDecide{
+				FromId:  uint64(r.FromId),
+				Entries: r.Entries,
+			},
+		}
+	case *rlog.UpdateResponseRestore:
+		m = &rlog_pb.Message{
+			Type: rlog_pb.Type_UPDATE_RESPONSE_RESTORE,
+			UpdateResponseRestore: &rlog_pb.UpdateResponseRestore{
+				Snapshot:  r.Snapshot,
+				StartId:   proto.Uint64(uint64(r.StartId)),
+				DecidedId: proto.Uint64(uint64(r.DecidedId)),
+				Entries:   r.Entries,
+			},
+		}
+	default:
+		return nil, errTypeUnknown
+	}
+	return proto.Marshal(m)
+}
+
+func Unmarshal(b []byte) (interface{}, error) {
+	if len(b) == 0 {
+		return nil, nil
+	}
+	m := &rlog_pb.Message{}
+	err := proto.Unmarshal(b, m)
+	if err != nil {
+		return nil, err
+	}
+	switch m.GetType() {
+	case rlog_pb.Type_PREPARE_REQUEST:
+		r := m.GetPrepareRequest()
+		return &rlog.PrepareRequest{
+			ProposalId: rlog.ProposalId(r.GetProposalId()),
+			FromId:     rlog.LogId(r.GetFromId()),
+		}, nil
+	case rlog_pb.Type_PREPARE_RESPONSE:
+		r := m.GetPrepareResponse()
+		return &rlog.PrepareResponse{
+			Promise:  rlog.ProposalId(r.GetPromise()),
+			AcceptId: rlog.LogId(r.GetAcceptId()),
+			Success:  r.GetSuccess(),
+			Accepted: rlog.ProposalId(r.GetAccepted()),
+			Entries:  r.GetEntries(),
+		}, nil
+	case rlog_pb.Type_ACCEPT_REQUEST:
+		r := m.GetAcceptRequest()
+		return &rlog.AcceptRequest{
+			ProposalId: rlog.ProposalId(r.GetProposalId()),
+			FromId:     rlog.LogId(r.GetFromId()),
+			Entries:    r.GetEntries(),
+		}, nil
+	case rlog_pb.Type_ACCEPT_RESPONSE:
+		r := m.GetAcceptResponse()
+		return &rlog.AcceptResponse{
+			Promise:  rlog.ProposalId(r.GetPromise()),
+			AcceptId: rlog.LogId(r.GetAcceptId()),
+			Success:  r.GetSuccess(),
+		}, nil
+	case rlog_pb.Type_DECIDE_REQUEST:
+		r := m.GetDecideRequest()
+		return &rlog.DecideRequest{
+			FromId:  rlog.LogId(r.GetFromId()),
+			Entries: r.GetEntries(),
+		}, nil
+	case rlog_pb.Type_DECIDE_RESPONSE:
+		return &rlog.DecideResponse{}, nil
+	case rlog_pb.Type_UPDATE_REQUEST:
+		r := m.GetUpdateRequest()
+		return &rlog.UpdateRequest{
+			DecidedId: rlog.LogId(r.DecidedId),
+		}, nil
+	case rlog_pb.Type_UPDATE_RESPONSE:
+		return &rlog.UpdateResponse{}, nil
+	case rlog_pb.Type_UPDATE_RESPONSE_DECIDE:
+		r := m.GetUpdateResponseDecide()
+		return &rlog.UpdateResponseDecide{
+			FromId:  rlog.LogId(r.GetFromId()),
+			Entries: r.GetEntries(),
+		}, nil
+	case rlog_pb.Type_UPDATE_RESPONSE_RESTORE:
+		r := m.GetUpdateResponseRestore()
+		return &rlog.UpdateResponseRestore{
+			Snapshot:  r.GetSnapshot(),
+			StartId:   rlog.LogId(r.GetStartId()),
+			DecidedId: rlog.LogId(r.GetDecidedId()),
+			Entries:   r.GetEntries(),
+		}, nil
+	default:
+		return nil, errTypeUnknown
+	}
+}
+./pkg/rlog_util/kvstore/command.go
+package kvstore
+
+import (
+	"encoding/json"
+)
+
+type Operation string
+
+const (
+	OpSet Operation = "set"
+	OpDel Operation = "del"
+)
+
+type Command struct {
+	Uuid      string    `json:"uuid"`
+	Operation Operation `json:"operation"`
+	Key       string    `json:"key"`
+	Version   uint64    `json:"version"`
+	Value     string    `json:"value"`
+}
+
+func (c Command) Encode() string {
+	b, _ := json.Marshal(c)
+	return string(b)
+}
+func (c *Command) Decode(s string) error {
+	return json.Unmarshal([]byte(s), c)
+}
+./pkg/rlog_util/kvstore/kvstore.go
+package kvstore
+
+import (
+	"encoding/json"
+	"sync"
+)
+
+type KVStore interface {
+	Watch(uuid string) (watchCh <-chan bool, cancel func())
+	Marshal() ([]byte, error)
+	Unmarshal(b []byte) error
+	Commit(commands ...string)
+	Get(key string) Entry
+	Snapshot() map[string]Entry
+}
+
+func New() KVStore {
+	return &kvstore{
+		mu:         sync.RWMutex{},
+		store:      map[string]Entry{},
+		watchChMap: sync.Map{},
+	}
+}
+
+type Entry struct {
+	Version uint64 `json:"version"`
+	Value   string `json:"value"`
+}
+
+type kvstore struct {
+	mu    sync.RWMutex
+	store map[string]Entry
+	// private
+	watchChMap sync.Map // map[uuid]chan bool
+}
+
+func (s *kvstore) Snapshot() map[string]Entry {
+	out := map[string]Entry{}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for k, v := range s.store {
+		out[k] = v
+	}
+	return out
+}
+func (s *kvstore) Get(key string) Entry {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if e, loaded := s.store[key]; loaded {
+		return e
+	}
+	return Entry{}
+}
+
+func (s *kvstore) Watch(uuid string) (watchCh <-chan bool, cancel func()) {
+	ch := make(chan bool, 1)
+	s.watchChMap.Store(uuid, ch)
+	return ch, func() {
+		s.watchChMap.Delete(uuid)
+	}
+}
+
+func (s *kvstore) Marshal() ([]byte, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return json.Marshal(s.store)
+}
+func (s *kvstore) Unmarshal(b []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return json.Unmarshal(b, &s.store)
+}
+
+func (s *kvstore) Commit(commands ...string) {
+	for _, command := range commands {
+		c := &Command{}
+		if err := c.Decode(command); err != nil {
+			continue
+		}
+		var watchCh chan bool = nil
+		if val, loaded := s.watchChMap.LoadAndDelete(c.Uuid); loaded {
+			watchCh = val.(chan bool)
+		}
+
+		s.mu.Lock()
+		var version uint64 = 0
+		if e, loaded := s.store[c.Key]; loaded {
+			version = e.Version
+		}
+		consistent := c.Version >= version+1
+		if consistent {
+			switch c.Operation {
+			case OpSet:
+				s.store[c.Key] = Entry{
+					Version: c.Version,
+					Value:   c.Value,
+				}
+			case OpDel:
+				delete(s.store, c.Key)
+			}
+		}
+		s.mu.Unlock()
+
+		if watchCh != nil {
+			watchCh <- consistent
+			close(watchCh)
+		}
+	}
+}
+./pkg/relay/proto/gen/relay_pb/relay.pb.go
+// Code generated by protoc-gen-go. DO NOT EDIT.
+// versions:
+// 	protoc-gen-go v1.26.0
+// 	protoc        v3.19.3
+// source: relay.proto
+
+package relay_pb
+
+import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
+)
+
+const (
+	// Verify that this generated code is sufficiently up-to-date.
+	_ = protoimpl.EnforceVersion(20 - protoimpl.MinVersion)
+	// Verify that runtime/protoimpl is sufficiently up-to-date.
+	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
+)
+
+type Message struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Sender   string `protobuf:"bytes,1,opt,name=sender,proto3" json:"sender,omitempty"`
+	Receiver string `protobuf:"bytes,2,opt,name=receiver,proto3" json:"receiver,omitempty"`
+	Payload  []byte `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
+}
+
+func (x *Message) Reset() {
+	*x = Message{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_relay_proto_msgTypes[0]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Message) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Message) ProtoMessage() {}
+
+func (x *Message) ProtoReflect() protoreflect.Message {
+	mi := &file_relay_proto_msgTypes[0]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Message.ProtoReflect.Descriptor instead.
+func (*Message) Descriptor() ([]byte, []int) {
+	return file_relay_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Message) GetSender() string {
+	if x != nil {
+		return x.Sender
+	}
+	return ""
+}
+
+func (x *Message) GetReceiver() string {
+	if x != nil {
+		return x.Receiver
+	}
+	return ""
+}
+
+func (x *Message) GetPayload() []byte {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+var File_relay_proto protoreflect.FileDescriptor
+
+var file_relay_proto_rawDesc = []byte{
+	0x0a, 0x0b, 0x72, 0x65, 0x6c, 0x61, 0x79, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05, 0x72,
+	0x65, 0x6c, 0x61, 0x79, 0x22, 0x57, 0x0a, 0x07, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12,
+	0x16, 0x0a, 0x06, 0x73, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x06, 0x73, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x63, 0x65, 0x69,
+	0x76, 0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x63, 0x65, 0x69,
+	0x76, 0x65, 0x72, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x70, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x42, 0x0e, 0x5a,
+	0x0c, 0x67, 0x65, 0x6e, 0x2f, 0x72, 0x65, 0x6c, 0x61, 0x79, 0x5f, 0x70, 0x62, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
+}
+
+var (
+	file_relay_proto_rawDescOnce sync.Once
+	file_relay_proto_rawDescData = file_relay_proto_rawDesc
+)
+
+func file_relay_proto_rawDescGZIP() []byte {
+	file_relay_proto_rawDescOnce.Do(func() {
+		file_relay_proto_rawDescData = protoimpl.X.CompressGZIP(file_relay_proto_rawDescData)
+	})
+	return file_relay_proto_rawDescData
+}
+
+var file_relay_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_relay_proto_goTypes = []interface{}{
+	(*Message)(nil), // 0: relay.Message
+}
+var file_relay_proto_depIdxs = []int32{
+	0, // [0:0] is the sub-list for method output_type
+	0, // [0:0] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for extension type_name
+	0, // [0:0] is the sub-list for extension extendee
+	0, // [0:0] is the sub-list for field type_name
+}
+
+func init() { file_relay_proto_init() }
+func file_relay_proto_init() {
+	if File_relay_proto != nil {
+		return
+	}
+	if !protoimpl.UnsafeEnabled {
+		file_relay_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Message); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+	}
+	type x struct{}
+	out := protoimpl.TypeBuilder{
+		File: protoimpl.DescBuilder{
+			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
+			RawDescriptor: file_relay_proto_rawDesc,
+			NumEnums:      0,
+			NumMessages:   1,
+			NumExtensions: 0,
+			NumServices:   0,
+		},
+		GoTypes:           file_relay_proto_goTypes,
+		DependencyIndexes: file_relay_proto_depIdxs,
+		MessageInfos:      file_relay_proto_msgTypes,
+	}.Build()
+	File_relay_proto = out.File
+	file_relay_proto_rawDesc = nil
+	file_relay_proto_goTypes = nil
+	file_relay_proto_depIdxs = nil
+}
+./pkg/relay/hub.go
+package relay
+
+import (
+	"log"
+	"net"
+	"sync"
+)
+
+type Hub interface {
+	ListenAndServe() error
+	Close() error
+}
+
+func NewHub(listenAddr string) (Hub, error) {
+	listen, err := net.ResolveTCPAddr("tcp", listenAddr)
+	if err != nil {
+		return nil, err
+	}
+	return &hub{
+		listen:  listen,
+		ln:      nil,
+		connMap: sync.Map{},
+	}, nil
+}
+
+type hub struct {
+	listen  *net.TCPAddr
+	ln      *net.TCPListener
+	connMap sync.Map // map[name]*net.TCPAddr
+}
+
+func (h *hub) ListenAndServe() (err error) {
+	h.ln, err = net.ListenTCP("tcp", h.listen)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("listenning to %s\n", h.listen.String())
+	for {
+		conn, err := h.ln.AcceptTCP()
+		if err != nil {
+			return err
+		}
+		go h.handle(conn)
+	}
+}
+func (h *hub) Close() error {
+	return h.ln.Close()
+}
+
+func (h *hub) handle(conn *net.TCPConn) {
+	var name string = ""
+	defer func() {
+		_ = conn.Close()
+		if name != "" {
+			h.connMap.Delete(name)
+			log.Printf("peer [%s|%s] has been removed\n", name, conn.RemoteAddr().String())
+		}
+	}()
+	for {
+		buffer, m, err := readAndUnmarshal(conn)
+		if err != nil {
+			return
+		}
+		if name != m.Sender {
+			if name != "" {
+				h.connMap.Delete(name)
+				log.Printf("peer [%s|%s] has been removed\n", name, conn.RemoteAddr().String())
+			}
+			name = m.Sender
+			h.connMap.Store(name, conn)
+			log.Printf("peer [%s|%s] has been registered\n", name, conn.RemoteAddr().String())
+		}
+		receiver := m.Receiver
+		if val, loaded := h.connMap.Load(receiver); loaded {
+			receiverConn := val.(*net.TCPConn)
+			_, _ = receiverConn.Write(buffer)
+		}
+	}
+}
+./pkg/relay/util.go
+package relay
+
+import (
+	"encoding/binary"
+	"errors"
+	"github.com/khanh-nguyen-code/go_util/pkg/relay/proto/gen/relay_pb"
+	"google.golang.org/protobuf/proto"
+	"io"
+)
+
+var sizeError = errors.New("size")
+
+func readExact(reader io.Reader, size int) ([]byte, error) {
+	buffer := make([]byte, size)
+	n, err := io.ReadFull(reader, buffer)
+	return buffer[:n], err
+}
+
+// readAndUnmarshal : not thread-safe
+func readAndUnmarshal(reader io.Reader) ([]byte, *relay_pb.Message, error) {
+	sizeBuffer, err := readExact(reader, 8)
+	if err != nil {
+		return nil, nil, err
+	}
+	size := int(binary.LittleEndian.Uint64(sizeBuffer))
+	dataBuffer, err := readExact(reader, size)
+	if err != nil {
+		return nil, nil, err
+	}
+	m := &relay_pb.Message{}
+	err = proto.Unmarshal(dataBuffer, m)
+	if err != nil {
+		return nil, nil, err
+	}
+	return append(sizeBuffer, dataBuffer...), m, nil
+}
+
+func marshalAndWrite(writer io.Writer, m *relay_pb.Message) error {
+	dataBuffer, err := proto.Marshal(m)
+	if err != nil {
+		return err
+	}
+	sizeBuffer := make([]byte, 8)
+	binary.LittleEndian.PutUint64(sizeBuffer, uint64(len(dataBuffer)))
+	n, err := writer.Write(append(sizeBuffer, dataBuffer...))
+	if n != len(sizeBuffer)+len(dataBuffer) {
+		return sizeError
+	}
+	return err
+}
+./pkg/relay/peer.go
+package relay
+
+import (
+	"errors"
+	"fmt"
+	"github.com/khanh-nguyen-code/go_util/pkg/relay/proto/gen/relay_pb"
+	"net"
+)
+
+var (
+	ErrNotInit = errors.New("not_init")
+)
+
+type Peer interface {
+	Write(m *relay_pb.Message) error
+	DialAndServe(serve func(m *relay_pb.Message)) error
+	Close() error
+}
+
+func NewPeer(name string, listenAddr string, relayAddr string) (Peer, error) {
+	listen, err := net.ResolveTCPAddr("tcp", listenAddr)
+	if err != nil {
+		return nil, err
+	}
+	relay, err := net.ResolveTCPAddr("tcp", relayAddr)
+	if err != nil {
+		return nil, err
+	}
+	return &peer{
+		name:   name,
+		listen: listen,
+		relay:  relay,
+		conn:   nil,
+	}, nil
+}
+
+type peer struct {
+	name   string
+	listen *net.TCPAddr
+	relay  *net.TCPAddr
+	conn   *net.TCPConn
+}
+
+func (p *peer) Write(m *relay_pb.Message) error {
+	m.Sender = p.name
+	if p.conn == nil {
+		err := ErrNotInit
+		fmt.Printf("[peer_%s] write error: %v\n", p.name, err)
+		return err
+	}
+	err := marshalAndWrite(p.conn, m)
+	if err != nil {
+		fmt.Printf("[peer_%s] write error: %v\n", p.name, err)
+		return err
+	}
+	return err
+}
+
+func (p *peer) DialAndServe(serve func(*relay_pb.Message)) (err error) {
+	fmt.Printf("[peer_%s] dialing %s\n", p.name, p.relay.String())
+	p.conn, err = net.DialTCP("tcp", p.listen, p.relay)
+	if err != nil {
+		fmt.Printf("[peer_%s] dial error: %v\n", p.name, err)
+		return err
+	}
+	defer p.conn.Close()
+	fmt.Printf("[peer_%s] connected to relay %s\n", p.name, p.relay.String())
+	err = p.Write(&relay_pb.Message{})
+	if err != nil {
+		return err
+	}
+	for {
+		_, m, err := readAndUnmarshal(p.conn)
+		if err != nil {
+			fmt.Printf("[peer_%s] read error: %v\n", p.name, err)
+			return err
+		}
+		serve(m)
+	}
+}
+
+func (p *peer) Close() error {
+	if p.conn == nil {
+		err := ErrNotInit
+		fmt.Printf("[agent_%s] close error: %v\n", p.name, err)
+		return err
+	}
+	return p.conn.Close()
+}
+./pkg/uuid/uuid.go
+package uuid
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"io"
+)
+
+func New() string {
+	buffer := make([]byte, 32)
+	n, err := io.ReadFull(rand.Reader, buffer)
+	if n != len(buffer) {
+		panic("read not full")
+	}
+	if err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(buffer)
 }
 ./pkg/uint_ntt/uint_ntt.go
 package uint_ntt
@@ -1864,5 +5533,1057 @@ func (a IntNTT) Equal(b IntNTT) bool {
 		return true
 	}
 	return a.sameSign(b) && a.Abs.Cmp(b.Abs) == 0
+}
+./pkg/rlog/message.go
+package rlog
+
+type PrepareRequest struct {
+	ProposalId ProposalId `json:"proposal_id"`
+	FromId     LogId      `json:"from_id"`
+}
+
+type PrepareResponse struct {
+	// header
+	Promise  ProposalId `json:"promise"`
+	AcceptId LogId      `json:"accept_id"`
+	Success  bool       `json:"success"`
+	// body
+	Accepted ProposalId `json:"accepted"` // if success=true
+	Entries  []Command  `json:"entries"`  // if success=true
+}
+
+type AcceptRequest struct {
+	ProposalId ProposalId `json:"proposal_id"`
+	FromId     LogId      `json:"from_id"`
+	Entries    []Command  `json:"entries"`
+}
+
+type AcceptResponse struct {
+	// header
+	Promise  ProposalId `json:"promise"`
+	AcceptId LogId      `json:"accept_id"`
+	Success  bool       `json:"success"`
+	// body
+}
+
+type DecideRequest struct {
+	FromId  LogId     `json:"from_id"`
+	Entries []Command `json:"entries"`
+}
+
+type DecideResponse struct{}
+
+type UpdateRequest struct {
+	DecidedId LogId `json:"decided_id"`
+}
+
+type UpdateResponse struct {
+}
+
+type UpdateResponseDecide struct {
+	FromId  LogId     `json:"from_id"`
+	Entries []Command `json:"entries"`
+}
+
+type UpdateResponseRestore struct {
+	Snapshot  []byte    `json:"snapshot"`
+	StartId   LogId     `json:"start_id"`
+	DecidedId LogId     `json:"accept_id"`
+	Entries   []Command `json:"entries"`
+}
+./pkg/rlog/rpc.go
+package rlog
+
+import (
+	"context"
+	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
+	"sync/atomic"
+)
+
+type requestConstructor func(receiver NodeId) func() (request interface{})
+
+type responseHandler func(receiver NodeId) func(response interface{})
+
+func batchRPC(router rpc.Router, cluster ClusterState, requestConstructor requestConstructor, responseHandler responseHandler) <-chan struct{} {
+	done := make(chan struct{})
+	doneCount := uint32(0)
+	var ctx = context.Background()
+	if cluster.RpcTimeout > 0 {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(context.Background(), cluster.RpcTimeout)
+		defer cancel()
+	}
+	for receiver, address := range cluster.AddressBook {
+		go func(receiver NodeId, address rpc.Address) {
+			call := &rpc.Call{
+				Request:  requestConstructor(receiver)(),
+				Response: nil,
+			}
+			go rpc.WaitThenCancel(call, ctx)
+			router(address)(call)
+			<-call.Done()
+			if responseHandler != nil {
+				responseHandler(receiver)(call.Response)
+			}
+			if atomic.AddUint32(&doneCount, 1) == uint32(len(cluster.AddressBook)) {
+				close(done)
+			}
+		}(receiver, address)
+	}
+	return done
+}
+./pkg/rlog/model.go
+package rlog
+
+import (
+	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
+	"time"
+)
+
+type NodeId uint8 // at most 256 nodes
+type CountId uint64
+
+type ProposalId uint64 // CountId<<8 + NodeId // at most 2^(64-8) proposals each node
+
+func MakeProposalId(nodeId NodeId, countId CountId) ProposalId {
+	return ProposalId(uint64(countId)<<8 + uint64(nodeId))
+}
+
+func (pid ProposalId) CountId() CountId {
+	return CountId(pid >> 8)
+}
+
+type LogId uint64
+
+type Command = string
+
+type Object interface {
+	Marshal() ([]byte, error)
+	Unmarshal([]byte) error
+	Commit(...Command)
+}
+
+type Value struct {
+	Object    Object    `json:"object"`
+	StartId   LogId     `json:"start_id"`
+	DecidedId LogId     `json:"decided_id"`
+	Entries   []Command `json:"entries"`
+}
+
+func (v Value) decided() Value {
+	return Value{
+		Object:    v.Object,
+		StartId:   v.StartId,
+		DecidedId: v.DecidedId,
+		Entries:   v.Entries[:v.DecidedId-v.StartId],
+	}
+}
+
+func (v Value) copyEntries() Value {
+	out := v // shallow copy
+	out.Entries = make([]Command, len(v.Entries))
+	copy(out.Entries, v.Entries)
+	return out
+}
+
+func (v Value) append(entries []Command) Value {
+	v.Entries = append(v.Entries, entries...)
+	return v
+}
+
+func (v *Value) compact(block LogId, ratio LogId) LogId {
+	beforeStartId := v.StartId
+	if block > 0 && ratio >= 2 {
+		for LogId(len(v.Entries)) > block*ratio {
+			v.StartId += block
+			v.Entries = v.Entries[block:]
+		}
+	}
+	return beforeStartId
+}
+func (v *Value) tail(from LogId) []Command {
+	return v.Entries[from-v.StartId:]
+}
+
+type AcceptorState struct {
+	Promised ProposalId `json:"promised"`
+	Accepted ProposalId `json:"accepted"`
+	Value    Value      `json:"value"`
+}
+
+func (hs *AcceptorState) decideAndCompactEntries(entries []Command, compactionBlock LogId, compactionRatio LogId) LogId {
+	hs.Value = hs.Value.decided().append(entries)
+	hs.Value.DecidedId += LogId(len(entries))
+	hs.Value.Object.Commit(entries...)
+	return hs.Value.compact(compactionBlock, compactionRatio)
+}
+func (hs *AcceptorState) acceptEntries(accepted ProposalId, entries []Command) {
+	hs.Value = hs.Value.decided().append(entries)
+	hs.Accepted = accepted
+}
+
+type ProposerState struct {
+	CountId     CountId          `json:"count_id"`
+	AcceptIdMap map[NodeId]LogId `json:"accept_id_map"`
+}
+
+type ClusterState struct {
+	AddressBook      map[NodeId]rpc.Address `json:"address_book"`
+	RpcTimeout       time.Duration          `json:"rpc_timeout"`
+	CompactionBlock  LogId                  `json:"compaction_block"`
+	CompactionRatio  LogId                  `json:"compaction_ratio"`
+	RetryUntilUpdate int                    `json:"retry_until_update"`
+}
+./pkg/rlog/node_test.go
+package rlog_test
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	rlog "github.com/khanh-nguyen-code/go_util/pkg/rlog"
+	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
+	"math/rand"
+	"strconv"
+	"sync/atomic"
+	"testing"
+	"time"
+)
+
+func TestNode_ProposeOnce(t *testing.T) {
+	rand.Seed(1234)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	numNodes := 3
+	cluster := makeCluster(numNodes, transportModel{
+		drop:     0.5,
+		minDelay: 0,
+		maxDelay: 10 * time.Millisecond,
+	})
+	nodeMap := make(map[rlog.NodeId]*rlog.Node)
+	for nodeId := range cluster.addressBook {
+		nodeId := nodeId
+		node := &rlog.Node{
+			NodeId: nodeId,
+			Router: cluster.router,
+			Cluster: rlog.ClusterState{
+				AddressBook:      cluster.addressBook,
+				RpcTimeout:       10 * time.Millisecond,
+				CompactionBlock:  2,
+				CompactionRatio:  2,
+				RetryUntilUpdate: 2,
+			},
+			Acceptor: rlog.AcceptorState{
+				Value: rlog.Value{
+					Object: newLog(),
+				},
+			},
+			Proposer: rlog.ProposerState{
+				AcceptIdMap: map[rlog.NodeId]rlog.LogId{},
+			},
+		}
+		nodeMap[nodeId] = node
+		go cluster.serve(ctx, nodeId, node.Handler)
+		go func() {
+			ticker := time.NewTicker(time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					node.Update(ctx)
+				}
+			}
+		}()
+	}
+
+	doneCount := uint32(0)
+	for nodeId := range cluster.addressBook {
+		go func(nodeId rlog.NodeId) {
+			for i := 0; i < 3; i++ {
+				v := fmt.Sprintf("command_%d_%d", nodeId, i)
+				_ = nodeMap[nodeId].Propose(context.Background(), v, exponentialBackoff(10*time.Millisecond, 80*time.Millisecond, 2))
+			}
+
+			if atomic.AddUint32(&doneCount, 1) >= uint32(len(cluster.addressBook)) {
+				cancel()
+			}
+		}(nodeId)
+	}
+	<-ctx.Done()
+
+	for _, replicatedLog := range nodeMap {
+		b, err := json.MarshalIndent(replicatedLog.Acceptor, "", "\t")
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(b))
+	}
+}
+
+type cluster struct {
+	model       transportModel
+	addressBook map[rlog.NodeId]rpc.Address
+	chanMap     map[rlog.NodeId]chan *rpc.Call
+}
+
+func makeCluster(numNodes int, model transportModel) *cluster {
+	c := &cluster{
+		model:       model,
+		addressBook: map[rlog.NodeId]rpc.Address{},
+		chanMap:     map[rlog.NodeId]chan *rpc.Call{},
+	}
+	for i := 0; i < numNodes; i++ {
+		nodeId := rlog.NodeId(i)
+		c.addressBook[nodeId] = strconv.Itoa(int(nodeId))
+		c.chanMap[nodeId] = make(chan *rpc.Call, 1024)
+	}
+	return c
+}
+
+func (c *cluster) router(receiverAddr rpc.Address) rpc.Handler {
+	receiver, _ := strconv.Atoi(receiverAddr)
+	return func(rpc *rpc.Call) {
+		c.model.do(func() {
+			c.chanMap[rlog.NodeId(receiver)] <- rpc
+		}, func() {
+			rpc.Write(nil)
+		})
+	}
+}
+
+func (c *cluster) serve(ctx context.Context, nodeId rlog.NodeId, handler rpc.Handler) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case call := <-c.chanMap[nodeId]:
+			handler(call)
+		}
+	}
+}
+
+type transportModel struct {
+	drop     float64
+	minDelay time.Duration
+	maxDelay time.Duration
+}
+
+func (tm transportModel) do(sendCb func(), dropCb func()) {
+	time.Sleep(tm.minDelay + time.Duration(rand.Intn(int(tm.maxDelay-tm.minDelay))))
+	if rand.Float64() < tm.drop {
+		dropCb()
+	} else {
+		sendCb()
+	}
+}
+
+func exponentialBackoff(minTimeout time.Duration, maxTimeout time.Duration, scale float64) rlog.RetryPolicy {
+	if minTimeout == 0 || maxTimeout == 0 {
+		panic("min timeout and max timeout must be positive")
+	}
+	timeout := minTimeout
+	return func() time.Duration {
+		duration := time.Duration(rand.Intn(int(timeout)))
+		timeout = time.Duration(float64(timeout) * scale)
+		if timeout > maxTimeout {
+			timeout = maxTimeout
+		}
+		return duration
+	}
+}
+
+type log struct {
+	Entries []string
+}
+
+func (l log) Marshal() ([]byte, error) {
+	return json.Marshal(l.Entries)
+}
+
+func (l *log) Unmarshal(bytes []byte) error {
+	return json.Unmarshal(bytes, &l.Entries)
+}
+
+func (l *log) Commit(command ...rlog.Command) {
+	l.Entries = append(l.Entries, command...)
+}
+func newLog() rlog.Object {
+	return &log{}
+}
+./pkg/rlog/rpc/rpc.go
+package rpc
+
+import (
+	"context"
+	"sync/atomic"
+)
+
+type Address = string
+
+type Router func(receiver Address) Handler
+
+type Handler func(call *Call)
+
+type state = uint32
+
+const (
+	state_ready   state = 0
+	state_written state = 1
+)
+
+type Call struct {
+	Request  interface{}
+	Response interface{}
+	doneCh   atomic.Value // chan struct{}
+	state    state
+}
+
+func (call *Call) initOnce() {
+	call.doneCh.CompareAndSwap(nil, make(chan struct{}))
+}
+
+func (call *Call) Write(response interface{}) {
+	call.initOnce()
+	if atomic.CompareAndSwapUint32(&call.state, state_ready, state_written) {
+		call.Response = response
+		close(call.doneCh.Load().(chan struct{}))
+	}
+}
+
+func (call *Call) Done() <-chan struct{} {
+	call.initOnce()
+	return call.doneCh.Load().(chan struct{})
+}
+
+func WaitThenCancel(call *Call, ctx context.Context) {
+	select {
+	case <-ctx.Done():
+		return
+	case <-call.Done():
+		call.Write(nil)
+	}
+}
+./pkg/rlog/node.go
+package rlog
+
+import (
+	"context"
+	"fmt"
+	"github.com/khanh-nguyen-code/go_util/pkg/rlog/rpc"
+	"sync"
+	"time"
+)
+
+type Node struct {
+	NodeId     NodeId
+	Router     rpc.Router
+	Cluster    ClusterState
+	Acceptor   AcceptorState
+	Proposer   ProposerState
+	acceptorMu sync.Mutex
+}
+
+type RetryPolicy func() time.Duration
+
+func (n *Node) lockAcceptor(f func()) {
+	n.acceptorMu.Lock()
+	defer n.acceptorMu.Unlock()
+	f()
+}
+
+// Update : if propose fails, it is due to
+// (1) no quorum
+// (2) my log is obsolete, call Update to update log
+func (n *Node) Update(ctx context.Context) {
+	var decidedId LogId
+	n.lockAcceptor(func() {
+		decidedId = n.Acceptor.Value.DecidedId
+	})
+	select {
+	case <-ctx.Done():
+		return
+	case <-batchRPC(n.Router, n.Cluster, func(nodeId NodeId) func() (request interface{}) {
+		return func() (request interface{}) {
+			return &UpdateRequest{
+				DecidedId: decidedId,
+			}
+		}
+	}, func(nodeId NodeId) func(response interface{}) {
+		return func(response interface{}) {
+			if updateResponse, ok := response.(*UpdateResponseDecide); ok && updateResponse != nil {
+				// decide
+				n.onDecide(&DecideRequest{
+					FromId:  updateResponse.FromId,
+					Entries: updateResponse.Entries,
+				})
+			}
+			if updateResponse, ok := response.(*UpdateResponseRestore); ok && updateResponse != nil {
+				// snapshot
+				n.lockAcceptor(func() {
+					if startIdOffset := updateResponse.StartId - n.Acceptor.Value.StartId; startIdOffset > 0 {
+						fmt.Printf("[node_%d] update start_id from %d to %d\n", n.NodeId, n.Acceptor.Value.StartId, updateResponse.StartId)
+						// update start_id
+						n.Acceptor.Value.StartId = updateResponse.StartId
+						// cut entries to match start_id
+						if LogId(len(n.Acceptor.Value.Entries)) <= startIdOffset {
+							n.Acceptor.Value.Entries = nil
+						} else {
+							n.Acceptor.Value.Entries = n.Acceptor.Value.Entries[startIdOffset:]
+						}
+					}
+					if n.Acceptor.Value.DecidedId < updateResponse.DecidedId {
+						fmt.Printf("[node_%d] update decided_id from %d to %d\n", n.NodeId, n.Acceptor.Value.DecidedId, updateResponse.DecidedId)
+						// update decided_id
+						n.Acceptor.Value.DecidedId = updateResponse.DecidedId
+						// cope entries to match decided_id
+						if len(n.Acceptor.Value.Entries) < len(updateResponse.Entries) {
+							n.Acceptor.Value.Entries = updateResponse.Entries
+						} else {
+							copy(n.Acceptor.Value.Entries, updateResponse.Entries)
+						}
+						// unmarshal object
+						fmt.Printf("[node_%d] unmarshal from snapshot %s\n", n.NodeId, string(updateResponse.Snapshot))
+						err := n.Acceptor.Value.Object.Unmarshal(updateResponse.Snapshot)
+						if err != nil {
+							panic(err)
+						}
+					}
+				})
+			}
+		}
+	}):
+	}
+}
+
+// Propose : value must be unique among all propose calls
+// If Propose is called sequentially and AcceptorState is properly saved into persistent storage
+// It can recover at any stage
+func (n *Node) Propose(ctx context.Context, command Command, nextTimeout RetryPolicy) error {
+	tryCount := 0
+	for {
+		tryCount++
+		if ok := n.proposeOnce(ctx, command); ok {
+			return nil
+		}
+		if n.Cluster.RetryUntilUpdate > 0 && tryCount >= n.Cluster.RetryUntilUpdate {
+			n.Update(ctx)
+		}
+		timeout := nextTimeout()
+		timer := time.NewTimer(timeout)
+		done := false
+		select {
+		case <-ctx.Done():
+			done = true
+		case <-timer.C:
+		}
+		timer.Stop()
+		if done {
+			return ctx.Err()
+		}
+	}
+}
+
+// proposeOnce : propose once
+func (n *Node) proposeOnce(ctx context.Context, command Command) bool {
+	var decidedValue Value
+	n.lockAcceptor(func() {
+		decidedValue = n.Acceptor.Value.decided().copyEntries()
+	})
+
+	onResponseMu := sync.Mutex{}
+	n.Proposer.CountId++
+	proposalId := MakeProposalId(n.NodeId, n.Proposer.CountId)
+	// PREPARE
+	prepareResponseMap := map[NodeId]*PrepareResponse{}
+	{
+		select {
+		case <-ctx.Done():
+			return false
+		case <-batchRPC(n.Router, n.Cluster, func(nodeId NodeId) func() (request interface{}) {
+			return func() (request interface{}) {
+				return &PrepareRequest{
+					ProposalId: proposalId,
+					FromId:     decidedValue.DecidedId,
+				}
+			}
+		}, func(receiver NodeId) func(response interface{}) {
+			return func(response interface{}) {
+				if prepareResponse, ok := response.(*PrepareResponse); ok && prepareResponse != nil {
+					onResponseMu.Lock()
+					defer onResponseMu.Unlock()
+					if prepareResponse.Success {
+						prepareResponseMap[receiver] = prepareResponse
+					}
+					n.processHeader(receiver, prepareResponse.Promise, prepareResponse.AcceptId)
+				}
+			}
+		}):
+		}
+
+		if len(prepareResponseMap) <= len(n.Cluster.AddressBook)/2 {
+			return false
+		}
+		fmt.Printf("[node_%d] prepare ok command=%+v,proposal_id=%+v\n", n.NodeId, command, proposalId)
+	}
+	// PROCESS PREPARE
+	var addonEntries []Command
+	{
+		maxAccepted := ProposalId(0)
+		for _, prepareResponse := range prepareResponseMap {
+			if maxAccepted < prepareResponse.Accepted {
+				maxAccepted = prepareResponse.Accepted
+				addonEntries = prepareResponse.Entries
+			}
+		}
+		existed := false
+		for _, e := range addonEntries {
+			if e == command {
+				existed = true
+				break
+			}
+		}
+		if !existed {
+			addonEntries = append(addonEntries, command)
+		}
+		decidedValue = decidedValue.append(addonEntries)
+		decidedValue.DecidedId += LogId(len(addonEntries))
+	}
+	// ACCEPT
+	{
+		acceptResponseMap := map[NodeId]*AcceptResponse{}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-batchRPC(n.Router, n.Cluster, func(id NodeId) func() (request interface{}) {
+			return func() (request interface{}) {
+				fromId := decidedValue.DecidedId
+				if lid, ok := n.Proposer.AcceptIdMap[id]; ok {
+					fromId = lid
+				}
+				if fromId < decidedValue.StartId {
+					// ignore obsolete node
+					return nil
+				}
+				return &AcceptRequest{
+					ProposalId: proposalId,
+					FromId:     fromId,
+					Entries:    decidedValue.tail(fromId),
+				}
+			}
+		}, func(receiver NodeId) func(response interface{}) {
+			return func(response interface{}) {
+				if acceptResponse, ok := response.(*AcceptResponse); ok && acceptResponse != nil {
+					onResponseMu.Lock()
+					defer onResponseMu.Unlock()
+					if acceptResponse.Success {
+						acceptResponseMap[receiver] = acceptResponse
+					}
+					n.processHeader(receiver, acceptResponse.Promise, acceptResponse.AcceptId)
+				}
+			}
+		}):
+		}
+
+		if len(acceptResponseMap) <= len(n.Cluster.AddressBook)/2 {
+			return false
+		}
+		fmt.Printf("[node_%d] accept ok command=%+v,proposal_id=%+v,next_id=%d,entries=%+v\n", n.NodeId, command, proposalId, decidedValue.DecidedId, addonEntries)
+	}
+	// DECIDE
+	go batchRPC(n.Router, n.Cluster, func(id NodeId) func() (request interface{}) {
+		return func() (request interface{}) {
+			fromId := decidedValue.DecidedId
+			if lid, ok := n.Proposer.AcceptIdMap[id]; ok {
+				fromId = lid
+			}
+			if fromId < decidedValue.StartId {
+				// ignore obsolete node
+				return nil
+			}
+			return &DecideRequest{
+				FromId:  fromId,
+				Entries: decidedValue.tail(fromId),
+			}
+		}
+	}, nil)
+	return true
+}
+
+func (n *Node) onPrepare(request *PrepareRequest) (response *PrepareResponse) {
+	if request == nil {
+		return nil
+	}
+	n.lockAcceptor(func() {
+		response = &PrepareResponse{
+			Promise:  n.Acceptor.Promised,
+			AcceptId: n.Acceptor.Value.DecidedId,
+			Success:  false,
+		}
+		if request.ProposalId <= n.Acceptor.Promised {
+			return
+		}
+		n.Acceptor.Promised = request.ProposalId
+		if offset := request.FromId - n.Acceptor.Value.StartId; 0 <= offset && offset <= LogId(len(n.Acceptor.Value.Entries)) {
+			response.Success = true
+			response.Accepted = n.Acceptor.Accepted
+			response.Entries = n.Acceptor.Value.tail(request.FromId)
+			fmt.Printf("[node_%d] promise to request=%+v,response=%+v\n", n.NodeId, *request, *response)
+		} else {
+			// ignore obsolete node
+		}
+	})
+	return response
+}
+
+func (n *Node) onAccept(request *AcceptRequest) (response *AcceptResponse) {
+	if request == nil {
+		return nil
+	}
+	n.lockAcceptor(func() {
+		response = &AcceptResponse{
+			Promise:  n.Acceptor.Promised,
+			AcceptId: n.Acceptor.Value.DecidedId,
+			Success:  false,
+		}
+		if request.ProposalId < n.Acceptor.Promised {
+			return
+		}
+		n.Acceptor.Promised = request.ProposalId
+
+		if offset := n.Acceptor.Value.DecidedId - request.FromId; 0 <= offset {
+			// do not ignore obsolete node
+			response.Success = true
+			var entries []Command
+			if offset < LogId(len(request.Entries)) {
+				entries = request.Entries[offset:] // guarantee all commands before offset are identical with node log
+			}
+			n.Acceptor.acceptEntries(request.ProposalId, entries)
+			fmt.Printf("[node_%d] accept to request=%+v,response=%+v\n", n.NodeId, *request, *response)
+		}
+	})
+	return response
+}
+func (n *Node) onDecide(request *DecideRequest) (response *DecideResponse) {
+	if request == nil {
+		return nil
+	}
+	var entries []Command
+	n.lockAcceptor(func() {
+		response = &DecideResponse{}
+		if entriesOffset := n.Acceptor.Value.DecidedId - request.FromId; entriesOffset >= 0 {
+			if entriesOffset < LogId(len(request.Entries)) {
+				entries = request.Entries[entriesOffset:]
+				beforeStartId := n.Acceptor.decideAndCompactEntries(entries, n.Cluster.CompactionBlock, n.Cluster.CompactionRatio)
+				if beforeStartId < n.Acceptor.Value.StartId {
+					fmt.Printf("[node_%d] compact log from %d to %d\n", n.NodeId, beforeStartId, n.Acceptor.Value.StartId)
+				}
+				fmt.Printf("[node_%d] decide ok %+v\n", n.NodeId, entries)
+			}
+		}
+	})
+	return response
+}
+
+// onUpdate : return either UpdateResponse or UpdateResponseDecide or UpdateResponseRestore
+func (n *Node) onUpdate(request *UpdateRequest) (response interface{}) {
+	if request == nil {
+		return nil
+	}
+	n.lockAcceptor(func() {
+		decidedValue := n.Acceptor.Value.decided()
+		if decidedValue.DecidedId > request.DecidedId {
+			if decidedValue.StartId > request.DecidedId {
+				// snapshot
+				snapshot, err := decidedValue.Object.Marshal()
+				if err != nil {
+					panic(err)
+				}
+				response = &UpdateResponseRestore{
+					Snapshot:  snapshot,
+					StartId:   decidedValue.StartId,
+					DecidedId: decidedValue.DecidedId,
+					Entries:   decidedValue.Entries,
+				}
+			} else {
+				// decide
+				response = &UpdateResponseDecide{
+					FromId:  request.DecidedId,
+					Entries: decidedValue.tail(request.DecidedId),
+				}
+			}
+		} else {
+			// nothing
+			response = &UpdateResponse{}
+		}
+	})
+	return response
+}
+func (n *Node) Handler(call *rpc.Call) {
+	response := func() interface{} {
+		switch request := call.Request.(type) {
+		case *PrepareRequest:
+			return n.onPrepare(request)
+		case *AcceptRequest:
+			return n.onAccept(request)
+		case *DecideRequest:
+			return n.onDecide(request)
+		case *UpdateRequest:
+			return n.onUpdate(request)
+		default:
+			return nil
+		}
+	}()
+	call.Write(response)
+}
+
+func (n *Node) processHeader(receiver NodeId, promise ProposalId, acceptId LogId) {
+	if n.Proposer.CountId < promise.CountId() {
+		n.Proposer.CountId = promise.CountId()
+	}
+	n.Proposer.AcceptIdMap[receiver] = acceptId
+}
+./pkg/time_queue/time_queue_test.go
+package time_queue_test
+
+import (
+	"context"
+	"fmt"
+	"github.com/khanh-nguyen-code/go_util/pkg/time_queue"
+	"math/rand"
+	"testing"
+	"time"
+)
+
+type record struct {
+	scheduleTime time.Time // time scheduled to collect
+	putTime      time.Time // time put into the priority_queue
+	collectTime  time.Time // actual time collected
+}
+
+const eps = 10 * time.Millisecond
+
+const interval = 20 * time.Millisecond
+
+const start = time.Second
+
+const slots = 1000
+
+var recordList []*record
+
+var zero time.Time
+
+func init() {
+	rand.Seed(1234)
+	zero = time.Now().Add(start)
+	recordList = make([]*record, 0, slots)
+	for i := 0; i < slots; i++ {
+		recordList = append(recordList, &record{
+			scheduleTime: zero.Add(interval * time.Duration(i)),
+		})
+	}
+	rand.Shuffle(len(recordList), func(i, j int) {
+		recordList[i], recordList[j] = recordList[j], recordList[i]
+	})
+}
+
+func TestTimer_Put(t *testing.T) {
+	q := time_queue.New()
+	go func() {
+		time.Sleep(time.Until(zero))
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for _, record := range recordList {
+			q.Put(&time_queue.Item{
+				Schedule: record.scheduleTime,
+				Value:    record,
+			})
+			record.putTime = time.Now()
+			<-ticker.C // i-th record is scheduled at i x interval
+		}
+	}()
+	counter := 0
+	ctx, cancel := context.WithCancel(context.Background())
+	q.DispatchLoop(ctx, func(item *time_queue.Item) {
+		record := item.Value.(*record)
+		record.collectTime = time.Now()
+		counter++
+		if counter >= slots {
+			cancel()
+		}
+	})
+
+	for i, r := range recordList {
+		fmt.Printf("[%d] put %v schedule %v collect %v\n", i, r.putTime.Sub(zero), r.scheduleTime.Sub(zero), r.collectTime.Sub(zero))
+
+		if r.putTime.Before(r.scheduleTime) {
+			if r.collectTime.Sub(r.scheduleTime) > eps {
+				t.Error("put before schedule, but collect too late")
+				return
+			}
+			if r.scheduleTime.Sub(r.collectTime) > eps {
+				t.Error("put before schedule, but collect too early")
+				return
+			}
+		}
+		if r.putTime.After(r.scheduleTime) {
+			if r.collectTime.Sub(r.putTime) > eps {
+				t.Error("put after schedule, but collect to late")
+				return
+			}
+		}
+	}
+}
+./pkg/time_queue/time_queue.go
+package time_queue
+
+import (
+	"context"
+	pq "github.com/khanh-nguyen-code/go_util/pkg/priority_queue"
+	"sync"
+	"time"
+)
+
+type Item struct {
+	Schedule time.Time
+	Value    interface{}
+}
+
+type Queue interface {
+	// Put : put item into the time queue, return update function
+	Put(item *Item) (dispatchUpdater func(updater func(*Item)))
+	// DispatchLoop : run handle(item) to items in the time queue
+	// at scheduled time or put time whichever is sooner
+	// @Note : can be run concurrently
+	// @Note : Loop stops when context is cancelled, need to call Flush to dispatch all items before the current time
+	DispatchLoop(ctx context.Context, handle func(item *Item))
+	// Flush : Flush is the last call made to Queue to flush all items before the current time
+	Flush(now time.Time, handle func(item *Item))
+}
+
+func New() Queue {
+	return &queue{
+		mu:   &sync.Mutex{},
+		pq:   pq.New(),
+		wait: nil,
+	}
+}
+
+type queue struct {
+	mu   *sync.Mutex
+	pq   pq.Queue // protected by mu
+	wait *cv      // protected by mu
+}
+
+func (q *queue) Put(item *Item) (dispatchUpdater func(updater func(*Item))) {
+	if item == nil {
+		return nil
+	}
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	i := &pq.Item{
+		Value:    item,
+		Priority: int(item.Schedule.UnixNano()), // priority always positive
+	}
+	q.pq.Push(i)
+	if q.wait != nil {
+		// if DispatchLoop is waiting for new timeValue signal
+		q.wait.dispose()
+	}
+	return func(updater func(*Item)) {
+		q.mu.Lock()
+		defer q.mu.Unlock()
+		updater(item)
+		// set priority to zero
+		if newPriority := int(item.Schedule.UnixNano()); i.Priority != newPriority {
+			i.Priority = newPriority
+			q.pq.Update(i)
+		}
+	}
+}
+
+func (q *queue) Flush(now time.Time, handle func(item *Item)) {
+	for {
+		item := func() *Item {
+			q.mu.Lock()
+			defer q.mu.Unlock()
+			i := q.pq.Peek()
+			if i == nil {
+				// pq empty
+				return nil
+			}
+			item := i.Value.(*Item)
+			if item.Schedule.After(now) {
+				// exceeded
+				return nil
+			}
+			q.pq.Pop()
+			return item
+		}()
+		if item == nil {
+			break
+		}
+		handle(item)
+	}
+}
+
+func (q *queue) DispatchLoop(ctx context.Context, handle func(item *Item)) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		// peek the priority queue
+		// either
+		// pop the item (nil, item)
+		// wait (wait, nil)
+		q.mu.Lock()
+		wait, item := func() (wait *cv, item *Item) {
+			i := q.pq.Peek()
+			if i == nil {
+				// no item in queue
+				// wait until new item
+				ctx, cancel := context.WithCancel(ctx)
+				return &cv{ctx, cancel}, nil
+			}
+
+			item = i.Value.(*Item)
+			if item.Schedule.Before(time.Now()) {
+				// item starts right now
+				q.pq.Pop()
+				return nil, item
+			} else {
+				// item not time right now
+				// wait until time or new item
+				ctx, cancel := context.WithDeadline(ctx, item.Schedule)
+				return &cv{ctx, cancel}, nil
+			}
+		}()
+		q.wait = wait // set wait for putTime to send signal
+		q.mu.Unlock()
+
+		if wait == nil {
+			handle(item)
+		} else {
+			// child context of ctx
+			// will stop if ctx is cancelled
+			<-wait.done()
+		}
+	}
+}
+
+type cv struct {
+	ctx    context.Context
+	cancel func()
+}
+
+func (cv *cv) done() <-chan struct{} {
+	return cv.ctx.Done()
+}
+func (cv *cv) dispose() {
+	cv.cancel()
 }
 do you have any comment on this?

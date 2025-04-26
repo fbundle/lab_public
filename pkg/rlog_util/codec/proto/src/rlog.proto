@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+option go_package = "gen/rlog_pb";
+
+package rlog;
+
+enum Type {
+  UNKNOWN_MESSAGE = 0;
+  PREPARE_REQUEST = 1;
+  PREPARE_RESPONSE = 2;
+  ACCEPT_REQUEST = 3;
+  ACCEPT_RESPONSE = 4;
+  DECIDE_REQUEST = 5;
+  DECIDE_RESPONSE = 6;
+  UPDATE_REQUEST = 7;
+  UPDATE_RESPONSE = 8;
+  UPDATE_RESPONSE_DECIDE = 9;
+  UPDATE_RESPONSE_RESTORE = 10;
+}
+
+message Message {
+  Type type = 1;
+  optional PrepareRequest prepare_request = 2;
+  optional PrepareResponse prepare_response = 3;
+  optional AcceptRequest accept_request = 4;
+  optional AcceptResponse accept_response = 5;
+  optional DecideRequest decide_request = 6;
+  optional DecideResponse decide_response = 7;
+  optional UpdateRequest update_request = 8;
+  optional UpdateResponse update_response = 9;
+  optional UpdateResponseDecide update_response_decide = 10;
+  optional UpdateResponseRestore update_response_restore = 11;
+}
+
+message PrepareRequest {
+  uint64 proposal_id = 1;
+  uint64 from_id = 2;
+}
+
+message PrepareResponse {
+  uint64 promise = 1;
+  uint64 accept_id = 2;
+  bool success = 3;
+  optional uint64 accepted = 4;
+  repeated string entries = 5;
+}
+
+message AcceptRequest {
+  uint64 proposal_id = 1;
+  uint64 from_id = 2;
+  repeated string entries = 3;
+}
+
+message AcceptResponse {
+  uint64 promise = 1;
+  uint64 accept_id = 2;
+  bool success = 3;
+}
+
+message DecideRequest {
+  uint64 from_id = 1;
+  repeated string entries = 2;
+}
+
+message DecideResponse {
+}
+
+message UpdateRequest {
+  uint64 decided_id = 1;
+}
+
+message UpdateResponse {
+}
+
+message UpdateResponseDecide {
+  uint64 from_id = 1;
+  repeated string entries = 2;
+}
+message UpdateResponseRestore {
+  optional bytes snapshot = 1;
+  optional uint64 start_id = 2;
+  optional uint64 decided_id = 3;
+  repeated string entries = 4;
+}

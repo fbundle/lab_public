@@ -1,0 +1,14 @@
+{
+  "kvstore": "http://35.213.177.215:3000/kvstore",
+  "once": {
+    "/pi/uname": "uname -a",
+    "/pi/lscpu": "lscpu"
+  },
+  "interval": {
+    "/pi/ifconfig": "ifconfig",
+    "/pi/lspci": "lspci",
+    "/pi/lsusb": "lsusb",
+    "/pi/ping": "ping -c 5 35.213.177.215",
+    "/pi/sensors": "sensors"
+  }
+}
