@@ -20,6 +20,9 @@ func init() {
 }
 
 func main() {
+	if *name == "" {
+		panic("name is required")
+	}
 	peer, err := relay.NewPeer(*name, "", *relayAddr)
 	if err != nil {
 		panic(err)
