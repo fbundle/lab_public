@@ -38,6 +38,26 @@ func boxPow[T Ring[T]](x [3]T, n uint64) [3]T {
 	}
 }
 
+// boxPowIter - somehow recursive version is faster
+func boxPowIter[T Ring[T]](x [3]T, n uint64) [3]T {
+	dummy := x[0]
+	res := [3]T{
+		dummy.One(),
+		dummy.Zero(),
+		dummy.One(),
+	}
+
+	for n > 0 {
+		if n%2 == 1 {
+			res = boxProd(res, x)
+		}
+		x = boxProd(x, x)
+		n /= 2
+	}
+
+	return res
+}
+
 func Fib[T Ring[T]](dummy T, n uint64) T {
 	x := [3]T{
 		dummy.Zero(),

@@ -3,6 +3,7 @@ package uint_ntt
 import (
 	"ca/pkg/vec"
 	"math/bits"
+	"sync"
 )
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
@@ -80,6 +81,61 @@ func IterativeCooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 				w = mul(w, wm)
 			}
 		}
+		reversed = newVec
+	}
+
+	return reversed
+}
+func IterativeParallelCooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
+	n := x.Len()
+	if n&(n-1) != 0 {
+		panic("n must be power of two")
+	}
+	logN := bits.TrailingZeros64(uint64(n))
+
+	reverseBits := func(num uint32, bits int) uint32 {
+		reversed := uint32(0)
+		for i := 0; i < bits; i++ {
+			reversed = (reversed << 1) | (num & 1)
+			num >>= 1
+		}
+		return reversed
+	}
+	reversed := vec.MakeVec[uint64](n)
+	for i := 0; i < n; i++ {
+		rev := reverseBits(uint32(i), logN)
+		reversed = reversed.Set(i, x.Get(int(rev)))
+	}
+
+	for stage := 1; stage <= logN; stage++ {
+		m := 1 << stage
+		wm := pow(omega, uint64(n>>stage))
+		newVec := reversed.Clone()
+
+		var wg sync.WaitGroup
+
+		for k := 0; k < n; k += m {
+			wg.Add(1)
+			go func(k int) {
+				defer wg.Done()
+
+				w := uint64(1)
+				for j := 0; j < m/2; j++ {
+					idx1 := k + j
+					idx2 := k + j + m/2
+
+					u := reversed.Get(idx1)
+					t := mul(reversed.Get(idx2), w)
+
+					newVec = newVec.Set(idx1, add(u, t))
+					newVec = newVec.Set(idx2, sub(u, t))
+
+					w = mul(w, wm)
+				}
+			}(k)
+		}
+
+		wg.Wait()
 		reversed = newVec
 	}
 
