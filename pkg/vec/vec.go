@@ -26,16 +26,15 @@ func MakeVecFromIter[T any](iter Iter[T]) Vec[T] {
 	return v
 }
 
+func (v Vec[T]) Len() int {
+	return len(v.Data)
+}
+
 func (v Vec[T]) Clone() Vec[T] {
 	w := MakeVec[T](v.Len())
 	copy(w.Data, v.Data)
 	return w
 }
-
-func (v Vec[T]) Len() int {
-	return len(v.Data)
-}
-
 func (v Vec[T]) Get(i int) T {
 	if i >= v.Len() {
 		return Zero[T]()
