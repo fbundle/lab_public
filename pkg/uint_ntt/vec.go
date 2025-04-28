@@ -1,9 +1,11 @@
 package uint_ntt
 
-import "ca/pkg/vec"
+import (
+	v "ca/pkg/vec"
+)
 
-type Vec[T any] = vec.Vec[T]
+type Vec[T any] = v.Vec[T]
 
-func MakeVec[T any](n int) Vec[T] {
-	return Vec[T](vec.MakeVec[T](n))
+func makeVec[T any](n int) Vec[T] {
+	return Vec[T](v.MakeVec[T](n))
 }

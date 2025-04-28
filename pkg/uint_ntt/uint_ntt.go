@@ -24,7 +24,7 @@ func (a UintNTT) One() UintNTT {
 }
 
 func FromUint64(x uint64) UintNTT {
-	return fromTime(MakeVec[uint64](1).Set(0, x))
+	return fromTime(makeVec[uint64](1).Set(0, x))
 }
 
 func (a UintNTT) Uint64() uint64 {
@@ -165,7 +165,7 @@ func (a UintNTT) String() string {
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
 	l := max(a.time.Len(), b.time.Len())
-	cTime := MakeVec[uint64](l)
+	cTime := makeVec[uint64](l)
 	for i := 0; i < l; i++ {
 		cTime = cTime.Set(i, a.time.Get(i)+b.time.Get(i))
 	}

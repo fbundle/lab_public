@@ -5118,7 +5118,7 @@ func (a UintNTT) One() UintNTT {
 }
 
 func FromUint64(x uint64) UintNTT {
-	return fromTime(MakeVec[uint64](1).Set(0, x))
+	return fromTime(makeVec[uint64](1).Set(0, x))
 }
 
 func (a UintNTT) Uint64() uint64 {
@@ -5259,7 +5259,7 @@ func (a UintNTT) String() string {
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
 	l := max(a.time.Len(), b.time.Len())
-	cTime := MakeVec[uint64](l)
+	cTime := makeVec[uint64](l)
 	for i := 0; i < l; i++ {
 		cTime = cTime.Set(i, a.time.Get(i)+b.time.Get(i))
 	}
@@ -5369,12 +5369,14 @@ func (a UintNTT) Mod(b UintNTT) UintNTT {
 ./pkg/uint_ntt/vec.go
 package uint_ntt
 
-import "ca/pkg/vec"
+import (
+	v "ca/pkg/vec"
+)
 
-type Vec[T any] = vec.Vec[T]
+type Vec[T any] = v.Vec[T]
 
-func MakeVec[T any](n int) Vec[T] {
-	return Vec[T](vec.MakeVec[T](n))
+func makeVec[T any](n int) Vec[T] {
+	return Vec[T](v.MakeVec[T](n))
 }
 ./pkg/uint_ntt/dft.go
 package uint_ntt
@@ -5396,7 +5398,7 @@ func CooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 		panic("n must be power of 2")
 	}
 	// even and odd values of x
-	e, o := MakeVec[uint64](n/2), MakeVec[uint64](n/2)
+	e, o := makeVec[uint64](n/2), makeVec[uint64](n/2)
 	for i := 0; i < n/2; i++ {
 		e = e.Set(i, x.Get(2*i))
 		o = o.Set(i, x.Get(2*i+1))
@@ -5406,7 +5408,7 @@ func CooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 	eFFT := CooleyTukeyFFT(e, omega_2)
 	oFFT := CooleyTukeyFFT(o, omega_2)
 
-	y := MakeVec[uint64](n)
+	y := makeVec[uint64](n)
 	for i := 0; i < n/2; i++ {
 		j := i + n/2
 		t := mul(pow(omega, uint64(i)), oFFT.Get(i))
@@ -5434,7 +5436,7 @@ func IterativeCooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 		}
 		return reversed
 	}
-	reversed := MakeVec[uint64](n)
+	reversed := makeVec[uint64](n)
 	for i := 0; i < n; i++ {
 		rev := reverseBits(uint32(i), logN)
 		reversed = reversed.Set(i, x.Get(int(rev)))
@@ -5481,7 +5483,7 @@ func IterativeParallelCooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 		}
 		return reversed
 	}
-	reversed := MakeVec[uint64](n)
+	reversed := makeVec[uint64](n)
 	for i := 0; i < n; i++ {
 		rev := reverseBits(uint32(i), logN)
 		reversed = reversed.Set(i, x.Get(int(rev)))
