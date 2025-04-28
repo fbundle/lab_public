@@ -1,10 +1,10 @@
 package vec
 
 const (
-	MAX_BUFFER_LENGTH = 1024
+	MAX_BUFFER_LENGTH = 256
 )
 
-// VecSBO : vector with small buffer optimzation
+// VecSBO : vector with small buffer optimization
 type VecSBO[T any] struct {
 	Buffer       [MAX_BUFFER_LENGTH]T
 	BufferLength int
@@ -15,7 +15,7 @@ func MakeVecSBO[T any](length int) VecSBO[T] {
 	addonLength := max(0, length-MAX_BUFFER_LENGTH)
 	if addonLength == 0 {
 		return VecSBO[T]{
-			Buffer:       [1024]T{},
+			Buffer:       [MAX_BUFFER_LENGTH]T{},
 			BufferLength: length,
 			AddonData:    nil,
 		}
