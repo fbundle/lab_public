@@ -5366,6 +5366,16 @@ func (a UintNTT) Mod(b UintNTT) UintNTT {
 	}
 	return m
 }
+./pkg/uint_ntt/vec.go
+package uint_ntt
+
+import "ca/pkg/vec"
+
+type Vec[T any] = vec.Vec[T]
+
+func MakeVec[T any](n int) Vec[T] {
+	return Vec[T](vec.MakeVec[T](n))
+}
 ./pkg/uint_ntt/dft.go
 package uint_ntt
 
@@ -5550,16 +5560,6 @@ func freq2time(freq FpBlock, length uint64) FpBlock {
 
 	time = trimZeros(time)
 	return time
-}
-./pkg/uint_ntt/util.go
-package uint_ntt
-
-import "ca/pkg/vec"
-
-type Vec[T any] = vec.Vec[T]
-
-func MakeVec[T any](n int) Vec[T] {
-	return Vec[T](vec.MakeVec[T](n))
 }
 ./pkg/uint_ntt/fp.go
 package uint_ntt
