@@ -1,7 +1,6 @@
 package uint_ntt
 
 import (
-	"ca/pkg/vec"
 	"strings"
 )
 
@@ -9,15 +8,15 @@ const (
 	base = 1 << 16 // pick base = 2^d, max_n * base * base < p so that multiplication won't overflow
 )
 
-type block = vec.Vec[uint64] // TODO - change to Vec[uint16]
+type timeBlock = Vec[uint64] // TODO - change to Vec[uint16]
 
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
-	time block // polynomial in F_p[X]
+	time timeBlock // polynomial in F_p[X]
 }
 
 func (a UintNTT) Zero() UintNTT {
-	return UintNTT{time: block{}}
+	return UintNTT{time: timeBlock{}}
 }
 
 func (a UintNTT) One() UintNTT {
@@ -25,14 +24,14 @@ func (a UintNTT) One() UintNTT {
 }
 
 func FromUint64(x uint64) UintNTT {
-	return fromTime(vec.MakeVec[uint64](1).Set(0, x))
+	return fromTime(MakeVec[uint64](1).Set(0, x))
 }
 
 func (a UintNTT) Uint64() uint64 {
 	return a.time.Get(0) + a.time.Get(1)*base + a.time.Get(2)*base*base + a.time.Get(3)*base*base*base
 }
 
-func fromTime(time block) UintNTT {
+func fromTime(time timeBlock) UintNTT {
 	// reduce to base
 	originalLen := time.Len()
 	for i := 0; i < originalLen; i++ {
@@ -55,7 +54,7 @@ func fromTime(time block) UintNTT {
 }
 
 // trimZeros : trim zeros at high degree
-func trimZeros(time block) block {
+func trimZeros(time timeBlock) timeBlock {
 	for time.Len() > 0 && time.Get(time.Len()-1) == 0 {
 		time = time.Slice(0, time.Len()-1)
 	}
@@ -100,7 +99,7 @@ func FromString(s string) UintNTT {
 		base16 = append(base16, byte(0))
 	}
 
-	time := block{}
+	time := timeBlock{}
 	for i := 0; i < len(base16); i += 4 {
 		var x uint64 = 0
 		x += uint64(base16[i])
@@ -166,7 +165,7 @@ func (a UintNTT) String() string {
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
 	l := max(a.time.Len(), b.time.Len())
-	cTime := vec.MakeVec[uint64](l)
+	cTime := MakeVec[uint64](l)
 	for i := 0; i < l; i++ {
 		cTime = cTime.Set(i, a.time.Get(i)+b.time.Get(i))
 	}
@@ -177,7 +176,7 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 	l := nextPowerOfTwo(uint64(a.time.Len() + b.time.Len()))
 
 	aFreq, bFreq := time2freq(a.time, l), time2freq(b.time, l)
-	freq := block{}
+	freq := timeBlock{}
 	for i := 0; i < int(l); i++ {
 		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
 	}

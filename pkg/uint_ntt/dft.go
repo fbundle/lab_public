@@ -1,13 +1,14 @@
 package uint_ntt
 
 import (
-	"ca/pkg/vec"
 	"math/bits"
 	"sync"
 )
 
+type FpBlock = Vec[uint64]
+
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
+func CooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 	n := x.Len()
 	if n == 1 {
 		return x
@@ -16,7 +17,7 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 		panic("n must be power of 2")
 	}
 	// even and odd values of x
-	e, o := vec.MakeVec[uint64](n/2), vec.MakeVec[uint64](n/2)
+	e, o := MakeVec[uint64](n/2), MakeVec[uint64](n/2)
 	for i := 0; i < n/2; i++ {
 		e = e.Set(i, x.Get(2*i))
 		o = o.Set(i, x.Get(2*i+1))
@@ -26,7 +27,7 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 	eFFT := CooleyTukeyFFT(e, omega_2)
 	oFFT := CooleyTukeyFFT(o, omega_2)
 
-	y := vec.MakeVec[uint64](n)
+	y := MakeVec[uint64](n)
 	for i := 0; i < n/2; i++ {
 		j := i + n/2
 		t := mul(pow(omega, uint64(i)), oFFT.Get(i))
@@ -37,7 +38,7 @@ func CooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 }
 
 // IterativeCooleyTukeyFFT : from deepseek
-func IterativeCooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
+func IterativeCooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 	n := x.Len()
 	if n&(n-1) != 0 {
 		panic("n must be power of two")
@@ -54,7 +55,7 @@ func IterativeCooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 		}
 		return reversed
 	}
-	reversed := vec.MakeVec[uint64](n)
+	reversed := MakeVec[uint64](n)
 	for i := 0; i < n; i++ {
 		rev := reverseBits(uint32(i), logN)
 		reversed = reversed.Set(i, x.Get(int(rev)))
@@ -86,7 +87,7 @@ func IterativeCooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
 
 	return reversed
 }
-func IterativeParallelCooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[uint64] {
+func IterativeParallelCooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 	n := x.Len()
 	if n&(n-1) != 0 {
 		panic("n must be power of two")
@@ -101,7 +102,7 @@ func IterativeParallelCooleyTukeyFFT(x vec.Vec[uint64], omega uint64) vec.Vec[ui
 		}
 		return reversed
 	}
-	reversed := vec.MakeVec[uint64](n)
+	reversed := MakeVec[uint64](n)
 	for i := 0; i < n; i++ {
 		rev := reverseBits(uint32(i), logN)
 		reversed = reversed.Set(i, x.Get(int(rev)))
@@ -155,7 +156,7 @@ func nextPowerOfTwo(x uint64) uint64 {
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
 
-func time2freq(time vec.Vec[uint64], length uint64) vec.Vec[uint64] {
+func time2freq(time FpBlock, length uint64) FpBlock {
 	// extend  into powers of 2
 	n := nextPowerOfTwo(length)
 	time = time.Slice(0, int(n)) // extend to length n
@@ -165,7 +166,7 @@ func time2freq(time vec.Vec[uint64], length uint64) vec.Vec[uint64] {
 	return freq
 }
 
-func freq2time(freq vec.Vec[uint64], length uint64) vec.Vec[uint64] {
+func freq2time(freq FpBlock, length uint64) FpBlock {
 	// extend  into powers of 2
 	n := nextPowerOfTwo(length)
 	freq = freq.Slice(0, int(n)) // extend to length n
