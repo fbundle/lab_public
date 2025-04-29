@@ -25,7 +25,7 @@ func (a UintNTT) One() UintNTT {
 }
 
 func FromUint64(x uint64) UintNTT {
-	return fromTime(vec.MakeVec[uint64](1).Set(0, x))
+	return FromTime(vec.MakeVec[uint64](1).Set(0, x))
 }
 
 func (a UintNTT) Uint64() uint64 {
@@ -37,38 +37,12 @@ func (a UintNTT) Uint64() uint64 {
 	return sum
 }
 
-func fromTime(time Block) UintNTT {
+func FromTime(time Block) UintNTT {
 	time = reduceToBase(time)
 	time = trimZeros(time)
 	return UintNTT{
 		time: time,
 	}
-}
-
-// reduceToBase : rewrite so that all coefficients in [0, base)
-func reduceToBase(time Block) Block {
-	originalLen := time.Len()
-	for i := 0; i < originalLen; i++ {
-		q, r := time.Get(i)/base, time.Get(i)%base
-		time = time.Set(i, r)
-		time = time.Set(i+1, time.Get(i+1)+q)
-	}
-	if time.Len() > 0 {
-		for time.Get(time.Len()-1) >= base {
-			q, r := time.Get(time.Len()-1)/base, time.Get(time.Len()-1)%base
-			time = time.Set(time.Len()-1, r)
-			time = time.Set(time.Len(), q)
-		}
-	}
-	return time
-}
-
-// trimZeros : trim zeros at high degree
-func trimZeros(time Block) Block {
-	for time.Len() > 0 && time.Get(time.Len()-1) == 0 {
-		time = time.Slice(0, time.Len()-1)
-	}
-	return time
 }
 
 func FromString(s string) UintNTT {
@@ -119,7 +93,7 @@ func FromString(s string) UintNTT {
 		time = time.Set(i/4, x)
 	}
 
-	return fromTime(time)
+	return FromTime(time)
 }
 
 func (a UintNTT) String() string {
@@ -179,7 +153,7 @@ func (a UintNTT) Add(b UintNTT) UintNTT {
 	for i := 0; i < l; i++ {
 		cTime = cTime.Set(i, a.time.Get(i)+b.time.Get(i))
 	}
-	return fromTime(cTime)
+	return FromTime(cTime)
 }
 
 func (a UintNTT) Mul(b UintNTT) UintNTT {
@@ -191,7 +165,7 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
 	}
 	time := freq2time(freq, l)
-	return fromTime(time)
+	return FromTime(time)
 }
 
 // Sub - subtract b from a using long subtraction
@@ -205,7 +179,7 @@ func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 		cTime = cTime.Set(i, x%base)
 		borrow = 1 - x/base
 	}
-	return fromTime(cTime), borrow == 0
+	return FromTime(cTime), borrow == 0
 }
 
 func (a UintNTT) IsZero() bool {
@@ -238,7 +212,9 @@ func (a UintNTT) shiftRight(n int) UintNTT {
 		return UintNTT{}
 	}
 	cTime := a.time.Slice(n, a.time.Len()).Clone()
-	return fromTime(cTime)
+	return UintNTT{
+		time: cTime,
+	}
 }
 
 // inv : let m = 2^{16n}
