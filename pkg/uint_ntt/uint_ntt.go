@@ -33,25 +33,28 @@ func (a UintNTT) Uint64() uint64 {
 }
 
 func fromTime(time timeBlock) UintNTT {
-	// reduce to base
+	time = reduceToBase(time)
+	time = trimZeros(time)
+	return UintNTT{
+		time: time,
+	}
+}
+
+func reduceToBase(time timeBlock) timeBlock {
 	originalLen := time.Len()
 	for i := 0; i < originalLen; i++ {
 		q, r := time.Get(i)/base, time.Get(i)%base
 		time = time.Set(i, r)
 		time = time.Set(i+1, time.Get(i+1)+q)
 	}
-	if time.Len() == 0 {
-		return UintNTT{}
+	if time.Len() > 0 {
+		for time.Get(time.Len()-1) >= base {
+			q, r := time.Get(time.Len()-1)/base, time.Get(time.Len()-1)%base
+			time = time.Set(time.Len()-1, r)
+			time = time.Set(time.Len(), q)
+		}
 	}
-	for time.Get(time.Len()-1) >= base {
-		q, r := time.Get(time.Len()-1)/base, time.Get(time.Len()-1)%base
-		time = time.Set(time.Len()-1, r)
-		time = time.Set(time.Len(), q)
-	}
-	time = trimZeros(time)
-	return UintNTT{
-		time: time,
-	}
+	return time
 }
 
 // trimZeros : trim zeros at high degree
