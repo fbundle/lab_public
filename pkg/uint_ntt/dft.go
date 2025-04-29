@@ -25,7 +25,7 @@ func time2freq(time Block, length uint64) Block {
 	time = time.Slice(0, int(n)) // extend to length n
 
 	omega := getPrimitiveRoot(n)
-	freq := trimZeros(dft(time, omega))
+	freq := trim(dft(time, omega))
 	return freq
 }
 
@@ -42,7 +42,7 @@ func freq2time(freq Block, length uint64) Block {
 		time = time.Set(i, mul(f, il))
 	}
 
-	time = trimZeros(time)
+	time = trim(time)
 	return time
 }
 

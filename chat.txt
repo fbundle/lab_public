@@ -5133,7 +5133,7 @@ func (a UintNTT) Uint64() uint64 {
 
 func FromTime(time Block) UintNTT {
 	time = canonicalize(time)
-	time = trimZeros(time)
+	time = trim(time)
 	return UintNTT{
 		time: time,
 	}
@@ -5380,7 +5380,7 @@ func time2freq(time Block, length uint64) Block {
 	time = time.Slice(0, int(n)) // extend to length n
 
 	omega := getPrimitiveRoot(n)
-	freq := trimZeros(dft(time, omega))
+	freq := trim(dft(time, omega))
 	return freq
 }
 
@@ -5397,7 +5397,7 @@ func freq2time(freq Block, length uint64) Block {
 		time = time.Set(i, mul(f, il))
 	}
 
-	time = trimZeros(time)
+	time = trim(time)
 	return time
 }
 
@@ -5557,8 +5557,8 @@ func canonicalize(time Block) Block {
 	return time
 }
 
-// trimZeros : trim zeros at high degree
-func trimZeros(time Block) Block {
+// trim : trim unused zeros at high degree
+func trim(time Block) Block {
 	for time.Len() > 0 && time.Get(time.Len()-1) == 0 {
 		time = time.Slice(0, time.Len()-1)
 	}

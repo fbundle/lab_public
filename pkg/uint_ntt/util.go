@@ -18,8 +18,8 @@ func canonicalize(time Block) Block {
 	return time
 }
 
-// trimZeros : trim zeros at high degree
-func trimZeros(time Block) Block {
+// trim : trim unused zeros at high degree
+func trim(time Block) Block {
 	for time.Len() > 0 && time.Get(time.Len()-1) == 0 {
 		time = time.Slice(0, time.Len()-1)
 	}
