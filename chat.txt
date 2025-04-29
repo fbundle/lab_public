@@ -5569,7 +5569,6 @@ package uint_ntt
 
 import (
 	"ca/pkg/vend/uint128"
-	"sync"
 )
 
 // p : operations on finite field of order p
@@ -5603,11 +5602,6 @@ func mul(a uint64, b uint64) uint64 {
 	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
 	return aLarge.Mul(bLarge).Mod64(p)
 }
-
-var (
-	powCache   = map[[2]uint64]uint64{}
-	powCacheMu sync.Mutex
-)
 
 func pow(a uint64, n uint64) uint64 {
 	a = a % p
