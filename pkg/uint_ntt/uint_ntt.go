@@ -1,6 +1,7 @@
 package uint_ntt
 
 import (
+	"ca/pkg/vec"
 	"strings"
 )
 
@@ -8,7 +9,7 @@ const (
 	base = 1 << 16 // pick base = 2^d, max_n * base * base < p so that multiplication won't overflow
 )
 
-type timeBlock = Vec[uint64] // TODO - change to Vec[uint16]
+type timeBlock = vec.Vec[uint64] // TODO - change to Vec[uint16]
 
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
@@ -24,7 +25,7 @@ func (a UintNTT) One() UintNTT {
 }
 
 func FromUint64(x uint64) UintNTT {
-	return fromTime(makeVec[uint64](1).Set(0, x))
+	return fromTime(vec.MakeVec[uint64](1).Set(0, x))
 }
 
 func (a UintNTT) Uint64() uint64 {
@@ -165,7 +166,7 @@ func (a UintNTT) String() string {
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
 	l := max(a.time.Len(), b.time.Len())
-	cTime := makeVec[uint64](l)
+	cTime := vec.MakeVec[uint64](l)
 	for i := 0; i < l; i++ {
 		cTime = cTime.Set(i, a.time.Get(i)+b.time.Get(i))
 	}

@@ -1,11 +1,12 @@
 package uint_ntt
 
 import (
+	"ca/pkg/vec"
 	"math/bits"
 	"sync"
 )
 
-type FpBlock = Vec[uint64]
+type FpBlock = vec.Vec[uint64]
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
 func CooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
@@ -17,7 +18,7 @@ func CooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 		panic("n must be power of 2")
 	}
 	// even and odd values of x
-	e, o := makeVec[uint64](n/2), makeVec[uint64](n/2)
+	e, o := vec.MakeVec[uint64](n/2), vec.MakeVec[uint64](n/2)
 	for i := 0; i < n/2; i++ {
 		e = e.Set(i, x.Get(2*i))
 		o = o.Set(i, x.Get(2*i+1))
@@ -27,7 +28,7 @@ func CooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 	eFFT := CooleyTukeyFFT(e, omega_2)
 	oFFT := CooleyTukeyFFT(o, omega_2)
 
-	y := makeVec[uint64](n)
+	y := vec.MakeVec[uint64](n)
 	for i := 0; i < n/2; i++ {
 		j := i + n/2
 		t := mul(pow(omega, uint64(i)), oFFT.Get(i))
@@ -55,7 +56,7 @@ func IterativeCooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 		}
 		return reversed
 	}
-	reversed := makeVec[uint64](n)
+	reversed := vec.MakeVec[uint64](n)
 	for i := 0; i < n; i++ {
 		rev := reverseBits(uint32(i), logN)
 		reversed = reversed.Set(i, x.Get(int(rev)))
@@ -102,7 +103,7 @@ func IterativeParallelCooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 		}
 		return reversed
 	}
-	reversed := makeVec[uint64](n)
+	reversed := vec.MakeVec[uint64](n)
 	for i := 0; i < n; i++ {
 		rev := reverseBits(uint32(i), logN)
 		reversed = reversed.Set(i, x.Get(int(rev)))
