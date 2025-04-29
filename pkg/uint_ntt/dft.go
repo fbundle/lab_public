@@ -6,10 +6,8 @@ import (
 	"sync"
 )
 
-type FpBlock = vec.Vec[uint64]
-
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
+func CooleyTukeyFFT(x largeBlock, omega uint64) largeBlock {
 	n := x.Len()
 	if n == 1 {
 		return x
@@ -39,7 +37,7 @@ func CooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 }
 
 // IterativeCooleyTukeyFFT : from deepseek
-func IterativeCooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
+func IterativeCooleyTukeyFFT(x largeBlock, omega uint64) largeBlock {
 	n := x.Len()
 	if n&(n-1) != 0 {
 		panic("n must be power of two")
@@ -88,7 +86,7 @@ func IterativeCooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
 
 	return reversed
 }
-func IterativeParallelCooleyTukeyFFT(x FpBlock, omega uint64) FpBlock {
+func IterativeParallelCooleyTukeyFFT(x largeBlock, omega uint64) largeBlock {
 	n := x.Len()
 	if n&(n-1) != 0 {
 		panic("n must be power of two")
@@ -157,7 +155,7 @@ func nextPowerOfTwo(x uint64) uint64 {
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
 
-func time2freq(time FpBlock, length uint64) FpBlock {
+func time2freq(time largeBlock, length uint64) largeBlock {
 	// extend  into powers of 2
 	n := nextPowerOfTwo(length)
 	time = time.Slice(0, int(n)) // extend to length n
@@ -167,7 +165,7 @@ func time2freq(time FpBlock, length uint64) FpBlock {
 	return freq
 }
 
-func freq2time(freq FpBlock, length uint64) FpBlock {
+func freq2time(freq largeBlock, length uint64) largeBlock {
 	// extend  into powers of 2
 	n := nextPowerOfTwo(length)
 	freq = freq.Slice(0, int(n)) // extend to length n

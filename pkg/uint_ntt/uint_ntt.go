@@ -9,15 +9,16 @@ const (
 	base = 1 << 16 // pick base = 2^d, max_n * base * base < p so that multiplication won't overflow
 )
 
-type timeBlock = vec.Vec[uint64] // TODO - change to Vec[uint16]
+type largeBlock = vec.Vec[uint64]
+type smallBlock = vec.Vec[uint64] // TODO - change small block to uint16 to save memory
 
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
-	time timeBlock // polynomial in F_p[X]
+	time smallBlock // polynomial in F_p[X]
 }
 
 func (a UintNTT) Zero() UintNTT {
-	return UintNTT{time: timeBlock{}}
+	return UintNTT{time: smallBlock{}}
 }
 
 func (a UintNTT) One() UintNTT {
@@ -32,7 +33,7 @@ func (a UintNTT) Uint64() uint64 {
 	return a.time.Get(0) + a.time.Get(1)*base + a.time.Get(2)*base*base + a.time.Get(3)*base*base*base
 }
 
-func fromTime(time timeBlock) UintNTT {
+func fromTime(time smallBlock) UintNTT {
 	time = reduceToBase(time)
 	time = trimZeros(time)
 	return UintNTT{
@@ -41,7 +42,7 @@ func fromTime(time timeBlock) UintNTT {
 }
 
 // reduceToBase : rewrite so that all coefficients in [0, base)
-func reduceToBase(time timeBlock) timeBlock {
+func reduceToBase(time smallBlock) smallBlock {
 	originalLen := time.Len()
 	for i := 0; i < originalLen; i++ {
 		q, r := time.Get(i)/base, time.Get(i)%base
@@ -59,7 +60,7 @@ func reduceToBase(time timeBlock) timeBlock {
 }
 
 // trimZeros : trim zeros at high degree
-func trimZeros(time timeBlock) timeBlock {
+func trimZeros(time smallBlock) smallBlock {
 	for time.Len() > 0 && time.Get(time.Len()-1) == 0 {
 		time = time.Slice(0, time.Len()-1)
 	}
@@ -104,7 +105,7 @@ func FromString(s string) UintNTT {
 		base16 = append(base16, byte(0))
 	}
 
-	time := timeBlock{}
+	time := smallBlock{}
 	for i := 0; i < len(base16); i += 4 {
 		var x uint64 = 0
 		x += uint64(base16[i])
@@ -181,7 +182,7 @@ func (a UintNTT) Mul(b UintNTT) UintNTT {
 	l := nextPowerOfTwo(uint64(a.time.Len() + b.time.Len()))
 
 	aFreq, bFreq := time2freq(a.time, l), time2freq(b.time, l)
-	freq := timeBlock{}
+	freq := smallBlock{}
 	for i := 0; i < int(l); i++ {
 		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
 	}
