@@ -5380,8 +5380,8 @@ func time2freq(time Block, length uint64) Block {
 	time = time.Slice(0, int(n)) // extend to length n
 
 	omega := getPrimitiveRoot(n)
-	freq := trim(dft(time, omega))
-	return freq
+	freq := dft(time, omega)
+	return trim(freq)
 }
 
 func freq2time(freq Block, length uint64) Block {
@@ -5397,8 +5397,7 @@ func freq2time(freq Block, length uint64) Block {
 		time = time.Set(i, mul(f, il))
 	}
 
-	time = trim(time)
-	return time
+	return trim(time)
 }
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
@@ -5558,11 +5557,11 @@ func canonicalize(time Block) Block {
 }
 
 // trim : trim unused zeros at high degree
-func trim(time Block) Block {
-	for time.Len() > 0 && time.Get(time.Len()-1) == 0 {
-		time = time.Slice(0, time.Len()-1)
+func trim(block Block) Block {
+	for block.Len() > 0 && block.Get(block.Len()-1) == 0 {
+		block = block.Slice(0, block.Len()-1)
 	}
-	return time
+	return block
 }
 ./pkg/uint_ntt/fp.go
 package uint_ntt

@@ -19,9 +19,9 @@ func canonicalize(time Block) Block {
 }
 
 // trim : trim unused zeros at high degree
-func trim(time Block) Block {
-	for time.Len() > 0 && time.Get(time.Len()-1) == 0 {
-		time = time.Slice(0, time.Len()-1)
+func trim(block Block) Block {
+	for block.Len() > 0 && block.Get(block.Len()-1) == 0 {
+		block = block.Slice(0, block.Len()-1)
 	}
-	return time
+	return block
 }

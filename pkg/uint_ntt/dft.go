@@ -25,8 +25,8 @@ func time2freq(time Block, length uint64) Block {
 	time = time.Slice(0, int(n)) // extend to length n
 
 	omega := getPrimitiveRoot(n)
-	freq := trim(dft(time, omega))
-	return freq
+	freq := dft(time, omega)
+	return trim(freq)
 }
 
 func freq2time(freq Block, length uint64) Block {
@@ -42,8 +42,7 @@ func freq2time(freq Block, length uint64) Block {
 		time = time.Set(i, mul(f, il))
 	}
 
-	time = trim(time)
-	return time
+	return trim(time)
 }
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
