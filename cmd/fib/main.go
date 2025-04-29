@@ -3,7 +3,6 @@ package main
 import (
 	"ca/pkg/fib"
 	"ca/pkg/uint_ntt"
-	"fmt"
 	"os"
 	"strconv"
 )
@@ -22,5 +21,5 @@ func main() {
 
 	x := fib.Fib(uint_ntt.UintNTT{}, uint64(n))
 	_ = x
-	fmt.Println(x)
+	// fmt.Println(x)
 }
