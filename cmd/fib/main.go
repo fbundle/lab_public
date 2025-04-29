@@ -21,5 +21,5 @@ func main() {
 
 	x := fib.Fib(uint_ntt.UintNTT{}, uint64(n))
 	_ = x
-	// fmt.Println(x)
+	fmt.Println(x)
 }
