@@ -5134,6 +5134,7 @@ func fromTime(time timeBlock) UintNTT {
 	}
 }
 
+// reduceToBase : rewrite so that all coefficients in [0, base)
 func reduceToBase(time timeBlock) timeBlock {
 	originalLen := time.Len()
 	for i := 0; i < originalLen; i++ {
