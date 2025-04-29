@@ -38,7 +38,7 @@ func (a UintNTT) Uint64() uint64 {
 }
 
 func FromTime(time Block) UintNTT {
-	time = reduceToBase(time)
+	time = canonicalize(time)
 	time = trimZeros(time)
 	return UintNTT{
 		time: time,

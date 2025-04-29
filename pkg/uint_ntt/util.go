@@ -1,7 +1,7 @@
 package uint_ntt
 
-// reduceToBase : rewrite so that all coefficients in [0, base)
-func reduceToBase(time Block) Block {
+// canonicalize : rewrite so that all coefficients in [0, base)
+func canonicalize(time Block) Block {
 	originalLen := time.Len()
 	for i := 0; i < originalLen; i++ {
 		q, r := time.Get(i)/base, time.Get(i)%base
