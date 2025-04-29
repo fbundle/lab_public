@@ -156,6 +156,7 @@ func (a UintNTT) Add(b UintNTT) UintNTT {
 	return FromTime(cTime)
 }
 
+// Mul : TODO Karatsuba fallback for small-size multiplication without NTT overhead.
 func (a UintNTT) Mul(b UintNTT) UintNTT {
 	l := nextPowerOfTwo(uint64(a.time.Len() + b.time.Len()))
 
@@ -249,6 +250,7 @@ func (a UintNTT) Div(b UintNTT) UintNTT {
 	return a.Mul(x).shiftRight(n)
 }
 
+// Mod : TODO Montgomery Multiplication for constant-time modular multiplication.
 func (a UintNTT) Mod(b UintNTT) UintNTT {
 	x := a.Div(b)
 	m, ok := a.Sub(b.Mul(x))
