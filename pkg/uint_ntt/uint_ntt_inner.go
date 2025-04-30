@@ -1,12 +1,12 @@
 package uint_ntt
 
 func (a UintNTT) shiftRight(n int) UintNTT {
-	if n > a.time.Len() {
+	if n > a.Time.Len() {
 		return UintNTT{}
 	}
-	cTime := a.time.Slice(n, a.time.Len()).Clone()
+	cTime := a.Time.Slice(n, a.Time.Len()).Clone()
 	return UintNTT{
-		time: cTime,
+		Time: cTime,
 	}
 }
 

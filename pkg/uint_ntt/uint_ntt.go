@@ -14,11 +14,11 @@ type Block = vec.Vec[uint64] // TODO - change  Block to uint16 to save memory
 
 // UintNTT : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
 type UintNTT struct {
-	time Block // polynomial in F_p[X]
+	Time Block // polynomial in F_p[X]
 }
 
 func (a UintNTT) Zero() UintNTT {
-	return UintNTT{time: Block{}}
+	return UintNTT{Time: Block{}}
 }
 
 func (a UintNTT) One() UintNTT {
@@ -31,10 +31,10 @@ func FromUint64(x uint64) UintNTT {
 
 func (a UintNTT) Uint64() uint64 {
 	sum := uint64(0)
-	sum += a.time.Get(0)
-	sum += a.time.Get(1) * B
-	sum += a.time.Get(2) * B * B
-	sum += a.time.Get(3) * B * B * B
+	sum += a.Time.Get(0)
+	sum += a.Time.Get(1) * B
+	sum += a.Time.Get(2) * B * B
+	sum += a.Time.Get(3) * B * B * B
 	return sum
 }
 
@@ -66,7 +66,7 @@ func FromTime(time Block) UintNTT {
 	time = trim(time)
 	time = canonicalize(time)
 	return UintNTT{
-		time: time,
+		Time: time,
 	}
 }
 
@@ -127,8 +127,8 @@ func (a UintNTT) String() string {
 	}
 	// convert B 2^16 to base16 (2^4)
 	var base16 []byte = nil
-	for i := 0; i < a.time.Len(); i++ {
-		x := a.time.Get(i)
+	for i := 0; i < a.Time.Len(); i++ {
+		x := a.Time.Get(i)
 		base16 = append(base16, byte(x%16))
 		x /= 16
 		base16 = append(base16, byte(x%16))
@@ -173,28 +173,28 @@ func (a UintNTT) String() string {
 }
 
 func (a UintNTT) Add(b UintNTT) UintNTT {
-	l := max(a.time.Len(), b.time.Len())
+	l := max(a.Time.Len(), b.Time.Len())
 	cTime := vec.MakeVec[uint64](l)
 	for i := 0; i < l; i++ {
-		cTime = cTime.Set(i, a.time.Get(i)+b.time.Get(i))
+		cTime = cTime.Set(i, a.Time.Get(i)+b.Time.Get(i))
 	}
 	return FromTime(cTime)
 }
 
 // Mul : TODO Karatsuba fallback for small-size multiplication without NTT overhead.
 func (a UintNTT) Mul(b UintNTT) UintNTT {
-	cTime := Block(ntt.Mul(ntt.Block(a.time), ntt.Block(b.time)))
+	cTime := Block(ntt.Mul(ntt.Block(a.Time), ntt.Block(b.Time)))
 	return FromTime(cTime)
 }
 
 // Sub - subtract b from a using long subtraction
 // if a < b, return 2nd complement and false
 func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
-	l := max(a.time.Len(), b.time.Len())
-	cTime := a.time.Clone()
+	l := max(a.Time.Len(), b.Time.Len())
+	cTime := a.Time.Clone()
 	var borrow uint64 = 0 // either zero or one
 	for i := 0; i < l; i++ {
-		x := (cTime.Get(i) + B) - (b.time.Get(i) + borrow) // x in [0, 2^{32}-1]
+		x := (cTime.Get(i) + B) - (b.Time.Get(i) + borrow) // x in [0, 2^{32}-1]
 		cTime = cTime.Set(i, x%B)
 		borrow = 1 - x/B
 	}
@@ -202,8 +202,8 @@ func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 }
 
 func (a UintNTT) IsZero() bool {
-	for i := 0; i < a.time.Len(); i++ {
-		if a.time.Get(i) != 0 {
+	for i := 0; i < a.Time.Len(); i++ {
+		if a.Time.Get(i) != 0 {
 			return false
 		}
 	}
@@ -211,15 +211,15 @@ func (a UintNTT) IsZero() bool {
 }
 
 func (a UintNTT) Cmp(b UintNTT) int {
-	l := max(a.time.Len(), b.time.Len())
+	l := max(a.Time.Len(), b.Time.Len())
 	if l == 0 {
 		return 0
 	}
 	for i := l - 1; i >= 0; i-- {
-		if a.time.Get(i) > b.time.Get(i) {
+		if a.Time.Get(i) > b.Time.Get(i) {
 			return +1
 		}
-		if a.time.Get(i) < b.time.Get(i) {
+		if a.Time.Get(i) < b.Time.Get(i) {
 			return -1
 		}
 	}
@@ -227,12 +227,12 @@ func (a UintNTT) Cmp(b UintNTT) int {
 }
 
 func (a UintNTT) Div(b UintNTT) UintNTT {
-	n := max(a.time.Len(), b.time.Len()) + 1 // large enough
+	n := max(a.Time.Len(), b.Time.Len()) + 1 // large enough
 	x := b.pinv(n)
 	return a.Mul(x).shiftRight(n)
 }
 
-// Mod : TODO Montgomery Multiplication for constant-time modular multiplication.
+// Mod : TODO Montgomery Multiplication for constant-Time modular multiplication.
 func (a UintNTT) Mod(b UintNTT) UintNTT {
 	x := a.Div(b)
 	m, ok := a.Sub(b.Mul(x))
