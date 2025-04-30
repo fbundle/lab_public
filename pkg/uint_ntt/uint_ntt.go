@@ -55,8 +55,15 @@ func FromTime(time util.Block) UintNTT {
 		}
 		return time
 	}
+	// trim : trim unused zeros at high degree
+	trim := func(block util.Block) util.Block {
+		for block.Len() > 0 && block.Get(block.Len()-1) == 0 {
+			block = block.Slice(0, block.Len()-1)
+		}
+		return block
+	}
+	time = trim(time)
 	time = canonicalize(time)
-	time = util.TrimBlock(time)
 	return UintNTT{
 		time: time,
 	}
@@ -92,7 +99,7 @@ func FromString(s string) UintNTT {
 	for i := len(s) - 1; i >= 0; i-- {
 		base16 = append(base16, toBase16[string(s[i])])
 	}
-	// convert base16 (2^4) to base 2^16 then TrimBlock
+	// convert base16 (2^4) to base 2^16 then trim
 	if base != 1<<16 {
 		panic("not implemented")
 	}
