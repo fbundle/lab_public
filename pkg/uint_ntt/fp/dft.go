@@ -1,11 +1,12 @@
 package fp
 
 import (
-	"ca/pkg/uint_ntt/util"
 	"ca/pkg/vec"
 	"math/bits"
 	"sync"
 )
+
+type Block = vec.Vec[uint64]
 
 var dft = IterativeCooleyTukeyFFT
 
@@ -20,10 +21,10 @@ func nextPowerOfTwo(x uint64) uint64 {
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
 
-func Mul(aTime util.Block, bTime util.Block) util.Block {
+func Mul(aTime Block, bTime Block) Block {
 	l := nextPowerOfTwo(uint64(aTime.Len() + bTime.Len()))
 	aFreq, bFreq := time2freq(aTime, l), time2freq(bTime, l)
-	freq := util.Block{}
+	freq := Block{}
 	for i := 0; i < int(l); i++ {
 		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
 	}
@@ -31,7 +32,7 @@ func Mul(aTime util.Block, bTime util.Block) util.Block {
 	return time
 }
 
-func time2freq(time util.Block, length uint64) util.Block {
+func time2freq(time Block, length uint64) Block {
 	// extend  into powers of 2
 	n := nextPowerOfTwo(length)
 	time = time.Slice(0, int(n)) // extend to length n
@@ -41,7 +42,7 @@ func time2freq(time util.Block, length uint64) util.Block {
 	return freq
 }
 
-func freq2time(freq util.Block, length uint64) util.Block {
+func freq2time(freq Block, length uint64) Block {
 	// extend  into powers of 2
 	n := nextPowerOfTwo(length)
 	freq = freq.Slice(0, int(n)) // extend to length n
@@ -58,7 +59,7 @@ func freq2time(freq util.Block, length uint64) util.Block {
 }
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(x util.Block, omega uint64) util.Block {
+func CooleyTukeyFFT(x Block, omega uint64) Block {
 	n := x.Len()
 	if n == 1 {
 		return x
@@ -88,7 +89,7 @@ func CooleyTukeyFFT(x util.Block, omega uint64) util.Block {
 }
 
 // IterativeCooleyTukeyFFT : from deepseek
-func IterativeCooleyTukeyFFT(x util.Block, omega uint64) util.Block {
+func IterativeCooleyTukeyFFT(x Block, omega uint64) Block {
 	n := x.Len()
 	if n&(n-1) != 0 {
 		panic("n must be power of two")
@@ -137,7 +138,7 @@ func IterativeCooleyTukeyFFT(x util.Block, omega uint64) util.Block {
 
 	return reversed
 }
-func IterativeParallelCooleyTukeyFFT(x util.Block, omega uint64) util.Block {
+func IterativeParallelCooleyTukeyFFT(x Block, omega uint64) Block {
 	n := x.Len()
 	if n&(n-1) != 0 {
 		panic("n must be power of two")

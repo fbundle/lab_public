@@ -2,7 +2,6 @@ package uint_ntt
 
 import (
 	"ca/pkg/uint_ntt/fp"
-	"ca/pkg/uint_ntt/util"
 	"ca/pkg/vec"
 	"strings"
 )
@@ -11,13 +10,15 @@ const (
 	base = 1 << 16 // pick base = 2^d, max_n * base * base < p so that multiplication won't overflow
 )
 
+type Block = vec.Vec[uint64] // TODO - change  Block to uint16 to save memory
+
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
-	time util.Block // polynomial in F_p[X]
+	time Block // polynomial in F_p[X]
 }
 
 func (a UintNTT) Zero() UintNTT {
-	return UintNTT{time: util.Block{}}
+	return UintNTT{time: Block{}}
 }
 
 func (a UintNTT) One() UintNTT {
@@ -37,9 +38,9 @@ func (a UintNTT) Uint64() uint64 {
 	return sum
 }
 
-func FromTime(time util.Block) UintNTT {
+func FromTime(time Block) UintNTT {
 	// canonicalize : rewrite so that all coefficients in [0, base)
-	canonicalize := func(time util.Block) util.Block {
+	canonicalize := func(time Block) Block {
 		originalLen := time.Len()
 		for i := 0; i < originalLen; i++ {
 			q, r := time.Get(i)/base, time.Get(i)%base
@@ -56,7 +57,7 @@ func FromTime(time util.Block) UintNTT {
 		return time
 	}
 	// trim : trim unused zeros at high degree
-	trim := func(block util.Block) util.Block {
+	trim := func(block Block) Block {
 		for block.Len() > 0 && block.Get(block.Len()-1) == 0 {
 			block = block.Slice(0, block.Len()-1)
 		}
@@ -107,7 +108,7 @@ func FromString(s string) UintNTT {
 		base16 = append(base16, byte(0))
 	}
 
-	time := util.Block{}
+	time := Block{}
 	for i := 0; i < len(base16); i += 4 {
 		var x uint64 = 0
 		x += uint64(base16[i])
