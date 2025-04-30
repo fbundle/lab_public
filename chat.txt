@@ -5095,6 +5095,7 @@ func New() string {
 package uint_ntt
 
 import (
+	"ca/pkg/uint_ntt/fp"
 	"ca/pkg/uint_ntt/util"
 	"ca/pkg/vec"
 	"strings"
@@ -5268,15 +5269,8 @@ func (a UintNTT) Add(b UintNTT) UintNTT {
 
 // Mul : TODO Karatsuba fallback for small-size multiplication without NTT overhead.
 func (a UintNTT) Mul(b UintNTT) UintNTT {
-	l := util.GetNextPowerOfTwo(uint64(a.time.Len() + b.time.Len()))
-
-	aFreq, bFreq := time2freq(a.time, l), time2freq(b.time, l)
-	freq := util.Block{}
-	for i := 0; i < int(l); i++ {
-		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
-	}
-	time := freq2time(freq, l)
-	return FromTime(time)
+	cTime := fp.Mul(a.time, b.time)
+	return FromTime(cTime)
 }
 
 // Sub - subtract b from a using long subtraction
@@ -5398,8 +5392,8 @@ func GetNextPowerOfTwo(x uint64) uint64 {
 	}
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
-./pkg/uint_ntt/fp.go
-package uint_ntt
+./pkg/uint_ntt/fp/fp.go
+package fp
 
 import (
 	"ca/pkg/vend/uint128"
@@ -5450,91 +5444,8 @@ func pow(a uint64, n uint64) uint64 {
 	}
 	return x
 }
-./pkg/uint_ntt/int_ntt.go
-package uint_ntt
-
-type IntNTT struct {
-	Abs UintNTT
-	Neg bool
-}
-
-func (a IntNTT) IsZero() bool {
-	return a.Abs.IsZero()
-}
-
-func (a IntNTT) sameSign(b IntNTT) bool {
-	return a.Neg == b.Neg
-}
-
-func (a IntNTT) Add(b IntNTT) IntNTT {
-	if a.sameSign(b) {
-		return IntNTT{
-			Abs: a.Abs.Add(b.Abs),
-			Neg: a.Neg,
-		}
-	} else {
-		switch a.Abs.Cmp(b.Abs) {
-		case +1:
-			diff, _ := a.Abs.Sub(b.Abs)
-			return IntNTT{
-				Abs: diff,
-				Neg: a.Neg,
-			}
-		case -1:
-			diff, _ := b.Abs.Sub(a.Abs)
-			return IntNTT{
-				Abs: diff,
-				Neg: b.Neg,
-			}
-		default: // cmp = 0
-			return IntNTT{} // zero
-		}
-	}
-}
-
-func (a IntNTT) Sub(b IntNTT) IntNTT {
-	return a.Add(IntNTT{
-		Abs: b.Abs,
-		Neg: !b.Neg, // flip sign of b
-	})
-}
-
-func (a IntNTT) Mul(b IntNTT) IntNTT {
-	return IntNTT{
-		Abs: a.Abs.Mul(b.Abs),
-		Neg: a.sameSign(b),
-	}
-}
-func (a IntNTT) Div(b IntNTT) IntNTT {
-	return IntNTT{
-		Abs: a.Abs.Div(b.Abs),
-		Neg: a.sameSign(b),
-	}
-}
-
-func (a IntNTT) Mod(b IntNTT) IntNTT {
-	if b.Neg || b.IsZero() {
-		panic("only mod positive number")
-	}
-
-	mod := IntNTT{
-		Abs: a.Abs.Mod(b.Abs),
-		Neg: a.Neg,
-	}
-	if mod.Neg {
-		mod = mod.Add(b)
-	}
-	return mod
-}
-
-func (a IntNTT) Equal(b IntNTT) bool {
-	if a.IsZero() && b.IsZero() {
-		return true
-	}
-	return a.sameSign(b) && a.Abs.Cmp(b.Abs) == 0
-}
-./pkg/uint_ntt/fp_dft.go
-package uint_ntt
+./pkg/uint_ntt/fp/fp_dft.go
+package fp
 
 import (
 	"ca/pkg/uint_ntt/util"
@@ -5544,6 +5455,17 @@ import (
 )
 
 var dft = IterativeCooleyTukeyFFT
+
+func Mul(aTime util.Block, bTime util.Block) util.Block {
+	l := util.GetNextPowerOfTwo(uint64(aTime.Len() + bTime.Len()))
+	aFreq, bFreq := time2freq(aTime, l), time2freq(bTime, l)
+	freq := util.Block{}
+	for i := 0; i < int(l); i++ {
+		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
+	}
+	time := freq2time(freq, l)
+	return time
+}
 
 func time2freq(time util.Block, length uint64) util.Block {
 	// extend  into powers of 2
@@ -5705,6 +5627,89 @@ func IterativeParallelCooleyTukeyFFT(x util.Block, omega uint64) util.Block {
 	}
 
 	return reversed
+}
+./pkg/uint_ntt/int_ntt.go
+package uint_ntt
+
+type IntNTT struct {
+	Abs UintNTT
+	Neg bool
+}
+
+func (a IntNTT) IsZero() bool {
+	return a.Abs.IsZero()
+}
+
+func (a IntNTT) sameSign(b IntNTT) bool {
+	return a.Neg == b.Neg
+}
+
+func (a IntNTT) Add(b IntNTT) IntNTT {
+	if a.sameSign(b) {
+		return IntNTT{
+			Abs: a.Abs.Add(b.Abs),
+			Neg: a.Neg,
+		}
+	} else {
+		switch a.Abs.Cmp(b.Abs) {
+		case +1:
+			diff, _ := a.Abs.Sub(b.Abs)
+			return IntNTT{
+				Abs: diff,
+				Neg: a.Neg,
+			}
+		case -1:
+			diff, _ := b.Abs.Sub(a.Abs)
+			return IntNTT{
+				Abs: diff,
+				Neg: b.Neg,
+			}
+		default: // cmp = 0
+			return IntNTT{} // zero
+		}
+	}
+}
+
+func (a IntNTT) Sub(b IntNTT) IntNTT {
+	return a.Add(IntNTT{
+		Abs: b.Abs,
+		Neg: !b.Neg, // flip sign of b
+	})
+}
+
+func (a IntNTT) Mul(b IntNTT) IntNTT {
+	return IntNTT{
+		Abs: a.Abs.Mul(b.Abs),
+		Neg: a.sameSign(b),
+	}
+}
+func (a IntNTT) Div(b IntNTT) IntNTT {
+	return IntNTT{
+		Abs: a.Abs.Div(b.Abs),
+		Neg: a.sameSign(b),
+	}
+}
+
+func (a IntNTT) Mod(b IntNTT) IntNTT {
+	if b.Neg || b.IsZero() {
+		panic("only mod positive number")
+	}
+
+	mod := IntNTT{
+		Abs: a.Abs.Mod(b.Abs),
+		Neg: a.Neg,
+	}
+	if mod.Neg {
+		mod = mod.Add(b)
+	}
+	return mod
+}
+
+func (a IntNTT) Equal(b IntNTT) bool {
+	if a.IsZero() && b.IsZero() {
+		return true
+	}
+	return a.sameSign(b) && a.Abs.Cmp(b.Abs) == 0
 }
 ./pkg/rlog/message.go
 package rlog

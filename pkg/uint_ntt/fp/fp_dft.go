@@ -1,4 +1,4 @@
-package uint_ntt
+package fp
 
 import (
 	"ca/pkg/uint_ntt/util"
@@ -8,6 +8,17 @@ import (
 )
 
 var dft = IterativeCooleyTukeyFFT
+
+func Mul(aTime util.Block, bTime util.Block) util.Block {
+	l := util.GetNextPowerOfTwo(uint64(aTime.Len() + bTime.Len()))
+	aFreq, bFreq := time2freq(aTime, l), time2freq(bTime, l)
+	freq := util.Block{}
+	for i := 0; i < int(l); i++ {
+		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
+	}
+	time := freq2time(freq, l)
+	return time
+}
 
 func time2freq(time util.Block, length uint64) util.Block {
 	// extend  into powers of 2

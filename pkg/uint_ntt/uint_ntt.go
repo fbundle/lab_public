@@ -1,6 +1,7 @@
 package uint_ntt
 
 import (
+	"ca/pkg/uint_ntt/fp"
 	"ca/pkg/uint_ntt/util"
 	"ca/pkg/vec"
 	"strings"
@@ -174,15 +175,8 @@ func (a UintNTT) Add(b UintNTT) UintNTT {
 
 // Mul : TODO Karatsuba fallback for small-size multiplication without NTT overhead.
 func (a UintNTT) Mul(b UintNTT) UintNTT {
-	l := util.GetNextPowerOfTwo(uint64(a.time.Len() + b.time.Len()))
-
-	aFreq, bFreq := time2freq(a.time, l), time2freq(b.time, l)
-	freq := util.Block{}
-	for i := 0; i < int(l); i++ {
-		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
-	}
-	time := freq2time(freq, l)
-	return FromTime(time)
+	cTime := fp.Mul(a.time, b.time)
+	return FromTime(cTime)
 }
 
 // Sub - subtract b from a using long subtraction
