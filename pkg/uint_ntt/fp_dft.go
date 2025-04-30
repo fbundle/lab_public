@@ -1,6 +1,7 @@
 package uint_ntt
 
 import (
+	"ca/pkg/uint_ntt/util"
 	"ca/pkg/vec"
 	"math/bits"
 	"sync"
@@ -8,19 +9,19 @@ import (
 
 var dft = IterativeCooleyTukeyFFT
 
-func time2freq(time Block, length uint64) Block {
+func time2freq(time util.Block, length uint64) util.Block {
 	// extend  into powers of 2
-	n := nextPowerOfTwo(length)
+	n := util.GetNextPowerOfTwo(length)
 	time = time.Slice(0, int(n)) // extend to length n
 
 	omega := getPrimitiveRoot(n)
 	freq := dft(time, omega)
-	return trim(freq)
+	return util.TrimBlock(freq)
 }
 
-func freq2time(freq Block, length uint64) Block {
+func freq2time(freq util.Block, length uint64) util.Block {
 	// extend  into powers of 2
-	n := nextPowerOfTwo(length)
+	n := util.GetNextPowerOfTwo(length)
 	freq = freq.Slice(0, int(n)) // extend to length n
 	omega := getPrimitiveRoot(n)
 	il := inv(n)
@@ -31,11 +32,11 @@ func freq2time(freq Block, length uint64) Block {
 		time = time.Set(i, mul(f, il))
 	}
 
-	return trim(time)
+	return util.TrimBlock(time)
 }
 
 // CooleyTukeyFFT :Cooley-Tukey algorithm
-func CooleyTukeyFFT(x Block, omega uint64) Block {
+func CooleyTukeyFFT(x util.Block, omega uint64) util.Block {
 	n := x.Len()
 	if n == 1 {
 		return x
@@ -65,7 +66,7 @@ func CooleyTukeyFFT(x Block, omega uint64) Block {
 }
 
 // IterativeCooleyTukeyFFT : from deepseek
-func IterativeCooleyTukeyFFT(x Block, omega uint64) Block {
+func IterativeCooleyTukeyFFT(x util.Block, omega uint64) util.Block {
 	n := x.Len()
 	if n&(n-1) != 0 {
 		panic("n must be power of two")
@@ -114,7 +115,7 @@ func IterativeCooleyTukeyFFT(x Block, omega uint64) Block {
 
 	return reversed
 }
-func IterativeParallelCooleyTukeyFFT(x Block, omega uint64) Block {
+func IterativeParallelCooleyTukeyFFT(x util.Block, omega uint64) util.Block {
 	n := x.Len()
 	if n&(n-1) != 0 {
 		panic("n must be power of two")

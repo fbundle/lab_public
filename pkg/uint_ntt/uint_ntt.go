@@ -1,6 +1,7 @@
 package uint_ntt
 
 import (
+	"ca/pkg/uint_ntt/util"
 	"ca/pkg/vec"
 	"strings"
 )
@@ -11,11 +12,11 @@ const (
 
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
-	time Block // polynomial in F_p[X]
+	time util.Block // polynomial in F_p[X]
 }
 
 func (a UintNTT) Zero() UintNTT {
-	return UintNTT{time: Block{}}
+	return UintNTT{time: util.Block{}}
 }
 
 func (a UintNTT) One() UintNTT {
@@ -35,9 +36,9 @@ func (a UintNTT) Uint64() uint64 {
 	return sum
 }
 
-func FromTime(time Block) UintNTT {
+func FromTime(time util.Block) UintNTT {
 	// canonicalize : rewrite so that all coefficients in [0, base)
-	canonicalize := func(time Block) Block {
+	canonicalize := func(time util.Block) util.Block {
 		originalLen := time.Len()
 		for i := 0; i < originalLen; i++ {
 			q, r := time.Get(i)/base, time.Get(i)%base
@@ -54,7 +55,7 @@ func FromTime(time Block) UintNTT {
 		return time
 	}
 	time = canonicalize(time)
-	time = trim(time)
+	time = util.TrimBlock(time)
 	return UintNTT{
 		time: time,
 	}
@@ -90,7 +91,7 @@ func FromString(s string) UintNTT {
 	for i := len(s) - 1; i >= 0; i-- {
 		base16 = append(base16, toBase16[string(s[i])])
 	}
-	// convert base16 (2^4) to base 2^16 then trim
+	// convert base16 (2^4) to base 2^16 then TrimBlock
 	if base != 1<<16 {
 		panic("not implemented")
 	}
@@ -98,7 +99,7 @@ func FromString(s string) UintNTT {
 		base16 = append(base16, byte(0))
 	}
 
-	time := Block{}
+	time := util.Block{}
 	for i := 0; i < len(base16); i += 4 {
 		var x uint64 = 0
 		x += uint64(base16[i])
@@ -173,10 +174,10 @@ func (a UintNTT) Add(b UintNTT) UintNTT {
 
 // Mul : TODO Karatsuba fallback for small-size multiplication without NTT overhead.
 func (a UintNTT) Mul(b UintNTT) UintNTT {
-	l := nextPowerOfTwo(uint64(a.time.Len() + b.time.Len()))
+	l := util.GetNextPowerOfTwo(uint64(a.time.Len() + b.time.Len()))
 
 	aFreq, bFreq := time2freq(a.time, l), time2freq(b.time, l)
-	freq := Block{}
+	freq := util.Block{}
 	for i := 0; i < int(l); i++ {
 		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
 	}
