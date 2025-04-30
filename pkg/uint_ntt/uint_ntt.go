@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	base = 1 << 16 // pick base = 2^d, max_n * base * base < p so that multiplication won't overflow
+	B = 1 << 16 // pick B = 2^d, max_n * B * B < p so that multiplication won't overflow
 )
 
 type Block = vec.Vec[uint64] // TODO - change  Block to uint16 to save memory
 
-// UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
+// UintNTT : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
 type UintNTT struct {
 	time Block // polynomial in F_p[X]
 }
@@ -32,24 +32,24 @@ func FromUint64(x uint64) UintNTT {
 func (a UintNTT) Uint64() uint64 {
 	sum := uint64(0)
 	sum += a.time.Get(0)
-	sum += a.time.Get(1) * base
-	sum += a.time.Get(2) * base * base
-	sum += a.time.Get(3) * base * base * base
+	sum += a.time.Get(1) * B
+	sum += a.time.Get(2) * B * B
+	sum += a.time.Get(3) * B * B * B
 	return sum
 }
 
 func FromTime(time Block) UintNTT {
-	// canonicalize : rewrite so that all coefficients in [0, base)
+	// canonicalize : rewrite so that all coefficients in [0, B)
 	canonicalize := func(time Block) Block {
 		originalLen := time.Len()
 		for i := 0; i < originalLen; i++ {
-			q, r := time.Get(i)/base, time.Get(i)%base
+			q, r := time.Get(i)/B, time.Get(i)%B
 			time = time.Set(i, r)
 			time = time.Set(i+1, time.Get(i+1)+q)
 		}
 		if time.Len() > 0 {
-			for time.Get(time.Len()-1) >= base {
-				q, r := time.Get(time.Len()-1)/base, time.Get(time.Len()-1)%base
+			for time.Get(time.Len()-1) >= B {
+				q, r := time.Get(time.Len()-1)/B, time.Get(time.Len()-1)%B
 				time = time.Set(time.Len()-1, r)
 				time = time.Set(time.Len(), q)
 			}
@@ -100,8 +100,8 @@ func FromString(s string) UintNTT {
 	for i := len(s) - 1; i >= 0; i-- {
 		base16 = append(base16, toBase16[string(s[i])])
 	}
-	// convert base16 (2^4) to base 2^16 then trim
-	if base != 1<<16 {
+	// convert base16 (2^4) to B 2^16 then trim
+	if B != 1<<16 {
 		panic("not implemented")
 	}
 	for len(base16)%4 != 0 {
@@ -122,10 +122,10 @@ func FromString(s string) UintNTT {
 }
 
 func (a UintNTT) String() string {
-	if base != 1<<16 {
+	if B != 1<<16 {
 		panic("not implemented")
 	}
-	// convert base 2^16 to base16 (2^4)
+	// convert B 2^16 to base16 (2^4)
 	var base16 []byte = nil
 	for i := 0; i < a.time.Len(); i++ {
 		x := a.time.Get(i)
@@ -194,9 +194,9 @@ func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 	cTime := a.time.Clone()
 	var borrow uint64 = 0 // either zero or one
 	for i := 0; i < l; i++ {
-		x := (cTime.Get(i) + base) - (b.time.Get(i) + borrow) // x in [0, 2^{32}-1]
-		cTime = cTime.Set(i, x%base)
-		borrow = 1 - x/base
+		x := (cTime.Get(i) + B) - (b.time.Get(i) + borrow) // x in [0, 2^{32}-1]
+		cTime = cTime.Set(i, x%B)
+		borrow = 1 - x/B
 	}
 	return FromTime(cTime), borrow == 0
 }
@@ -224,42 +224,6 @@ func (a UintNTT) Cmp(b UintNTT) int {
 		}
 	}
 	return 0
-}
-
-func (a UintNTT) shiftRight(n int) UintNTT {
-	if n > a.time.Len() {
-		return UintNTT{}
-	}
-	cTime := a.time.Slice(n, a.time.Len()).Clone()
-	return UintNTT{
-		time: cTime,
-	}
-}
-
-// inv : let m = 2^{16n}
-// approx root of f(x) = m / x - a using Newton method
-// error at most 1
-func (a UintNTT) pinv(n int) UintNTT {
-	if a.IsZero() {
-		panic("division by zero")
-	}
-	x := FromUint64(1)
-	// Newton iteration
-	for {
-		// x_{n+1} = x_n + x_n - (a x_n^2) / m
-		left := x.Add(x)
-		right := a.Mul(x).Mul(x).shiftRight(n)
-		x1, ok := left.Sub(right)
-		if !ok {
-			// x is always on the left of the root - this will not happen
-			panic("subtract overflow")
-		}
-		if x1.Cmp(x) == 0 {
-			break
-		}
-		x = x1
-	}
-	return x
 }
 
 func (a UintNTT) Div(b UintNTT) UintNTT {
