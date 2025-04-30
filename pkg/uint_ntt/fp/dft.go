@@ -21,7 +21,7 @@ func nextPowerOfTwo(x uint64) uint64 {
 	return 1 << (64 - bits.LeadingZeros64(x-1))
 }
 
-func Mul(aTime Block, bTime Block) Block {
+func MulTime(aTime Block, bTime Block) Block {
 	l := nextPowerOfTwo(uint64(aTime.Len() + bTime.Len()))
 	aFreq, bFreq := time2freq(aTime, l), time2freq(bTime, l)
 	freq := Block{}

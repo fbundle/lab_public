@@ -183,7 +183,7 @@ func (a UintNTT) Add(b UintNTT) UintNTT {
 
 // Mul : TODO Karatsuba fallback for small-size multiplication without NTT overhead.
 func (a UintNTT) Mul(b UintNTT) UintNTT {
-	cTime := fp.Mul(a.time, b.time)
+	cTime := Block(fp.MulTime(fp.Block(a.time), fp.Block(b.time)))
 	return FromTime(cTime)
 }
 
