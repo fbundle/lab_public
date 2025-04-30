@@ -9,8 +9,6 @@ const (
 	base = 1 << 16 // pick base = 2^d, max_n * base * base < p so that multiplication won't overflow
 )
 
-type Block = vec.Vec[uint64] // TODO - change  Block to uint16 to save memory
-
 // UintNTT : represents nonnegative integers by a_0 + a_1 base + a_2 base^2 + ... + a_{N-1} base^{N-1}
 type UintNTT struct {
 	time Block // polynomial in F_p[X]
@@ -38,6 +36,23 @@ func (a UintNTT) Uint64() uint64 {
 }
 
 func FromTime(time Block) UintNTT {
+	// canonicalize : rewrite so that all coefficients in [0, base)
+	canonicalize := func(time Block) Block {
+		originalLen := time.Len()
+		for i := 0; i < originalLen; i++ {
+			q, r := time.Get(i)/base, time.Get(i)%base
+			time = time.Set(i, r)
+			time = time.Set(i+1, time.Get(i+1)+q)
+		}
+		if time.Len() > 0 {
+			for time.Get(time.Len()-1) >= base {
+				q, r := time.Get(time.Len()-1)/base, time.Get(time.Len()-1)%base
+				time = time.Set(time.Len()-1, r)
+				time = time.Set(time.Len(), q)
+			}
+		}
+		return time
+	}
 	time = canonicalize(time)
 	time = trim(time)
 	return UintNTT{
