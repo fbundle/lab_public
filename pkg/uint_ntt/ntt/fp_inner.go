@@ -1,4 +1,4 @@
-package fp
+package ntt
 
 import (
 	"ca/pkg/vend/uint128"

@@ -5091,11 +5091,269 @@ func New() string {
 	}
 	return hex.EncodeToString(buffer)
 }
+./pkg/uint_ntt/ntt/ntt_inner.go
+package ntt
+
+import (
+	"ca/pkg/vec"
+	"math/bits"
+	"sync"
+)
+
+var dft = iterativeCooleyTukeyFFT
+
+func time2freq(time Block, length uint64) Block {
+	// extend  into powers of 2
+	n := nextPowerOfTwo(length)
+	time = time.Slice(0, int(n)) // extend to length n
+
+	omega := getPrimitiveRoot(n)
+	freq := dft(time, omega)
+	return freq
+}
+
+func freq2time(freq Block, length uint64) Block {
+	// extend  into powers of 2
+	n := nextPowerOfTwo(length)
+	freq = freq.Slice(0, int(n)) // extend to length n
+	omega := getPrimitiveRoot(n)
+	il := inv(n)
+
+	time := dft(freq, inv(omega))
+	for i := 0; i < time.Len(); i++ {
+		f := time.Get(i)
+		time = time.Set(i, mul(f, il))
+	}
+
+	return time
+}
+
+// cooleyTukeyFFT :Cooley-Tukey algorithm
+func cooleyTukeyFFT(x Block, omega uint64) Block {
+	n := x.Len()
+	if n == 1 {
+		return x
+	}
+	if n <= 0 || n%2 != 0 {
+		panic("n must be power of 2")
+	}
+	// even and odd values of x
+	e, o := vec.MakeVec[uint64](n/2), vec.MakeVec[uint64](n/2)
+	for i := 0; i < n/2; i++ {
+		e = e.Set(i, x.Get(2*i))
+		o = o.Set(i, x.Get(2*i+1))
+	}
+	omega_2 := mul(omega, omega)
+
+	eFFT := cooleyTukeyFFT(e, omega_2)
+	oFFT := cooleyTukeyFFT(o, omega_2)
+
+	y := vec.MakeVec[uint64](n)
+	for i := 0; i < n/2; i++ {
+		j := i + n/2
+		t := mul(pow(omega, uint64(i)), oFFT.Get(i))
+		y = y.Set(i, add(eFFT.Get(i), t))
+		y = y.Set(j, sub(eFFT.Get(i), t))
+	}
+	return y
+}
+
+// iterativeCooleyTukeyFFT : from deepseek
+func iterativeCooleyTukeyFFT(x Block, omega uint64) Block {
+	n := x.Len()
+	if n&(n-1) != 0 {
+		panic("n must be power of two")
+	}
+	logN := bits.TrailingZeros64(uint64(n))
+
+	// Bit-reversal permutation (creates new vector)
+	// Reverse bits helper (unchanged)
+	reverseBits := func(num uint32, bits int) uint32 {
+		reversed := uint32(0)
+		for i := 0; i < bits; i++ {
+			reversed = (reversed << 1) | (num & 1)
+			num >>= 1
+		}
+		return reversed
+	}
+	reversed := vec.MakeVec[uint64](n)
+	for i := 0; i < n; i++ {
+		rev := reverseBits(uint32(i), logN)
+		reversed = reversed.Set(i, x.Get(int(rev)))
+	}
+
+	// Main computation (build new vector at each stage)
+	for stage := 1; stage <= logN; stage++ {
+		m := 1 << stage
+		wm := pow(omega, uint64(n>>stage))
+		newVec := reversed.Clone()
+
+		for k := 0; k < n; k += m {
+			w := uint64(1)
+			for j := 0; j < m/2; j++ {
+				idx1 := k + j
+				idx2 := k + j + m/2
+
+				u := reversed.Get(idx1)
+				t := mul(reversed.Get(idx2), w)
+
+				newVec = newVec.Set(idx1, add(u, t))
+				newVec = newVec.Set(idx2, sub(u, t))
+
+				w = mul(w, wm)
+			}
+		}
+		reversed = newVec
+	}
+
+	return reversed
+}
+func iterativeParallelCooleyTukeyFFT(x Block, omega uint64) Block {
+	n := x.Len()
+	if n&(n-1) != 0 {
+		panic("n must be power of two")
+	}
+	logN := bits.TrailingZeros64(uint64(n))
+
+	reverseBits := func(num uint32, bits int) uint32 {
+		reversed := uint32(0)
+		for i := 0; i < bits; i++ {
+			reversed = (reversed << 1) | (num & 1)
+			num >>= 1
+		}
+		return reversed
+	}
+	reversed := vec.MakeVec[uint64](n)
+	for i := 0; i < n; i++ {
+		rev := reverseBits(uint32(i), logN)
+		reversed = reversed.Set(i, x.Get(int(rev)))
+	}
+
+	for stage := 1; stage <= logN; stage++ {
+		m := 1 << stage
+		wm := pow(omega, uint64(n>>stage))
+		newVec := reversed.Clone()
+
+		var wg sync.WaitGroup
+
+		for k := 0; k < n; k += m {
+			wg.Add(1)
+			go func(k int) {
+				defer wg.Done()
+
+				w := uint64(1)
+				for j := 0; j < m/2; j++ {
+					idx1 := k + j
+					idx2 := k + j + m/2
+
+					u := reversed.Get(idx1)
+					t := mul(reversed.Get(idx2), w)
+
+					newVec = newVec.Set(idx1, add(u, t))
+					newVec = newVec.Set(idx2, sub(u, t))
+
+					w = mul(w, wm)
+				}
+			}(k)
+		}
+
+		wg.Wait()
+		reversed = newVec
+	}
+
+	return reversed
+}
+./pkg/uint_ntt/ntt/ntt.go
+package ntt
+
+import (
+	"ca/pkg/vec"
+)
+
+type Block = vec.Vec[uint64]
+
+func Mul(aTime Block, bTime Block) Block {
+	l := nextPowerOfTwo(uint64(aTime.Len() + bTime.Len()))
+	aFreq, bFreq := time2freq(aTime, l), time2freq(bTime, l)
+	freq := Block{}
+	for i := 0; i < int(l); i++ {
+		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
+	}
+	time := freq2time(freq, l)
+	return time
+}
+./pkg/uint_ntt/ntt/fp_inner.go
+package ntt
+
+import (
+	"ca/pkg/vend/uint128"
+)
+
+// p : operations on finite field of order p
+const (
+	// p, g : p = 2^64 - 2^32 + 1, generator g of F_p^\times, g^{p-1} = 1 mod p
+	p, g uint64 = 18446744069414584321, 7
+)
+
+func getPrimitiveRoot(n uint64) uint64 {
+	if (p-1)%n != 0 {
+		panic("n must divide p-1")
+	}
+	return pow(g, (p-1)/n)
+}
+
+// int : Fermat little theorem a^{p-1} = 1 mod p
+func inv(a uint64) uint64 {
+	return pow(a, p-2)
+}
+
+func add(a uint64, b uint64) uint64 {
+	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
+	return aLarge.Add(bLarge).Mod64(p)
+}
+
+func sub(a uint64, b uint64) uint64 {
+	return add(a, p-b%p)
+}
+
+func mul(a uint64, b uint64) uint64 {
+	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
+	return aLarge.Mul(bLarge).Mod64(p)
+}
+
+func pow(a uint64, n uint64) uint64 {
+	a = a % p
+
+	var x uint64 = 1
+	for n > 0 {
+		if n%2 == 1 {
+			x = mul(x, a)
+		}
+		a = mul(a, a)
+		n /= 2
+	}
+	return x
+}
+./pkg/uint_ntt/ntt/util_inner.go
+package ntt
+
+import "math/bits"
+
+// nextPowerOfTwo : return the smallest power of 2 greater than x (code generated by chatgpt)
+func nextPowerOfTwo(x uint64) uint64 {
+	if x == 0 {
+		return 1
+	}
+	if x > 1<<63 {
+		panic("next power of 2 overflows uint64")
+	}
+	return 1 << (64 - bits.LeadingZeros64(x-1))
+}
 ./pkg/uint_ntt/uint_ntt.go
 package uint_ntt
 
 import (
-	"ca/pkg/uint_ntt/fp"
+	"ca/pkg/uint_ntt/ntt"
 	"ca/pkg/vec"
 	"strings"
 )
@@ -5277,7 +5535,7 @@ func (a UintNTT) Add(b UintNTT) UintNTT {
 
 // Mul : TODO Karatsuba fallback for small-size multiplication without NTT overhead.
 func (a UintNTT) Mul(b UintNTT) UintNTT {
-	cTime := Block(fp.Mul(fp.Block(a.time), fp.Block(b.time)))
+	cTime := Block(ntt.Mul(ntt.Block(a.time), ntt.Block(b.time)))
 	return FromTime(cTime)
 }
 
@@ -5371,254 +5629,6 @@ func (a UintNTT) Mod(b UintNTT) UintNTT {
 		panic("subtraction overflow")
 	}
 	return m
-}
-./pkg/uint_ntt/fp/dft.go
-package fp
-
-import (
-	"ca/pkg/vec"
-	"math/bits"
-	"sync"
-)
-
-type Block = vec.Vec[uint64]
-
-var dft = iterativeCooleyTukeyFFT
-
-// nextPowerOfTwo : return the smallest power of 2 greater than x (code generated by chatgpt)
-func nextPowerOfTwo(x uint64) uint64 {
-	if x == 0 {
-		return 1
-	}
-	if x > 1<<63 {
-		panic("next power of 2 overflows uint64")
-	}
-	return 1 << (64 - bits.LeadingZeros64(x-1))
-}
-
-func Mul(aTime Block, bTime Block) Block {
-	l := nextPowerOfTwo(uint64(aTime.Len() + bTime.Len()))
-	aFreq, bFreq := time2freq(aTime, l), time2freq(bTime, l)
-	freq := Block{}
-	for i := 0; i < int(l); i++ {
-		freq = freq.Set(i, mul(aFreq.Get(i), bFreq.Get(i)))
-	}
-	time := freq2time(freq, l)
-	return time
-}
-
-func time2freq(time Block, length uint64) Block {
-	// extend  into powers of 2
-	n := nextPowerOfTwo(length)
-	time = time.Slice(0, int(n)) // extend to length n
-
-	omega := getPrimitiveRoot(n)
-	freq := dft(time, omega)
-	return freq
-}
-
-func freq2time(freq Block, length uint64) Block {
-	// extend  into powers of 2
-	n := nextPowerOfTwo(length)
-	freq = freq.Slice(0, int(n)) // extend to length n
-	omega := getPrimitiveRoot(n)
-	il := inv(n)
-
-	time := dft(freq, inv(omega))
-	for i := 0; i < time.Len(); i++ {
-		f := time.Get(i)
-		time = time.Set(i, mul(f, il))
-	}
-
-	return time
-}
-
-// cooleyTukeyFFT :Cooley-Tukey algorithm
-func cooleyTukeyFFT(x Block, omega uint64) Block {
-	n := x.Len()
-	if n == 1 {
-		return x
-	}
-	if n <= 0 || n%2 != 0 {
-		panic("n must be power of 2")
-	}
-	// even and odd values of x
-	e, o := vec.MakeVec[uint64](n/2), vec.MakeVec[uint64](n/2)
-	for i := 0; i < n/2; i++ {
-		e = e.Set(i, x.Get(2*i))
-		o = o.Set(i, x.Get(2*i+1))
-	}
-	omega_2 := mul(omega, omega)
-
-	eFFT := cooleyTukeyFFT(e, omega_2)
-	oFFT := cooleyTukeyFFT(o, omega_2)
-
-	y := vec.MakeVec[uint64](n)
-	for i := 0; i < n/2; i++ {
-		j := i + n/2
-		t := mul(pow(omega, uint64(i)), oFFT.Get(i))
-		y = y.Set(i, add(eFFT.Get(i), t))
-		y = y.Set(j, sub(eFFT.Get(i), t))
-	}
-	return y
-}
-
-// iterativeCooleyTukeyFFT : from deepseek
-func iterativeCooleyTukeyFFT(x Block, omega uint64) Block {
-	n := x.Len()
-	if n&(n-1) != 0 {
-		panic("n must be power of two")
-	}
-	logN := bits.TrailingZeros64(uint64(n))
-
-	// Bit-reversal permutation (creates new vector)
-	// Reverse bits helper (unchanged)
-	reverseBits := func(num uint32, bits int) uint32 {
-		reversed := uint32(0)
-		for i := 0; i < bits; i++ {
-			reversed = (reversed << 1) | (num & 1)
-			num >>= 1
-		}
-		return reversed
-	}
-	reversed := vec.MakeVec[uint64](n)
-	for i := 0; i < n; i++ {
-		rev := reverseBits(uint32(i), logN)
-		reversed = reversed.Set(i, x.Get(int(rev)))
-	}
-
-	// Main computation (build new vector at each stage)
-	for stage := 1; stage <= logN; stage++ {
-		m := 1 << stage
-		wm := pow(omega, uint64(n>>stage))
-		newVec := reversed.Clone()
-
-		for k := 0; k < n; k += m {
-			w := uint64(1)
-			for j := 0; j < m/2; j++ {
-				idx1 := k + j
-				idx2 := k + j + m/2
-
-				u := reversed.Get(idx1)
-				t := mul(reversed.Get(idx2), w)
-
-				newVec = newVec.Set(idx1, add(u, t))
-				newVec = newVec.Set(idx2, sub(u, t))
-
-				w = mul(w, wm)
-			}
-		}
-		reversed = newVec
-	}
-
-	return reversed
-}
-func iterativeParallelCooleyTukeyFFT(x Block, omega uint64) Block {
-	n := x.Len()
-	if n&(n-1) != 0 {
-		panic("n must be power of two")
-	}
-	logN := bits.TrailingZeros64(uint64(n))
-
-	reverseBits := func(num uint32, bits int) uint32 {
-		reversed := uint32(0)
-		for i := 0; i < bits; i++ {
-			reversed = (reversed << 1) | (num & 1)
-			num >>= 1
-		}
-		return reversed
-	}
-	reversed := vec.MakeVec[uint64](n)
-	for i := 0; i < n; i++ {
-		rev := reverseBits(uint32(i), logN)
-		reversed = reversed.Set(i, x.Get(int(rev)))
-	}
-
-	for stage := 1; stage <= logN; stage++ {
-		m := 1 << stage
-		wm := pow(omega, uint64(n>>stage))
-		newVec := reversed.Clone()
-
-		var wg sync.WaitGroup
-
-		for k := 0; k < n; k += m {
-			wg.Add(1)
-			go func(k int) {
-				defer wg.Done()
-
-				w := uint64(1)
-				for j := 0; j < m/2; j++ {
-					idx1 := k + j
-					idx2 := k + j + m/2
-
-					u := reversed.Get(idx1)
-					t := mul(reversed.Get(idx2), w)
-
-					newVec = newVec.Set(idx1, add(u, t))
-					newVec = newVec.Set(idx2, sub(u, t))
-
-					w = mul(w, wm)
-				}
-			}(k)
-		}
-
-		wg.Wait()
-		reversed = newVec
-	}
-
-	return reversed
-}
-./pkg/uint_ntt/fp/fp.go
-package fp
-
-import (
-	"ca/pkg/vend/uint128"
-)
-
-// p : operations on finite field of order p
-const (
-	// p, g : p = 2^64 - 2^32 + 1, generator g of F_p^\times, g^{p-1} = 1 mod p
-	p, g uint64 = 18446744069414584321, 7
-)
-
-func getPrimitiveRoot(n uint64) uint64 {
-	if (p-1)%n != 0 {
-		panic("n must divide p-1")
-	}
-	return pow(g, (p-1)/n)
-}
-
-// int : Fermat little theorem a^{p-1} = 1 mod p
-func inv(a uint64) uint64 {
-	return pow(a, p-2)
-}
-
-func add(a uint64, b uint64) uint64 {
-	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
-	return aLarge.Add(bLarge).Mod64(p)
-}
-
-func sub(a uint64, b uint64) uint64 {
-	return add(a, p-b%p)
-}
-
-func mul(a uint64, b uint64) uint64 {
-	aLarge, bLarge := uint128.From64(a), uint128.From64(b)
-	return aLarge.Mul(bLarge).Mod64(p)
-}
-
-func pow(a uint64, n uint64) uint64 {
-	a = a % p
-
-	var x uint64 = 1
-	for n > 0 {
-		if n%2 == 1 {
-			x = mul(x, a)
-		}
-		a = mul(a, a)
-		n /= 2
-	}
-	return x
 }
 ./pkg/uint_ntt/int_ntt.go
 package uint_ntt
