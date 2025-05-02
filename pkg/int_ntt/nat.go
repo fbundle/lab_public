@@ -188,7 +188,6 @@ func (a Nat) Mul(b Nat) Nat {
 }
 
 // Sub - subtract b from a using long subtraction
-// if a < b, return 2nd complement and false
 func (a Nat) Sub(b Nat) (Nat, bool) {
 	l := max(a.Time.Len(), b.Time.Len())
 	cTime := a.Time.Clone()
@@ -200,7 +199,7 @@ func (a Nat) Sub(b Nat) (Nat, bool) {
 	}
 
 	if borrow != 0 {
-		return Nat{}, false
+		return Nat{}, false // return 0 if a < b
 	}
 
 	return FromTime(cTime), true
