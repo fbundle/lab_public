@@ -1,7 +1,7 @@
 package int_ntt
 
 import (
-	"ca/pkg/int_ntt/ntt"
+	"ca/pkg/ntt"
 	"ca/pkg/vec"
 	"strings"
 )
