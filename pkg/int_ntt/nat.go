@@ -232,13 +232,17 @@ func (a Nat) Div(b Nat) Nat {
 	return a.Mul(x).shiftRight(n)
 }
 
-// Mod : TODO Montgomery Multiplication for constant-Time modular multiplication.
-func (a Nat) Mod(b Nat) Nat {
+func (a Nat) DivMod(b Nat) (Nat, Nat) {
 	x := a.Div(b)
 	m, ok := a.Sub(b.Mul(x))
 	if !ok {
 		// this will not happen
 		panic("subtraction overflow")
 	}
-	return m
+	return x, m
+}
+
+// Mod : TODO Montgomery Multiplication for constant-Time modular multiplication.
+func (a Nat) Mod(b Nat) Nat {
+	panic("not implemented")
 }
