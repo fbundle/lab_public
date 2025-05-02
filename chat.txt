@@ -535,7 +535,12 @@ func (a Nat) Sub(b Nat) (Nat, bool) {
 		cTime = cTime.Set(i, x%B)
 		borrow = 1 - x/B
 	}
-	return FromTime(cTime), borrow == 0
+
+	if borrow != 0 {
+		return Nat{}, false
+	}
+
+	return FromTime(cTime), true
 }
 
 func (a Nat) IsZero() bool {
