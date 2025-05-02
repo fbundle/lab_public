@@ -1,7 +1,7 @@
-package uint_ntt
+package int_ntt
 
 import (
-	"ca/pkg/uint_ntt/ntt"
+	"ca/pkg/int_ntt/ntt"
 	"ca/pkg/vec"
 	"strings"
 )
@@ -12,24 +12,24 @@ const (
 
 type Block = vec.Vec[uint64] // TODO - change  Block to uint16 to save memory
 
-// UintNTT : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
-type UintNTT struct {
+// Nat : represents nonnegative integers by a_0 + a_1 B + a_2 B^2 + ... + a_{N-1} B^{N-1}
+type Nat struct {
 	Time Block // polynomial in F_p[X]
 }
 
-func (a UintNTT) Zero() UintNTT {
-	return UintNTT{Time: Block{}}
+func (a Nat) Zero() Nat {
+	return Nat{Time: Block{}}
 }
 
-func (a UintNTT) One() UintNTT {
+func (a Nat) One() Nat {
 	return FromUint64(1)
 }
 
-func FromUint64(x uint64) UintNTT {
+func FromUint64(x uint64) Nat {
 	return FromTime(vec.MakeVec[uint64](1).Set(0, x))
 }
 
-func (a UintNTT) Uint64() uint64 {
+func (a Nat) Uint64() uint64 {
 	sum := uint64(0)
 	sum += a.Time.Get(0)
 	sum += a.Time.Get(1) * B
@@ -38,7 +38,7 @@ func (a UintNTT) Uint64() uint64 {
 	return sum
 }
 
-func FromTime(time Block) UintNTT {
+func FromTime(time Block) Nat {
 	// canonicalize : rewrite so that all coefficients in [0, B)
 	canonicalize := func(time Block) Block {
 		originalLen := time.Len()
@@ -65,12 +65,12 @@ func FromTime(time Block) UintNTT {
 	}
 	time = trim(time)
 	time = canonicalize(time)
-	return UintNTT{
+	return Nat{
 		Time: time,
 	}
 }
 
-func FromString(s string) UintNTT {
+func FromString(s string) Nat {
 	s = strings.ToLower(s)
 	if s[0:2] != "0x" {
 		panic("string must start with 0x")
@@ -121,7 +121,7 @@ func FromString(s string) UintNTT {
 	return FromTime(time)
 }
 
-func (a UintNTT) String() string {
+func (a Nat) String() string {
 	if B != 1<<16 {
 		panic("not implemented")
 	}
@@ -172,7 +172,7 @@ func (a UintNTT) String() string {
 	return "0x" + out
 }
 
-func (a UintNTT) Add(b UintNTT) UintNTT {
+func (a Nat) Add(b Nat) Nat {
 	l := max(a.Time.Len(), b.Time.Len())
 	cTime := vec.MakeVec[uint64](l)
 	for i := 0; i < l; i++ {
@@ -182,14 +182,14 @@ func (a UintNTT) Add(b UintNTT) UintNTT {
 }
 
 // Mul : TODO Karatsuba fallback for small-size multiplication without NTT overhead.
-func (a UintNTT) Mul(b UintNTT) UintNTT {
+func (a Nat) Mul(b Nat) Nat {
 	cTime := Block(ntt.Mul(ntt.Block(a.Time), ntt.Block(b.Time)))
 	return FromTime(cTime)
 }
 
 // Sub - subtract b from a using long subtraction
 // if a < b, return 2nd complement and false
-func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
+func (a Nat) Sub(b Nat) (Nat, bool) {
 	l := max(a.Time.Len(), b.Time.Len())
 	cTime := a.Time.Clone()
 	var borrow uint64 = 0 // either zero or one
@@ -201,7 +201,7 @@ func (a UintNTT) Sub(b UintNTT) (UintNTT, bool) {
 	return FromTime(cTime), borrow == 0
 }
 
-func (a UintNTT) IsZero() bool {
+func (a Nat) IsZero() bool {
 	for i := 0; i < a.Time.Len(); i++ {
 		if a.Time.Get(i) != 0 {
 			return false
@@ -210,7 +210,7 @@ func (a UintNTT) IsZero() bool {
 	return true
 }
 
-func (a UintNTT) Cmp(b UintNTT) int {
+func (a Nat) Cmp(b Nat) int {
 	l := max(a.Time.Len(), b.Time.Len())
 	if l == 0 {
 		return 0
@@ -226,14 +226,14 @@ func (a UintNTT) Cmp(b UintNTT) int {
 	return 0
 }
 
-func (a UintNTT) Div(b UintNTT) UintNTT {
+func (a Nat) Div(b Nat) Nat {
 	n := max(a.Time.Len(), b.Time.Len()) + 1 // large enough
 	x := b.pinv(n)
 	return a.Mul(x).shiftRight(n)
 }
 
 // Mod : TODO Montgomery Multiplication for constant-Time modular multiplication.
-func (a UintNTT) Mod(b UintNTT) UintNTT {
+func (a Nat) Mod(b Nat) Nat {
 	x := a.Div(b)
 	m, ok := a.Sub(b.Mul(x))
 	if !ok {

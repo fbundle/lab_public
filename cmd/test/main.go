@@ -2,10 +2,10 @@ package main
 
 import (
 	"ca/pkg/fib"
+	"ca/pkg/int_ntt"
 	"ca/pkg/integer"
 	"ca/pkg/padic"
 	"ca/pkg/ring"
-	"ca/pkg/uint_ntt"
 	"fmt"
 	"os"
 	"strconv"
@@ -35,7 +35,7 @@ func testFib() {
 		return
 	}
 
-	fmt.Println(fib.Fib(uint_ntt.UintNTT{}, uint64(n)))
+	fmt.Println(fib.Fib(int_ntt.Nat{}, uint64(n)))
 }
 
 func testEA() {
@@ -44,8 +44,8 @@ func testEA() {
 }
 
 func testUintNTT() {
-	x := uint_ntt.FromString("0x318346193417412890342342")
-	z := uint_ntt.FromString("0x539543980a084524")
+	x := int_ntt.FromString("0x318346193417412890342342")
+	z := int_ntt.FromString("0x539543980a084524")
 	fmt.Println(z)
 	fmt.Println(z.Add(x).Mod(x))
 }

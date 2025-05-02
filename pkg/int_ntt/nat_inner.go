@@ -1,11 +1,11 @@
-package uint_ntt
+package int_ntt
 
-func (a UintNTT) shiftRight(n int) UintNTT {
+func (a Nat) shiftRight(n int) Nat {
 	if n > a.Time.Len() {
-		return UintNTT{}
+		return Nat{}
 	}
 	cTime := a.Time.Slice(n, a.Time.Len()).Clone()
-	return UintNTT{
+	return Nat{
 		Time: cTime,
 	}
 }
@@ -13,7 +13,7 @@ func (a UintNTT) shiftRight(n int) UintNTT {
 // inv : let m = 2^{16n}
 // approx root of f(x) = m / x - a using Newton method
 // error at most 1
-func (a UintNTT) pinv(n int) UintNTT {
+func (a Nat) pinv(n int) Nat {
 	if a.IsZero() {
 		panic("division by zero")
 	}

@@ -1,21 +1,21 @@
-package uint_ntt
+package int_ntt
 
-type IntNTT struct {
-	Abs UintNTT
+type Int struct {
+	Abs Nat
 	Neg bool
 }
 
-func (a IntNTT) IsZero() bool {
+func (a Int) IsZero() bool {
 	return a.Abs.IsZero()
 }
 
-func (a IntNTT) sameSign(b IntNTT) bool {
+func (a Int) sameSign(b Int) bool {
 	return a.Neg == b.Neg
 }
 
-func (a IntNTT) Add(b IntNTT) IntNTT {
+func (a Int) Add(b Int) Int {
 	if a.sameSign(b) {
-		return IntNTT{
+		return Int{
 			Abs: a.Abs.Add(b.Abs),
 			Neg: a.Neg,
 		}
@@ -23,48 +23,48 @@ func (a IntNTT) Add(b IntNTT) IntNTT {
 		switch a.Abs.Cmp(b.Abs) {
 		case +1:
 			diff, _ := a.Abs.Sub(b.Abs)
-			return IntNTT{
+			return Int{
 				Abs: diff,
 				Neg: a.Neg,
 			}
 		case -1:
 			diff, _ := b.Abs.Sub(a.Abs)
-			return IntNTT{
+			return Int{
 				Abs: diff,
 				Neg: b.Neg,
 			}
 		default: // cmp = 0
-			return IntNTT{} // zero
+			return Int{} // zero
 		}
 	}
 }
 
-func (a IntNTT) Sub(b IntNTT) IntNTT {
-	return a.Add(IntNTT{
+func (a Int) Sub(b Int) Int {
+	return a.Add(Int{
 		Abs: b.Abs,
 		Neg: !b.Neg, // flip sign of b
 	})
 }
 
-func (a IntNTT) Mul(b IntNTT) IntNTT {
-	return IntNTT{
+func (a Int) Mul(b Int) Int {
+	return Int{
 		Abs: a.Abs.Mul(b.Abs),
 		Neg: a.sameSign(b),
 	}
 }
-func (a IntNTT) Div(b IntNTT) IntNTT {
-	return IntNTT{
+func (a Int) Div(b Int) Int {
+	return Int{
 		Abs: a.Abs.Div(b.Abs),
 		Neg: a.sameSign(b),
 	}
 }
 
-func (a IntNTT) Mod(b IntNTT) IntNTT {
+func (a Int) Mod(b Int) Int {
 	if b.Neg || b.IsZero() {
 		panic("only mod positive number")
 	}
 
-	mod := IntNTT{
+	mod := Int{
 		Abs: a.Abs.Mod(b.Abs),
 		Neg: a.Neg,
 	}
@@ -74,7 +74,7 @@ func (a IntNTT) Mod(b IntNTT) IntNTT {
 	return mod
 }
 
-func (a IntNTT) Equal(b IntNTT) bool {
+func (a Int) Equal(b Int) bool {
 	if a.IsZero() && b.IsZero() {
 		return true
 	}
