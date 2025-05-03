@@ -6,6 +6,7 @@ import (
 	"ca/pkg/integer"
 	"ca/pkg/padic"
 	"ca/pkg/ring"
+	"ca/pkg/tup"
 	"fmt"
 	"os"
 	"strconv"
@@ -43,13 +44,18 @@ func testEA() {
 	fmt.Println(a, b)
 }
 
-func testUintNTT() {
+func testIntNTT() {
 	x := int_ntt.FromString("0x318346193417412890342342")
 	z := int_ntt.FromString("0x539543980a084524")
 	fmt.Println(z)
 	fmt.Println(z.Add(x).Mod(x))
 }
 
+func testTup() {
+	t := tup.MakeTup(2, 2.5)
+	fmt.Println(t)
+}
+
 func main() {
-	testUintNTT()
+	testTup()
 }
