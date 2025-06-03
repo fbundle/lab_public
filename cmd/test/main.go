@@ -64,7 +64,8 @@ func testVecFunctor() {
 
 	v1 := vec.MakeVecFromSlice([]int{1, 2, 3, 4, 5})
 
-	v2 := vec.Wrap(add1)(v1)
+	add1vec := vec.Wrap(add1)
+	v2 := add1vec(v1)
 	fmt.Println(v2)
 
 }
