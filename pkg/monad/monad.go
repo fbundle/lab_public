@@ -2,7 +2,7 @@ package monad
 
 type Monad[T any] func() (value T, ok bool)
 
-// Pure is equivalent to an iterator of length 1
+// Pure is equivalent to an iterator of length n
 func Pure[T any](values ...T) Monad[T] {
 	i := 0
 	return func() (value T, ok bool) {
@@ -17,9 +17,7 @@ func Pure[T any](values ...T) Monad[T] {
 
 // None is equivalent to an iterator of length 0
 func None[T any]() Monad[T] {
-	return func() (value T, ok bool) {
-		return value, false
-	}
+	return Pure[T]()
 }
 
 // Bind is equivalent to flatMap
