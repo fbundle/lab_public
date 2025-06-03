@@ -8,6 +8,12 @@ func Pure[T any](value T) Monad[T] {
 	}
 }
 
+func None[T any]() Monad[T] {
+	return func() (value T, ok bool) {
+		return value, false
+	}
+}
+
 func Bind[Ta any, Tb any](ma Monad[Ta], f func(Ta) Monad[Tb]) Monad[Tb] {
 	var mb Monad[Tb] = nil
 	return func() (b Tb, ok bool) {

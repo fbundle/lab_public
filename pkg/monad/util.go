@@ -1,11 +1,5 @@
 package monad
 
-func None[T any]() Monad[T] {
-	return func() (value T, ok bool) {
-		return value, false
-	}
-}
-
 func FromSlice[T any](s []T) Monad[T] {
 	i := 0
 	return func() (value T, ok bool) {

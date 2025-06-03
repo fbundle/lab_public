@@ -3670,6 +3670,12 @@ func Pure[T any](value T) Monad[T] {
 	}
 }
 
+func None[T any]() Monad[T] {
+	return func() (value T, ok bool) {
+		return value, false
+	}
+}
+
 func Bind[Ta any, Tb any](ma Monad[Ta], f func(Ta) Monad[Tb]) Monad[Tb] {
 	var mb Monad[Tb] = nil
 	return func() (b Tb, ok bool) {
@@ -3691,12 +3697,6 @@ func Bind[Ta any, Tb any](ma Monad[Ta], f func(Ta) Monad[Tb]) Monad[Tb] {
 }
 ./pkg/monad/util.go
 package monad
-
-func None[T any]() Monad[T] {
-	return func() (value T, ok bool) {
-		return value, false
-	}
-}
 
 func FromSlice[T any](s []T) Monad[T] {
 	i := 0
