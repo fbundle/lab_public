@@ -1544,18 +1544,22 @@ func Propose(recordID RecordID, value Value) {
 }./pkg/vec/vec.go
 package vec
 
-// Zero : return Zero value of a type
+type Vec[T any] struct {
+	Data []T
+}
+
+// Zero returns zero value of a type
 func Zero[T any]() T {
 	var zero T
 	return zero
 }
 
-type Vec[T any] struct {
-	Data []T
-}
-
 func MakeVec[T any](n int) Vec[T] {
 	return Vec[T]{make([]T, n)}
+}
+
+func MakeVecFromSlice[T any](s []T) Vec[T] {
+	return Vec[T]{s}
 }
 
 func MakeVecFromIter[T any](iter Iter[T]) Vec[T] {
@@ -1750,6 +1754,19 @@ func MakeChanIter[T any](ch chan T) Iter[T] {
 func ViewIter[T any](i Iter[T]) (j Iter[T], v Vec[T]) {
 	v = MakeVecFromIter(i)
 	return v.Iterate(), v
+}
+./pkg/vec/functor.go
+package vec
+
+// Wrap makes Vec a functor
+func Wrap[T any](f func(T) T) func(Vec[T]) Vec[T] {
+	return func(v1 Vec[T]) Vec[T] {
+		v2 := MakeVec[T](v1.Len())
+		for i := 0; i < v1.Len(); i++ {
+			v2.Set(i, f(v1.Get(i)))
+		}
+		return v2
+	}
 }
 ./pkg/vec/range.go
 package vec

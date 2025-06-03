@@ -7,6 +7,7 @@ import (
 	"ca/pkg/padic"
 	"ca/pkg/ring"
 	"ca/pkg/tup"
+	"ca/pkg/vec"
 	"fmt"
 	"os"
 	"strconv"
@@ -56,6 +57,18 @@ func testTup() {
 	fmt.Println(t)
 }
 
+func testVecFunctor() {
+	add1 := func(x int) int {
+		return x + 1
+	}
+
+	v1 := vec.MakeVecFromSlice([]int{1, 2, 3, 4, 5})
+
+	v2 := vec.Wrap(add1)(v1)
+	fmt.Println(v2)
+
+}
+
 func main() {
-	testTup()
+	testVecFunctor()
 }

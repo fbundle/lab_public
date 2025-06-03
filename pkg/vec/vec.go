@@ -1,17 +1,21 @@
 package vec
 
-// Zero : return Zero value of a type
+type Vec[T any] struct {
+	Data []T
+}
+
+// Zero returns zero value of a type
 func Zero[T any]() T {
 	var zero T
 	return zero
 }
 
-type Vec[T any] struct {
-	Data []T
-}
-
 func MakeVec[T any](n int) Vec[T] {
 	return Vec[T]{make([]T, n)}
+}
+
+func MakeVecFromSlice[T any](s []T) Vec[T] {
+	return Vec[T]{s}
 }
 
 func MakeVecFromIter[T any](iter Iter[T]) Vec[T] {
