@@ -4,6 +4,7 @@ import (
 	"ca/pkg/fib"
 	"ca/pkg/int_ntt"
 	"ca/pkg/integer"
+	"ca/pkg/monad"
 	"ca/pkg/padic"
 	"ca/pkg/ring"
 	"ca/pkg/tup"
@@ -70,6 +71,24 @@ func testVecFunctor() {
 
 }
 
+func testMonad() {
+	bind := func(x int) monad.Monad[int] {
+		if x%2 == 0 {
+			return monad.None[int]()
+		} else {
+			return monad.FromSlice([]int{x, x + 1, x + 2})
+		}
+	}
+	m := monad.FromSlice([]int{1, 2, 3})
+	m = monad.Bind(m, bind)
+	s := monad.ToSlice(m)
+	fmt.Println(s)
+	m = monad.None[int]()
+	m = monad.Bind(m, bind)
+	s = monad.ToSlice(m)
+	fmt.Println(s)
+}
+
 func main() {
-	testVecFunctor()
+	testMonad()
 }
