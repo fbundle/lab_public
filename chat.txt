@@ -3665,9 +3665,15 @@ package monad
 type Monad[T any] func() (value T, ok bool)
 
 // Pure is equivalent to an iterator of length 1
-func Pure[T any](value T) Monad[T] {
-	return func() (T, bool) {
-		return value, true
+func Pure[T any](values ...T) Monad[T] {
+	i := 0
+	return func() (value T, ok bool) {
+		if i >= len(values) {
+			return value, false
+		}
+		value, ok = values[i], true
+		i++
+		return value, ok
 	}
 }
 
@@ -3700,18 +3706,6 @@ func Bind[Ta any, Tb any](ma Monad[Ta], f func(Ta) Monad[Tb]) Monad[Tb] {
 }
 ./pkg/monad/util.go
 package monad
-
-func FromSlice[T any](s []T) Monad[T] {
-	i := 0
-	return func() (value T, ok bool) {
-		if i >= len(s) {
-			return value, false
-		}
-		value, ok = s[i], true
-		i++
-		return value, ok
-	}
-}
 
 func ToSlice[T any](m Monad[T]) []T {
 	var s []T

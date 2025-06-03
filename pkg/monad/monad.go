@@ -3,9 +3,15 @@ package monad
 type Monad[T any] func() (value T, ok bool)
 
 // Pure is equivalent to an iterator of length 1
-func Pure[T any](value T) Monad[T] {
-	return func() (T, bool) {
-		return value, true
+func Pure[T any](values ...T) Monad[T] {
+	i := 0
+	return func() (value T, ok bool) {
+		if i >= len(values) {
+			return value, false
+		}
+		value, ok = values[i], true
+		i++
+		return value, ok
 	}
 }
 

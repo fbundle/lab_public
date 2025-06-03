@@ -72,20 +72,24 @@ func testVecFunctor() {
 }
 
 func testMonad() {
-	bind := func(x int) monad.Monad[int] {
+	bind := func(x int) monad.Monad[float64] {
 		if x%2 == 0 {
-			return monad.None[int]()
+			return monad.None[float64]()
 		} else {
-			return monad.FromSlice([]int{x, x + 1, x + 2})
+			return monad.Pure[float64](
+				float64(x),
+				float64(x)+0.01,
+				float64(x)+0.02,
+			)
 		}
 	}
-	m := monad.FromSlice([]int{1, 2, 3})
-	m = monad.Bind(m, bind)
-	s := monad.ToSlice(m)
+	m := monad.Pure(1, 2, 3)
+	m1 := monad.Bind(m, bind)
+	s := monad.ToSlice(m1)
 	fmt.Println(s)
 	m = monad.None[int]()
-	m = monad.Bind(m, bind)
-	s = monad.ToSlice(m)
+	m1 = monad.Bind(m, bind)
+	s = monad.ToSlice(m1)
 	fmt.Println(s)
 }
 
