@@ -67,14 +67,14 @@ func Fold[T any, Tr any](m Monad[T], f func(Tr, T) Tr, i Tr) Monad[Tr] {
 
 func Map[Ta any, Tb any](ma Monad[Ta], f func(Ta) Tb) Monad[Tb] {
 	return Bind(ma, func(ta Ta) Monad[Tb] {
-		return None[Tb]().Prepend(f(ta))
+		return None[Tb]().Insert(f(ta))
 	})
 }
 
 func Filter[T any](m Monad[T], f func(T) bool) Monad[T] {
 	return Bind(m, func(t T) Monad[T] {
 		if f(t) {
-			return None[T]().Prepend(t)
+			return None[T]().Insert(t)
 		} else {
 			return None[T]()
 		}

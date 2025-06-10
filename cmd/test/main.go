@@ -73,7 +73,7 @@ func testVecFunctor() {
 
 func testMonad() {
 	natural := monad.Natural()
-	a := monad.None[int]().Prepend(1, 2, 3, 4)
+	a := monad.None[int]().Insert(1, 2, 3, 4)
 	resultList := []interface{}{
 		natural.TakeAtMost(10).Slice(),
 		monad.Filter(monad.Natural(), func(n int) bool {
@@ -83,7 +83,7 @@ func testMonad() {
 		a.TakeAtMost(0).Slice(),
 		a.TakeAtMost(2).Slice(),
 		a.TakeAtMost(5).Slice(),
-		a.Prepend(9, 8, 7).Slice(),
+		a.Insert(9, 8, 7).Slice(),
 		a.DropAtMost(0).Slice(),
 		a.DropAtMost(2).Slice(),
 		a.DropAtMost(5).Slice(),

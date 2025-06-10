@@ -32,8 +32,8 @@ func (m Monad[T]) Chan() <-chan T {
 	return ch
 }
 
-// Prepend is equivalent to a monad of length n
-func (m Monad[T]) Prepend(vs ...T) Monad[T] {
+// Insert is equivalent to a monad of length n
+func (m Monad[T]) Insert(vs ...T) Monad[T] {
 	return func() Iterator[T] {
 		mi := m()
 		i := 0
