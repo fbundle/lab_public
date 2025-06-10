@@ -3856,15 +3856,15 @@ var Fibonacci Monad[int] = func() Iterator[int] {
 }
 
 // Prime - prime sieve
-var Prime Monad[int] = Filter(Map(Natural, func(n int) int {
+var oddNonUnit Monad[int] = Map(Natural, func(n int) int {
 	return 2*n + 3
-}), func(n int) bool {
+})
+
+var Prime Monad[int] = Filter(oddNonUnit, func(n int) bool {
 	if n < 3 {
 		panic("n must be >= 3")
 	}
-	return Reduce(Map(Natural, func(n int) int {
-		return 2*n + 3
-	}), func(numFactors int, m int) (int, bool) {
+	return Reduce(oddNonUnit, func(numFactors int, m int) (int, bool) {
 		if numFactors > 0 {
 			return numFactors, false // early stop condition
 		}
