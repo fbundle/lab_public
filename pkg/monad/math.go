@@ -9,17 +9,24 @@ var Fibonacci Monad[int] = func() Iterator[int] {
 	}
 }
 
-// Prime - prime sieve
-var Prime Monad[int] = func() Iterator[int] {
-	i := Natural.DropAtMost(2)
-	return func() (int, bool) {
-		p, ok := i.Head()
-		if !ok {
-			panic("not ok")
-		}
-		i = Filter(i.DropAtMost(1), func(n int) bool {
-			return n%p != 0 // keep those n not divided by p
-		})
-		return p, true
+func isPrime(n int) bool {
+	if n <= 1 {
+		return false
 	}
+	if n == 2 {
+		return true
+	}
+	i := 3
+	for i*i <= n {
+		if n%i == 0 {
+			return false
+		}
+		i += 2
+	}
+	return true
 }
+
+// Prime - prime sieve
+var Prime Monad[int] = Filter(Map(Natural, func(n int) int {
+	return 2*n + 3
+}), isPrime).Insert(2)
