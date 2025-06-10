@@ -9,12 +9,12 @@ var Fibonacci Monad[int] = func() Iterator[int] {
 	}
 }
 
-func isPrime(n int) bool {
-	if n <= 1 {
-		return false
-	}
-	if n == 2 {
-		return true
+// Prime - prime sieve
+var Prime Monad[int] = Filter(Map(Natural, func(n int) int {
+	return 2*n + 3
+}), func(n int) bool {
+	if n < 3 {
+		panic("n must be >= 3")
 	}
 	i := 3
 	for i*i <= n {
@@ -24,9 +24,4 @@ func isPrime(n int) bool {
 		i += 2
 	}
 	return true
-}
-
-// Prime - prime sieve
-var Prime Monad[int] = Filter(Map(Natural, func(n int) int {
-	return 2*n + 3
-}), isPrime).Insert(2)
+}).Insert(2)
