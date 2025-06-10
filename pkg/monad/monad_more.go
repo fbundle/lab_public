@@ -2,7 +2,7 @@ package monad
 
 // None is equivalent to a monad of length 0
 func None[T any]() Monad[T] {
-	return func() func() (v T, ok bool) {
+	return func() Iterator[T] {
 		return func() (v T, ok bool) {
 			return zero[T](), false
 		}
@@ -10,7 +10,7 @@ func None[T any]() Monad[T] {
 }
 
 func Replicate[T any](v T) Monad[T] {
-	return func() func() (v T, ok bool) {
+	return func() Iterator[T] {
 		return func() (T, bool) {
 			return v, true
 		}
@@ -18,7 +18,7 @@ func Replicate[T any](v T) Monad[T] {
 }
 
 func Natural() Monad[int] {
-	return func() func() (int, bool) {
+	return func() Iterator[int] {
 		n := 0
 		return func() (int, bool) {
 			n++
@@ -29,7 +29,7 @@ func Natural() Monad[int] {
 
 // Bind is equivalent to flatMap
 func Bind[Ta any, Tb any](ma Monad[Ta], f func(Ta) Monad[Tb]) Monad[Tb] {
-	return func() func() (Tb, bool) {
+	return func() Iterator[Tb] {
 		mai := ma()
 		var mbi func() (Tb, bool) = nil
 		return func() (b Tb, ok bool) {
@@ -52,7 +52,7 @@ func Bind[Ta any, Tb any](ma Monad[Ta], f func(Ta) Monad[Tb]) Monad[Tb] {
 }
 
 func Fold[T any, Tr any](m Monad[T], f func(Tr, T) Tr, i Tr) Monad[Tr] {
-	return func() func() (v Tr, ok bool) {
+	return func() Iterator[Tr] {
 		mi := m()
 		return func() (tb Tr, ok bool) {
 			v, ok := mi()
