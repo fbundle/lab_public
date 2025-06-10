@@ -3867,7 +3867,7 @@ var Prime Monad[int] = Filter(oddNonUnit, func(n int) bool {
 	}
 	return Reduce(oddNonUnit, func(numFactors int, m int) (int, bool) {
 		if numFactors > 0 {
-			return numFactors, false // early stop condition
+			return numFactors, false // stop condition
 		}
 		if m*m > n {
 			return numFactors, false // stop condition
