@@ -18,13 +18,13 @@ var Fibonacci Monad[uint] = func() Iterator[uint] {
 }
 
 // 3, 5, 7, 9, 11, ...
-var oddNumbers Monad[uint] = Map(Natural, func(n uint) uint {
+var oddNonUnit Monad[uint] = Map(Natural, func(n uint) uint {
 	return 2*n + 3
 })
 
 // Prime -
-var Prime Monad[uint] = Filter(oddNumbers, func(n uint) bool {
-	return 0 == Reduce(oddNumbers, func(numFactors uint, m uint) (uint, bool) {
+var Prime Monad[uint] = Filter(oddNonUnit, func(n uint) bool {
+	return 0 == Reduce(oddNonUnit, func(numFactors uint, m uint) (uint, bool) {
 		if numFactors > 0 {
 			return numFactors, false // stop condition
 		}
