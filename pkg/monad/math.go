@@ -16,12 +16,19 @@ var Prime Monad[int] = Filter(Map(Natural, func(n int) int {
 	if n < 3 {
 		panic("n must be >= 3")
 	}
-	i := 3
-	for i*i <= n {
-		if n%i == 0 {
-			return false
+	return Reduce(Map(Natural, func(n int) int {
+		return 2*n + 3
+	}), func(numFactors int, m int) (int, bool) {
+		if numFactors > 0 {
+			return numFactors, false // early stop condition
 		}
-		i += 2
-	}
-	return true
+		if m*m > n {
+			return numFactors, false // stop condition
+		}
+		if m%n == 0 {
+			return numFactors + 1, true
+		} else {
+			return numFactors, true
+		}
+	}, 0) == 0
 }).Insert(2)
