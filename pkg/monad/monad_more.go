@@ -17,14 +17,6 @@ func Replicate[T any](v T) Monad[T] {
 	}
 }
 
-var Natural Monad[int] = func() Iterator[int] {
-	n := 0
-	return func() (int, bool) {
-		n++
-		return n - 1, true
-	}
-}
-
 // Bind is equivalent to flatMap
 func Bind[Tx any, Ty any](mx Monad[Tx], f func(Tx) Monad[Ty]) Monad[Ty] {
 	return func() Iterator[Ty] {

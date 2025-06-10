@@ -72,8 +72,8 @@ func testVecFunctor() {
 }
 
 func testMonad() {
-	a := monad.None[int]().Insert(1, 2, 3, 4)
-	join := func(tr string, t int) (string, bool) {
+	a := monad.None[uint]().Insert(1, 2, 3, 4)
+	join := func(tr string, t uint) (string, bool) {
 		if t >= 4 {
 			return "", false
 		}
@@ -81,7 +81,7 @@ func testMonad() {
 	}
 	resultList := []interface{}{
 		monad.Natural.TakeAtMost(10).Slice(),
-		monad.Filter(monad.Natural, func(n int) bool {
+		monad.Filter(monad.Natural, func(n uint) bool {
 			return n%2 == 0
 		}).TakeAtMost(10).Slice(),
 		monad.Replicate(5).TakeAtMost(10).Slice(),
@@ -92,16 +92,16 @@ func testMonad() {
 		a.DropAtMost(0).Slice(),
 		a.DropAtMost(2).Slice(),
 		a.DropAtMost(5).Slice(),
-		monad.Map(a, func(x int) int {
+		monad.Map(a, func(x uint) uint {
 			return x * 2
 		}).Slice(),
-		monad.Filter(a, func(n int) bool {
+		monad.Filter(a, func(n uint) bool {
 			return n%2 == 0
 		}).Slice(),
 		monad.Reduce(a, join, ""),
 		monad.Fold(a, join, "").Slice(),
-		monad.Bind(a, func(ta int) monad.Monad[int] {
-			return monad.Replicate(ta).TakeAtMost(ta)
+		monad.Bind(a, func(ta uint) monad.Monad[uint] {
+			return monad.Replicate(ta).TakeAtMost(int(ta))
 		}).Slice(),
 		monad.Fibonacci.TakeAtMost(10).Slice(),
 		monad.Prime.TakeAtMost(10).Slice(),
