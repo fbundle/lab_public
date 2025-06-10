@@ -1,12 +1,12 @@
-package iterator
+package monad
 
-type Iterator[T any] func() (v T, ok bool)
+type Monad[T any] func() (v T, ok bool)
 
-func (m Iterator[T]) Next() (v T, ok bool) {
+func (m Monad[T]) Next() (v T, ok bool) {
 	return m()
 }
 
-func (m Iterator[T]) Slice() []T {
+func (m Monad[T]) Slice() []T {
 	var vs []T
 	for {
 		v, ok := m()
@@ -18,7 +18,7 @@ func (m Iterator[T]) Slice() []T {
 	return vs
 }
 
-func (m Iterator[T]) Chan() <-chan T {
+func (m Monad[T]) Chan() <-chan T {
 	ch := make(chan T)
 	go func() {
 		for {
@@ -33,8 +33,8 @@ func (m Iterator[T]) Chan() <-chan T {
 	return ch
 }
 
-// Pure is equivalent to an iterator of length n
-func (m Iterator[T]) Pure(vs ...T) Iterator[T] {
+// Pure is equivalent to a monad of length n
+func (m Monad[T]) Pure(vs ...T) Monad[T] {
 	i := 0
 	return func() (v T, ok bool) {
 		if i >= len(vs) {
@@ -45,7 +45,7 @@ func (m Iterator[T]) Pure(vs ...T) Iterator[T] {
 	}
 }
 
-func (m Iterator[T]) TakeAtMost(n int) Iterator[T] {
+func (m Monad[T]) TakeAtMost(n int) Monad[T] {
 	return func() (v T, ok bool) {
 		if n <= 0 {
 			return zero[T](), false
@@ -55,14 +55,14 @@ func (m Iterator[T]) TakeAtMost(n int) Iterator[T] {
 	}
 }
 
-func (m Iterator[T]) DropAtMost(n int) Iterator[T] {
+func (m Monad[T]) DropAtMost(n int) Monad[T] {
 	for i := 0; i < n; i++ {
 		m()
 	}
 	return m
 }
 
-func (m Iterator[T]) Last() (v T, ok bool) {
+func (m Monad[T]) Last() (v T, ok bool) {
 	empty := true
 	for {
 		v, ok = m()

@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// Iter is a generic iterator interface
+// Iter is a generic monad interface
 type Iter[T any] interface {
 	Next() (value T, ok bool)
 	Map[S any](f func(T) S) Iter[S]
@@ -33,7 +33,7 @@ func (it *sliceIter[T]) Map[S any](f func(T) S) Iter[S] {
 	}
 }
 
-// mapIter transforms an iterator of T into an iterator of S using function f
+// mapIter transforms an monad of T into an monad of S using function f
 type mapIter[T any, S any] struct {
 	base Iter[T]
 	f    func(T) S
@@ -55,7 +55,7 @@ func (it *mapIter[T, S]) Map[U any](f func(S) U) Iter[U] {
 	}
 }
 
-// helper function to create an iterator from a slice
+// helper function to create an monad from a slice
 func FromSlice[T any](s []T) Iter[T] {
 	return &sliceIter[T]{data: s}
 }

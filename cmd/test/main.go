@@ -4,7 +4,7 @@ import (
 	"ca/pkg/fib"
 	"ca/pkg/int_ntt"
 	"ca/pkg/integer"
-	"ca/pkg/iterator"
+	"ca/pkg/monad"
 	"ca/pkg/padic"
 	"ca/pkg/ring"
 	"ca/pkg/tup"
@@ -72,25 +72,41 @@ func testVecFunctor() {
 }
 
 func testMonad() {
-	bind := func(x int) iterator.Iterator[float64] {
-		if x%2 == 0 {
-			return iterator.None[float64]()
-		} else {
-			return iterator.Pure[float64](
-				float64(x),
-				float64(x)+0.01,
-				float64(x)+0.02,
-			)
-		}
+	a := func() monad.Monad[int] {
+		return monad.None[int]().Pure(1, 2, 3, 4)
 	}
-	m := iterator.Pure(1, 2, 3)
-	m1 := iterator.Bind(m, bind)
-	s := iterator.ToSlice(m1)
-	fmt.Println(s)
-	m = iterator.None[int]()
-	m1 = iterator.Bind(m, bind)
-	s = iterator.ToSlice(m1)
-	fmt.Println(s)
+	resultList := []interface{}{
+		monad.Natural().TakeAtMost(10).Slice(),
+		monad.Filter(monad.Natural(), func(n int) bool {
+			return n%2 == 0
+		}).TakeAtMost(10).Slice(),
+		monad.Replicate(5).TakeAtMost(10).Slice(),
+		a().TakeAtMost(0).Slice(),
+		a().TakeAtMost(2).Slice(),
+		a().TakeAtMost(5).Slice(),
+		a().Pure(9, 8, 7).Slice(),
+		a().DropAtMost(0).Slice(),
+		a().DropAtMost(2).Slice(),
+		a().DropAtMost(5).Slice(),
+		monad.Map(a(), func(x int) int {
+			return x * 2
+		}).Slice(),
+		monad.Filter(a(), func(n int) bool {
+			return n%2 == 0
+		}).Slice(),
+		monad.Reduce(a(), func(tr string, t int) string {
+			return fmt.Sprintf("%s%d,", tr, t)
+		}, ""), // TODO fix reduce
+		monad.Fold(a(), func(tr string, t int) string {
+			return fmt.Sprintf("%s%d,", tr, t)
+		}, "").Slice(),
+		monad.Bind(a(), func(ta int) monad.Monad[int] {
+			return monad.Replicate(ta).TakeAtMost(ta)
+		}).Slice(),
+	}
+	for _, result := range resultList {
+		fmt.Println(result)
+	}
 }
 
 func main() {

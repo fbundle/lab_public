@@ -1,26 +1,26 @@
-package iterator
+package monad
 
-func FromChan[T any](c <-chan T) Iterator[T] {
+func FromChan[T any](c <-chan T) Monad[T] {
 	return func() (T, bool) {
 		v, ok := <-c
 		return v, ok
 	}
 }
 
-// None is equivalent to an iterator of length 0
-func None[T any]() Iterator[T] {
+// None is equivalent to an monad of length 0
+func None[T any]() Monad[T] {
 	return func() (v T, ok bool) {
 		return zero[T](), false
 	}
 }
 
-func Replicate[T any](v T) Iterator[T] {
+func Replicate[T any](v T) Monad[T] {
 	return func() (T, bool) {
 		return v, true
 	}
 }
 
-func Natural() Iterator[int] {
+func Natural() Monad[int] {
 	n := 0
 	return func() (int, bool) {
 		n++
@@ -29,8 +29,8 @@ func Natural() Iterator[int] {
 }
 
 // Bind is equivalent to flatMap
-func Bind[Ta any, Tb any](ma Iterator[Ta], f func(Ta) Iterator[Tb]) Iterator[Tb] {
-	var mb Iterator[Tb] = nil
+func Bind[Ta any, Tb any](ma Monad[Ta], f func(Ta) Monad[Tb]) Monad[Tb] {
+	var mb Monad[Tb] = nil
 	return func() (b Tb, ok bool) {
 		for {
 			if mb != nil {
@@ -49,7 +49,7 @@ func Bind[Ta any, Tb any](ma Iterator[Ta], f func(Ta) Iterator[Tb]) Iterator[Tb]
 	}
 }
 
-func Fold[T any, Tr any](m Iterator[T], f func(Tr, T) Tr, i Tr) Iterator[Tr] {
+func Fold[T any, Tr any](m Monad[T], f func(Tr, T) Tr, i Tr) Monad[Tr] {
 	return func() (tb Tr, ok bool) {
 		v, ok := m.Next()
 		if !ok {
@@ -60,14 +60,14 @@ func Fold[T any, Tr any](m Iterator[T], f func(Tr, T) Tr, i Tr) Iterator[Tr] {
 	}
 }
 
-func Map[Ta any, Tb any](ma Iterator[Ta], f func(Ta) Tb) Iterator[Tb] {
-	return Bind(ma, func(ta Ta) Iterator[Tb] {
+func Map[Ta any, Tb any](ma Monad[Ta], f func(Ta) Tb) Monad[Tb] {
+	return Bind(ma, func(ta Ta) Monad[Tb] {
 		return None[Tb]().Pure(f(ta))
 	})
 }
 
-func Filter[T any](m Iterator[T], f func(T) bool) Iterator[T] {
-	return Bind(m, func(t T) Iterator[T] {
+func Filter[T any](m Monad[T], f func(T) bool) Monad[T] {
+	return Bind(m, func(t T) Monad[T] {
 		if f(t) {
 			return None[T]().Pure(t)
 		} else {
@@ -76,7 +76,7 @@ func Filter[T any](m Iterator[T], f func(T) bool) Iterator[T] {
 	})
 }
 
-func Reduce[T any, Tr any](m Iterator[T], f func(Tr, T) Tr, i Tr) Tr {
+func Reduce[T any, Tr any](m Monad[T], f func(Tr, T) Tr, i Tr) Tr {
 	mr := Fold[T, Tr](m, f, i)
 	v, ok := mr.Last()
 	if !ok {

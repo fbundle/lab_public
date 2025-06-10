@@ -1464,7 +1464,7 @@ func (d *queueDispatcher) Dispatch(task func()) (ok bool) {
 ./pkg/option/option.go
 package option
 
-import "ca/pkg/iterator"
+import "ca/pkg/monad"
 
 type Option[T any] struct {
 	value  T
@@ -1502,7 +1502,7 @@ func Match[T1 any, T2 any](o Option[T1], f func(T1) T2, g func() T2) T2 {
 
 }
 
-func (o Option[T]) Monad() iterator.Iterator[T] {
+func (o Option[T]) Monad() monad.Monad[T] {
 	consume := false
 	return func() (v T, ok bool) {
 		if consume {
@@ -1511,179 +1511,6 @@ func (o Option[T]) Monad() iterator.Iterator[T] {
 		consume = true
 		return o.value, true
 	}
-}
-./pkg/iterator/util.go
-package iterator
-
-func zero[T any]() T {
-	var v T
-	return v
-}
-./pkg/iterator/iterator_more.go
-package iterator
-
-func FromChan[T any](c <-chan T) Iterator[T] {
-	return func() (T, bool) {
-		v, ok := <-c
-		return v, ok
-	}
-}
-
-// None is equivalent to an iterator of length 0
-func None[T any]() Iterator[T] {
-	return func() (v T, ok bool) {
-		return zero[T](), false
-	}
-}
-
-func Replicate[T any](v T) Iterator[T] {
-	return func() (T, bool) {
-		return v, true
-	}
-}
-
-func Natural() Iterator[int] {
-	n := 0
-	return func() (int, bool) {
-		n++
-		return n - 1, true
-	}
-}
-
-// Bind is equivalent to flatMap
-func Bind[Ta any, Tb any](ma Iterator[Ta], f func(Ta) Iterator[Tb]) Iterator[Tb] {
-	var mb Iterator[Tb] = nil
-	return func() (b Tb, ok bool) {
-		for {
-			if mb != nil {
-				b, ok = mb()
-				if ok {
-					return b, true
-				}
-				mb = nil
-			}
-			a, ok := ma()
-			if !ok {
-				return zero[Tb](), false
-			}
-			mb = f(a)
-		}
-	}
-}
-
-func Fold[T any, Tr any](m Iterator[T], f func(Tr, T) Tr, i Tr) Iterator[Tr] {
-	return func() (tb Tr, ok bool) {
-		v, ok := m.Next()
-		if !ok {
-			return zero[Tr](), false
-		}
-		i = f(i, v)
-		return i, true
-	}
-}
-
-func Map[Ta any, Tb any](ma Iterator[Ta], f func(Ta) Tb) Iterator[Tb] {
-	return Bind(ma, func(ta Ta) Iterator[Tb] {
-		return None[Tb]().Pure(f(ta))
-	})
-}
-
-func Filter[T any](m Iterator[T], f func(T) bool) Iterator[T] {
-	return Bind(m, func(t T) Iterator[T] {
-		if f(t) {
-			return None[T]().Pure(t)
-		} else {
-			return None[T]()
-		}
-	})
-}
-
-func Reduce[T any, Tr any](m Iterator[T], f func(Tr, T) Tr, i Tr) Tr {
-	mr := Fold[T, Tr](m, f, i)
-	v, ok := mr.Last()
-	if !ok {
-		return i
-	}
-	return v
-}
-./pkg/iterator/iterator.go
-package iterator
-
-type Iterator[T any] func() (v T, ok bool)
-
-func (m Iterator[T]) Next() (v T, ok bool) {
-	return m()
-}
-
-func (m Iterator[T]) Slice() []T {
-	var vs []T
-	for {
-		v, ok := m()
-		if !ok {
-			break
-		}
-		vs = append(vs, v)
-	}
-	return vs
-}
-
-func (m Iterator[T]) Chan() <-chan T {
-	ch := make(chan T)
-	go func() {
-		for {
-			v, ok := m()
-			if !ok {
-				break
-			}
-			ch <- v
-		}
-		close(ch)
-	}()
-	return ch
-}
-
-// Pure is equivalent to an iterator of length n
-func (m Iterator[T]) Pure(vs ...T) Iterator[T] {
-	i := 0
-	return func() (v T, ok bool) {
-		if i >= len(vs) {
-			return m()
-		}
-		i++
-		return vs[i-1], true
-	}
-}
-
-func (m Iterator[T]) TakeAtMost(n int) Iterator[T] {
-	return func() (v T, ok bool) {
-		if n <= 0 {
-			return zero[T](), false
-		}
-		n--
-		return m()
-	}
-}
-
-func (m Iterator[T]) DropAtMost(n int) Iterator[T] {
-	for i := 0; i < n; i++ {
-		m()
-	}
-	return m
-}
-
-func (m Iterator[T]) Last() (v T, ok bool) {
-	empty := true
-	for {
-		v, ok = m()
-		if !ok {
-			break
-		}
-		empty = false
-	}
-	if empty {
-		return zero[T](), false
-	}
-	return v, true
 }
 ./pkg/paxos/acceptor.go
 package paxos
@@ -3820,6 +3647,179 @@ func EuclideanAlgorithm[T EuclideanDomain[T]](x T, y T) (T, T) {
 	b := b1.Sub(a.Mul(q))
 	return a, b
 
+}
+./pkg/monad/monad.go
+package monad
+
+type Monad[T any] func() (v T, ok bool)
+
+func (m Monad[T]) Next() (v T, ok bool) {
+	return m()
+}
+
+func (m Monad[T]) Slice() []T {
+	var vs []T
+	for {
+		v, ok := m()
+		if !ok {
+			break
+		}
+		vs = append(vs, v)
+	}
+	return vs
+}
+
+func (m Monad[T]) Chan() <-chan T {
+	ch := make(chan T)
+	go func() {
+		for {
+			v, ok := m()
+			if !ok {
+				break
+			}
+			ch <- v
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+// Pure is equivalent to a monad of length n
+func (m Monad[T]) Pure(vs ...T) Monad[T] {
+	i := 0
+	return func() (v T, ok bool) {
+		if i >= len(vs) {
+			return m()
+		}
+		i++
+		return vs[i-1], true
+	}
+}
+
+func (m Monad[T]) TakeAtMost(n int) Monad[T] {
+	return func() (v T, ok bool) {
+		if n <= 0 {
+			return zero[T](), false
+		}
+		n--
+		return m()
+	}
+}
+
+func (m Monad[T]) DropAtMost(n int) Monad[T] {
+	for i := 0; i < n; i++ {
+		m()
+	}
+	return m
+}
+
+func (m Monad[T]) Last() (v T, ok bool) {
+	empty := true
+	for {
+		v, ok = m()
+		if !ok {
+			break
+		}
+		empty = false
+	}
+	if empty {
+		return zero[T](), false
+	}
+	return v, true
+}
+./pkg/monad/monad_more.go
+package monad
+
+func FromChan[T any](c <-chan T) Monad[T] {
+	return func() (T, bool) {
+		v, ok := <-c
+		return v, ok
+	}
+}
+
+// None is equivalent to an monad of length 0
+func None[T any]() Monad[T] {
+	return func() (v T, ok bool) {
+		return zero[T](), false
+	}
+}
+
+func Replicate[T any](v T) Monad[T] {
+	return func() (T, bool) {
+		return v, true
+	}
+}
+
+func Natural() Monad[int] {
+	n := 0
+	return func() (int, bool) {
+		n++
+		return n - 1, true
+	}
+}
+
+// Bind is equivalent to flatMap
+func Bind[Ta any, Tb any](ma Monad[Ta], f func(Ta) Monad[Tb]) Monad[Tb] {
+	var mb Monad[Tb] = nil
+	return func() (b Tb, ok bool) {
+		for {
+			if mb != nil {
+				b, ok = mb()
+				if ok {
+					return b, true
+				}
+				mb = nil
+			}
+			a, ok := ma()
+			if !ok {
+				return zero[Tb](), false
+			}
+			mb = f(a)
+		}
+	}
+}
+
+func Fold[T any, Tr any](m Monad[T], f func(Tr, T) Tr, i Tr) Monad[Tr] {
+	return func() (tb Tr, ok bool) {
+		v, ok := m.Next()
+		if !ok {
+			return zero[Tr](), false
+		}
+		i = f(i, v)
+		return i, true
+	}
+}
+
+func Map[Ta any, Tb any](ma Monad[Ta], f func(Ta) Tb) Monad[Tb] {
+	return Bind(ma, func(ta Ta) Monad[Tb] {
+		return None[Tb]().Pure(f(ta))
+	})
+}
+
+func Filter[T any](m Monad[T], f func(T) bool) Monad[T] {
+	return Bind(m, func(t T) Monad[T] {
+		if f(t) {
+			return None[T]().Pure(t)
+		} else {
+			return None[T]()
+		}
+	})
+}
+
+func Reduce[T any, Tr any](m Monad[T], f func(Tr, T) Tr, i Tr) Tr {
+	mr := Fold[T, Tr](m, f, i)
+	v, ok := mr.Last()
+	if !ok {
+		return i
+	}
+	return v
+}
+./pkg/monad/util.go
+package monad
+
+func zero[T any]() T {
+	var v T
+	return v
 }
 ./pkg/rlog_util/transport/transport.go
 package transport
