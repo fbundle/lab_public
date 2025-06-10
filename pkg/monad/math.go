@@ -24,9 +24,6 @@ var oddNonUnit Monad[uint] = Map(Natural, func(n uint) uint {
 
 // Prime -
 var Prime Monad[uint] = Filter(oddNonUnit, func(n uint) bool {
-	if n < 3 {
-		panic("n must be >= 3")
-	}
 	return Reduce(oddNonUnit, func(numFactors uint, m uint) (uint, bool) {
 		if numFactors > 0 {
 			return numFactors, false // stop condition
