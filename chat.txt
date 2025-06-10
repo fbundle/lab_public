@@ -3860,7 +3860,7 @@ var oddNonUnit Monad[int] = Map(Natural, func(n int) int {
 	return 2*n + 3
 })
 
-// Prime - prime sieve
+// Prime -
 var Prime Monad[int] = Filter(oddNonUnit, func(n int) bool {
 	if n < 3 {
 		panic("n must be >= 3")
