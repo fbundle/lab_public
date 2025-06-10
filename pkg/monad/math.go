@@ -7,3 +7,10 @@ var Fibonacci Monad[int] = func() Iterator[int] {
 		return a, true
 	}
 }
+
+var Prime Monad[int] = func() Iterator[int] {
+	i := Natural.DropAtMost(2)
+	return func() (int, bool) {
+
+	}
+}

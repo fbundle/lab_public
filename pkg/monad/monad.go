@@ -70,6 +70,11 @@ func (m Monad[T]) DropAtMost(n int) Monad[T] {
 	}
 }
 
+func (m Monad[T]) Head() (v T, ok bool) {
+	mi := m()
+	return mi()
+}
+
 func (m Monad[T]) Last() (v T, ok bool) {
 	mi := m()
 	ok = false

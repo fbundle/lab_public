@@ -3721,6 +3721,11 @@ func (m Monad[T]) DropAtMost(n int) Monad[T] {
 	}
 }
 
+func (m Monad[T]) Head() (v T, ok bool) {
+	mi := m()
+	return mi()
+}
+
 func (m Monad[T]) Last() (v T, ok bool) {
 	mi := m()
 	ok = false
@@ -3838,6 +3843,13 @@ var Fibonacci Monad[int] = func() Iterator[int] {
 	return func() (int, bool) {
 		a, b = b, a+b
 		return a, true
+	}
+}
+
+var Prime Monad[int] = func() Iterator[int] {
+	i := Natural.DropAtMost(2)
+	return func() (int, bool) {
+
 	}
 }
 ./pkg/rlog_util/transport/transport.go
