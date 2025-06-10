@@ -50,10 +50,14 @@ func Bind[Ta any, Tb any](ma Iterator[Ta], f func(Ta) Iterator[Tb]) Iterator[Tb]
 }
 
 func Fold[T any, Tr any](m Iterator[T], f func(Tr, T) Tr, i Tr) Iterator[Tr] {
-	return Bind(m, func(t T) Iterator[Tr] {
-		i = f(i, t)
-		return None[Tr]().Pure(i)
-	})
+	return func() (tb Tr, ok bool) {
+		v, ok := m.Next()
+		if !ok {
+			return zero[Tr](), false
+		}
+		i = f(i, v)
+		return i, true
+	}
 }
 
 func Map[Ta any, Tb any](ma Iterator[Ta], f func(Ta) Tb) Iterator[Tb] {
