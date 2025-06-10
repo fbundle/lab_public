@@ -71,16 +71,13 @@ func (m Monad[T]) DropAtMost(n int) Monad[T] {
 
 func (m Monad[T]) Last() (v T, ok bool) {
 	mi := m()
-	empty := true
+	ok = false
 	for {
-		v, ok = mi()
-		if !ok {
+		v1, ok1 := mi()
+		if !ok1 {
 			break
 		}
-		empty = false
+		v, ok = v1, true
 	}
-	if empty {
-		return zero[T](), false
-	}
-	return v, true
+	return v, ok
 }

@@ -72,35 +72,34 @@ func testVecFunctor() {
 }
 
 func testMonad() {
-	a := func() monad.Monad[int] {
-		return monad.None[int]().Prepend(1, 2, 3, 4)
-	}
+	natural := monad.Natural()
+	a := monad.None[int]().Prepend(1, 2, 3, 4)
 	resultList := []interface{}{
-		monad.Natural().TakeAtMost(10).Slice(),
+		natural.TakeAtMost(10).Slice(),
 		monad.Filter(monad.Natural(), func(n int) bool {
 			return n%2 == 0
 		}).TakeAtMost(10).Slice(),
 		monad.Replicate(5).TakeAtMost(10).Slice(),
-		a().TakeAtMost(0).Slice(),
-		a().TakeAtMost(2).Slice(),
-		a().TakeAtMost(5).Slice(),
-		a().Prepend(9, 8, 7).Slice(),
-		a().DropAtMost(0).Slice(),
-		a().DropAtMost(2).Slice(),
-		a().DropAtMost(5).Slice(),
-		monad.Map(a(), func(x int) int {
+		a.TakeAtMost(0).Slice(),
+		a.TakeAtMost(2).Slice(),
+		a.TakeAtMost(5).Slice(),
+		a.Prepend(9, 8, 7).Slice(),
+		a.DropAtMost(0).Slice(),
+		a.DropAtMost(2).Slice(),
+		a.DropAtMost(5).Slice(),
+		monad.Map(a, func(x int) int {
 			return x * 2
 		}).Slice(),
-		monad.Filter(a(), func(n int) bool {
+		monad.Filter(a, func(n int) bool {
 			return n%2 == 0
 		}).Slice(),
-		monad.Reduce(a(), func(tr string, t int) string {
+		monad.Reduce(a, func(tr string, t int) string {
 			return fmt.Sprintf("%s%d,", tr, t)
 		}, ""), // TODO fix reduce
-		monad.Fold(a(), func(tr string, t int) string {
+		monad.Fold(a, func(tr string, t int) string {
 			return fmt.Sprintf("%s%d,", tr, t)
 		}, "").Slice(),
-		monad.Bind(a(), func(ta int) monad.Monad[int] {
+		monad.Bind(a, func(ta int) monad.Monad[int] {
 			return monad.Replicate(ta).TakeAtMost(ta)
 		}).Slice(),
 	}
