@@ -1,75 +1,80 @@
 package monad
 
-func FromChan[T any](c <-chan T) Monad[T] {
-	return func() (T, bool) {
-		v, ok := <-c
-		return v, ok
-	}
-}
-
-// None is equivalent to an monad of length 0
+// None is equivalent to a monad of length 0
 func None[T any]() Monad[T] {
-	return func() (v T, ok bool) {
-		return zero[T](), false
+	return func() func() (v T, ok bool) {
+		return func() (v T, ok bool) {
+			return zero[T](), false
+		}
 	}
 }
 
 func Replicate[T any](v T) Monad[T] {
-	return func() (T, bool) {
-		return v, true
+	return func() func() (v T, ok bool) {
+		return func() (T, bool) {
+			return v, true
+		}
 	}
 }
 
 func Natural() Monad[int] {
-	n := 0
-	return func() (int, bool) {
-		n++
-		return n - 1, true
+	return func() func() (int, bool) {
+		n := 0
+		return func() (int, bool) {
+			n++
+			return n - 1, true
+		}
 	}
 }
 
 // Bind is equivalent to flatMap
 func Bind[Ta any, Tb any](ma Monad[Ta], f func(Ta) Monad[Tb]) Monad[Tb] {
-	var mb Monad[Tb] = nil
-	return func() (b Tb, ok bool) {
-		for {
-			if mb != nil {
-				b, ok = mb()
-				if ok {
-					return b, true
+	return func() func() (Tb, bool) {
+		mai := ma()
+		var mbi func() (Tb, bool) = nil
+		return func() (b Tb, ok bool) {
+			for {
+				if mbi != nil {
+					b, ok = mbi()
+					if ok {
+						return b, true
+					}
+					mbi = nil
 				}
-				mb = nil
+				a, ok := mai()
+				if !ok {
+					return zero[Tb](), false
+				}
+				mbi = f(a)()
 			}
-			a, ok := ma()
-			if !ok {
-				return zero[Tb](), false
-			}
-			mb = f(a)
 		}
 	}
 }
 
 func Fold[T any, Tr any](m Monad[T], f func(Tr, T) Tr, i Tr) Monad[Tr] {
-	return func() (tb Tr, ok bool) {
-		v, ok := m.Next()
-		if !ok {
-			return zero[Tr](), false
+	return func() func() (v Tr, ok bool) {
+		mi := m()
+		return func() (tb Tr, ok bool) {
+			v, ok := mi()
+			if !ok {
+				return zero[Tr](), false
+			}
+			i = f(i, v)
+			return i, true
 		}
-		i = f(i, v)
-		return i, true
 	}
 }
 
 func Map[Ta any, Tb any](ma Monad[Ta], f func(Ta) Tb) Monad[Tb] {
 	return Bind(ma, func(ta Ta) Monad[Tb] {
-		return None[Tb]().Pure(f(ta))
+		return None[Tb]().Prepend(f(ta))
 	})
 }
 
 func Filter[T any](m Monad[T], f func(T) bool) Monad[T] {
 	return Bind(m, func(t T) Monad[T] {
 		if f(t) {
-			return None[T]().Pure(t)
+			return None[T]().Prepend(t)
 		} else {
 			return None[T]()
 		}
