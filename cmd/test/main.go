@@ -109,42 +109,6 @@ func testMonad() {
 	}
 }
 
-func testPrime() {
-	n := 1000
-	get_nth_prime := func(n int) int {
-		is_prime := func(n int) bool {
-			if n <= 1 {
-				return false
-			}
-			if n == 2 {
-				return true
-			}
-			i := 3
-			for i*i <= n {
-				if n%i == 0 {
-					return false
-				}
-				i += 2
-			}
-			return true
-		}
-
-		n = n - 1
-		m := 3
-		p := 0
-		for n > 0 {
-			if is_prime(m) {
-				p = m
-				n = n - 1
-			}
-			m += 2
-		}
-		return p
-	}
-	p, _ := monad.Prime.TakeAtMost(n).Last()
-	fmt.Println(p, get_nth_prime(n))
-}
-
 func main() {
-	testPrime()
+	testMonad()
 }
