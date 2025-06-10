@@ -4,7 +4,7 @@ import (
 	"ca/pkg/fib"
 	"ca/pkg/int_ntt"
 	"ca/pkg/integer"
-	"ca/pkg/monad"
+	"ca/pkg/iterator"
 	"ca/pkg/padic"
 	"ca/pkg/ring"
 	"ca/pkg/tup"
@@ -72,24 +72,24 @@ func testVecFunctor() {
 }
 
 func testMonad() {
-	bind := func(x int) monad.Monad[float64] {
+	bind := func(x int) iterator.Iterator[float64] {
 		if x%2 == 0 {
-			return monad.None[float64]()
+			return iterator.None[float64]()
 		} else {
-			return monad.Pure[float64](
+			return iterator.Pure[float64](
 				float64(x),
 				float64(x)+0.01,
 				float64(x)+0.02,
 			)
 		}
 	}
-	m := monad.Pure(1, 2, 3)
-	m1 := monad.Bind(m, bind)
-	s := monad.ToSlice(m1)
+	m := iterator.Pure(1, 2, 3)
+	m1 := iterator.Bind(m, bind)
+	s := iterator.ToSlice(m1)
 	fmt.Println(s)
-	m = monad.None[int]()
-	m1 = monad.Bind(m, bind)
-	s = monad.ToSlice(m1)
+	m = iterator.None[int]()
+	m1 = iterator.Bind(m, bind)
+	s = iterator.ToSlice(m1)
 	fmt.Println(s)
 }
 

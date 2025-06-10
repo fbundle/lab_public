@@ -1,6 +1,6 @@
 package option
 
-import "ca/pkg/monad"
+import "ca/pkg/iterator"
 
 type Option[T any] struct {
 	value  T
@@ -38,7 +38,7 @@ func Match[T1 any, T2 any](o Option[T1], f func(T1) T2, g func() T2) T2 {
 
 }
 
-func (o Option[T]) Monad() monad.Monad[T] {
+func (o Option[T]) Monad() iterator.Iterator[T] {
 	consume := false
 	return func() (v T, ok bool) {
 		if consume {
