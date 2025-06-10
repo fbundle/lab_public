@@ -73,6 +73,12 @@ func testVecFunctor() {
 
 func testMonad() {
 	a := monad.None[int]().Insert(1, 2, 3, 4)
+	join := func(tr string, t int) (string, bool) {
+		if t >= 4 {
+			return "", false
+		}
+		return fmt.Sprintf("%s%d,", tr, t), true
+	}
 	resultList := []interface{}{
 		monad.Natural.TakeAtMost(10).Slice(),
 		monad.Filter(monad.Natural, func(n int) bool {
@@ -92,12 +98,8 @@ func testMonad() {
 		monad.Filter(a, func(n int) bool {
 			return n%2 == 0
 		}).Slice(),
-		monad.Reduce(a, func(tr string, t int) string {
-			return fmt.Sprintf("%s%d,", tr, t)
-		}, ""), // TODO fix reduce
-		monad.Fold(a, func(tr string, t int) string {
-			return fmt.Sprintf("%s%d,", tr, t)
-		}, "").Slice(),
+		monad.Reduce(a, join, ""),
+		monad.Fold(a, join, "").Slice(),
 		monad.Bind(a, func(ta int) monad.Monad[int] {
 			return monad.Replicate(ta).TakeAtMost(ta)
 		}).Slice(),

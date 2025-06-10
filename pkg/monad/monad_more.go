@@ -49,16 +49,24 @@ func Bind[Tx any, Ty any](mx Monad[Tx], f func(Tx) Monad[Ty]) Monad[Ty] {
 	}
 }
 
-func Fold[T any, Ta any](m Monad[T], f func(Ta, T) Ta, i Ta) Monad[Ta] {
+func Fold[T any, Ta any](m Monad[T], f func(Ta, T) (Ta, bool), i Ta) Monad[Ta] {
 	return func() Iterator[Ta] {
 		mi := m()
+		stopped := false
 		return func() (ta Ta, ok bool) {
+			if stopped {
+				return zero[Ta](), false
+			}
 			v, ok := mi()
 			if !ok {
 				return zero[Ta](), false
 			}
-			i = f(i, v)
-			return i, true
+			i, ok = f(i, v)
+			if ok {
+				return i, true
+			}
+			stopped = true
+			return zero[Ta](), false
 		}
 	}
 }
@@ -79,7 +87,7 @@ func Filter[T any](m Monad[T], f func(T) bool) Monad[T] {
 	})
 }
 
-func Reduce[T any, Tr any](m Monad[T], f func(Tr, T) Tr, i Tr) Tr {
+func Reduce[T any, Tr any](m Monad[T], f func(Tr, T) (Tr, bool), i Tr) Tr {
 	mr := Fold[T, Tr](m, f, i)
 	v, ok := mr.Last()
 	if !ok {
