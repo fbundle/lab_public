@@ -17,13 +17,11 @@ func Replicate[T any](v T) Monad[T] {
 	}
 }
 
-func Natural() Monad[int] {
-	return func() Iterator[int] {
-		n := 0
-		return func() (int, bool) {
-			n++
-			return n - 1, true
-		}
+var Natural Monad[int] = func() Iterator[int] {
+	n := 0
+	return func() (int, bool) {
+		n++
+		return n - 1, true
 	}
 }
 
