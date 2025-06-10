@@ -102,6 +102,7 @@ func testMonad() {
 			return monad.Replicate(ta).TakeAtMost(ta)
 		}).Slice(),
 		monad.Fibonacci.TakeAtMost(10).Slice(),
+		monad.Prime.TakeAtMost(10).Slice(),
 	}
 	for _, result := range resultList {
 		fmt.Println(result)

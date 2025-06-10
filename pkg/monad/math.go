@@ -1,5 +1,6 @@
 package monad
 
+// Fibonacci - Fibonacci sequence
 var Fibonacci Monad[int] = func() Iterator[int] {
 	a, b := 0, 1
 	return func() (int, bool) {
@@ -8,6 +9,7 @@ var Fibonacci Monad[int] = func() Iterator[int] {
 	}
 }
 
+// Prime - prime sieve
 var Prime Monad[int] = func() Iterator[int] {
 	i := Natural.DropAtMost(2)
 	return func() (int, bool) {
