@@ -72,11 +72,10 @@ func testVecFunctor() {
 }
 
 func testMonad() {
-	natural := monad.Natural
 	a := monad.None[int]().Insert(1, 2, 3, 4)
 	resultList := []interface{}{
-		natural.TakeAtMost(10).Slice(),
-		monad.Filter(natural, func(n int) bool {
+		monad.Natural.TakeAtMost(10).Slice(),
+		monad.Filter(monad.Natural, func(n int) bool {
 			return n%2 == 0
 		}).TakeAtMost(10).Slice(),
 		monad.Replicate(5).TakeAtMost(10).Slice(),
@@ -102,6 +101,7 @@ func testMonad() {
 		monad.Bind(a, func(ta int) monad.Monad[int] {
 			return monad.Replicate(ta).TakeAtMost(ta)
 		}).Slice(),
+		monad.Fibonacci.TakeAtMost(10).Slice(),
 	}
 	for _, result := range resultList {
 		fmt.Println(result)

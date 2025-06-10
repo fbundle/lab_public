@@ -3832,6 +3832,14 @@ func zero[T any]() T {
 }
 ./pkg/monad/math.go
 package monad
+
+var Fibonacci Monad[int] = func() Iterator[int] {
+	a, b := 0, 1
+	return func() (int, bool) {
+		a, b = b, a+b
+		return a, true
+	}
+}
 ./pkg/rlog_util/transport/transport.go
 package transport
 
