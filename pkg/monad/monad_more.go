@@ -28,36 +28,36 @@ func Natural() Monad[int] {
 }
 
 // Bind is equivalent to flatMap
-func Bind[Ta any, Tb any](ma Monad[Ta], f func(Ta) Monad[Tb]) Monad[Tb] {
-	return func() Iterator[Tb] {
-		mai := ma()
-		var mbi func() (Tb, bool) = nil
-		return func() (b Tb, ok bool) {
+func Bind[Tx any, Ty any](mx Monad[Tx], f func(Tx) Monad[Ty]) Monad[Ty] {
+	return func() Iterator[Ty] {
+		mxi := mx()
+		var myi func() (Ty, bool) = nil
+		return func() (y Ty, ok bool) {
 			for {
-				if mbi != nil {
-					b, ok = mbi()
+				if myi != nil {
+					y, ok = myi()
 					if ok {
-						return b, true
+						return y, true
 					}
-					mbi = nil
+					myi = nil
 				}
-				a, ok := mai()
+				x, ok := mxi()
 				if !ok {
-					return zero[Tb](), false
+					return zero[Ty](), false
 				}
-				mbi = f(a)()
+				myi = f(x)()
 			}
 		}
 	}
 }
 
-func Fold[T any, Tr any](m Monad[T], f func(Tr, T) Tr, i Tr) Monad[Tr] {
-	return func() Iterator[Tr] {
+func Fold[T any, Ta any](m Monad[T], f func(Ta, T) Ta, i Ta) Monad[Ta] {
+	return func() Iterator[Ta] {
 		mi := m()
-		return func() (tb Tr, ok bool) {
+		return func() (ta Ta, ok bool) {
 			v, ok := mi()
 			if !ok {
-				return zero[Tr](), false
+				return zero[Ta](), false
 			}
 			i = f(i, v)
 			return i, true
