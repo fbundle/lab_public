@@ -4,11 +4,13 @@ import (
 	"ca/pkg/fib"
 	"ca/pkg/int_ntt"
 	"ca/pkg/integer"
+	"ca/pkg/line_slice"
 	"ca/pkg/monad"
 	"ca/pkg/padic"
 	"ca/pkg/ring"
 	"ca/pkg/tup"
 	"ca/pkg/vec"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -111,6 +113,67 @@ func testMonad() {
 	}
 }
 
+type Item struct {
+	Id    uint   `json:"id"`
+	Value string `json:"value"`
+}
+
+func (i Item) String() string {
+	b, _ := json.Marshal(i)
+	return string(b)
+}
+
+func setupTmpDir(dir string) {
+	if _, err := os.Stat(dir); err == nil {
+		if err := os.RemoveAll(dir); err != nil {
+			panic(err)
+		}
+	} else if os.IsNotExist(err) {
+	} else {
+		panic(err)
+	}
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func testLineSlice() {
+	setupTmpDir("tmp")
+	ls, err := line_slice.NewLineSlice[Item](
+		"tmp/test.jsonl",
+		func(b []byte) (Item, error) {
+			item := Item{}
+			err := json.Unmarshal(b, &item)
+			return item, err
+		},
+		func(item Item) ([]byte, error) {
+			return json.Marshal(item)
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+	defer ls.Close()
+
+	//
+	err = ls.Push(Item{Id: 0, Value: "0"})
+	if err != nil {
+		panic(err)
+	}
+	err = ls.Push(Item{Id: 1, Value: "1"})
+	if err != nil {
+		panic(err)
+	}
+	err = ls.Push(Item{Id: 2, Value: "2"})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(ls.Get(0))
+	fmt.Println(ls.Get(1))
+	fmt.Println(ls.Get(2))
+}
+
 func main() {
-	testMonad()
+	testLineSlice()
 }
