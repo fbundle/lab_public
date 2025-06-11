@@ -10,6 +10,7 @@ import (
 type Unmarshaler[T any] = func([]byte) (T, error)
 type Marshaler[T any] = func(T) ([]byte, error)
 
+// LineSlice - give jsonl file random access
 type LineSlice[T any] interface {
 	Close() error
 	Get(i int) (T, error)
