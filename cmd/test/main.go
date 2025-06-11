@@ -150,6 +150,7 @@ func testLineSlice() {
 		func(item Item) ([]byte, error) {
 			return json.Marshal(item)
 		},
+		'\n',
 	)
 	if err != nil {
 		panic(err)

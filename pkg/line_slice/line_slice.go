@@ -22,6 +22,7 @@ type lineSlice[T any] struct {
 	index       []int
 	unmarshaler Unmarshaler[T]
 	marshaler   Marshaler[T]
+	delim       byte
 }
 
 func zero[T any]() T {
@@ -35,12 +36,12 @@ func (l *lineSlice[T]) Get(i int) (T, error) {
 		return zero[T](), err
 	}
 	reader := bufio.NewReader(l.file)
-	line, err := reader.ReadBytes('\n')
+	line, err := reader.ReadBytes(l.delim)
 	if err != nil && err != io.EOF {
 		return zero[T](), err
 	}
-	if line[len(line)-1] == '\n' {
-		line = line[:len(line)-1] // strip '\n' at the end
+	if line[len(line)-1] == l.delim {
+		line = line[:len(line)-1] // strip l.delim at the end
 	}
 	v, err := l.unmarshaler(line)
 	if err != nil {
@@ -58,7 +59,7 @@ func (l *lineSlice[T]) Push(v T) error {
 	if err != nil {
 		return err
 	}
-	_, err = l.file.Write(append(line, '\n'))
+	_, err = l.file.Write(append(line, l.delim))
 	if err != nil {
 		return err
 	}
@@ -70,7 +71,7 @@ func (l *lineSlice[T]) Close() error {
 	return l.file.Close()
 }
 
-func NewLineSlice[T any](path string, unmarshaler Unmarshaler[T], marshaler Marshaler[T]) (LineSlice[T], error) {
+func NewLineSlice[T any](path string, unmarshaler Unmarshaler[T], marshaler Marshaler[T], delim byte) (LineSlice[T], error) {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
 		return nil, err
@@ -83,7 +84,7 @@ func NewLineSlice[T any](path string, unmarshaler Unmarshaler[T], marshaler Mars
 	}
 	reader := bufio.NewReader(file)
 	for {
-		line, err := reader.ReadBytes('\n')
+		line, err := reader.ReadBytes(delim)
 		if err != nil {
 			if len(line) > 0 {
 				return nil, fmt.Errorf("PARTIAL_LINE_ERROR: %s %s %s", path, err.Error(), string(line))
@@ -101,5 +102,6 @@ func NewLineSlice[T any](path string, unmarshaler Unmarshaler[T], marshaler Mars
 		index:       index,
 		unmarshaler: unmarshaler,
 		marshaler:   marshaler,
+		delim:       delim,
 	}, nil
 }
