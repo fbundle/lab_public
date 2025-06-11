@@ -158,15 +158,15 @@ func testLineSlice() {
 	defer ls.Close()
 
 	//
-	err = ls.Push(Item{Id: 0, Value: "0"})
+	err = ls.Push(Item{Id: 0, Value: "zero"})
 	if err != nil {
 		panic(err)
 	}
-	err = ls.Push(Item{Id: 1, Value: "1"})
+	err = ls.Push(Item{Id: 1, Value: "one"})
 	if err != nil {
 		panic(err)
 	}
-	err = ls.Push(Item{Id: 2, Value: "2"})
+	err = ls.Push(Item{Id: 2, Value: "two"})
 	if err != nil {
 		panic(err)
 	}
