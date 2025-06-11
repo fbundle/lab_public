@@ -140,39 +140,78 @@ func setupTmpDir(dir string) {
 
 func testLineSlice() {
 	setupTmpDir("tmp")
-	ls, err := line_slice.NewLineSlice[Item](
-		"tmp/test.jsonl",
-		func(b []byte) (Item, error) {
-			item := Item{}
-			err := json.Unmarshal(b, &item)
-			return item, err
-		},
-		func(item Item) ([]byte, error) {
-			return json.Marshal(item)
-		},
-		'\n',
-	)
-	if err != nil {
-		panic(err)
+	openLS := func() (line_slice.LineSlice[Item], error) {
+		return line_slice.NewLineSlice[Item](
+			"tmp/test.jsonl",
+			func(b []byte) (Item, error) {
+				item := Item{}
+				err := json.Unmarshal(b, &item)
+				if err != nil {
+					return Item{}, err
+				}
+				return item, err
+			},
+			func(item Item) ([]byte, error) {
+				b, err := json.Marshal(item)
+				if err != nil {
+					return nil, err
+				}
+				return b, nil
+			},
+			'\n',
+		)
 	}
-	defer ls.Close()
+	{
+		ls, err := openLS()
+		if err != nil {
+			panic(err)
+		}
+		defer ls.Close()
 
-	//
-	err = ls.Push(Item{Id: 0, Value: "zero"})
-	if err != nil {
-		panic(err)
+		//
+		err = ls.Push(Item{Id: 0, Value: "zero"})
+		if err != nil {
+			panic(err)
+		}
+		err = ls.Push(Item{Id: 1, Value: "one"})
+		if err != nil {
+			panic(err)
+		}
+		err = ls.Push(Item{Id: 2, Value: "two"})
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(ls.Get(0))
+		fmt.Println(ls.Get(1))
+		fmt.Println(ls.Get(2))
 	}
-	err = ls.Push(Item{Id: 1, Value: "one"})
-	if err != nil {
-		panic(err)
+	{
+		ls, err := openLS()
+		if err != nil {
+			panic(err)
+		}
+		defer ls.Close()
+
+		//
+		err = ls.Push(Item{Id: 3, Value: "three"})
+		if err != nil {
+			panic(err)
+		}
+		err = ls.Push(Item{Id: 4, Value: "four"})
+		if err != nil {
+			panic(err)
+		}
+		err = ls.Push(Item{Id: 5, Value: "five"})
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(ls.Get(0))
+		fmt.Println(ls.Get(1))
+		fmt.Println(ls.Get(2))
+		fmt.Println(ls.Get(3))
+		fmt.Println(ls.Get(4))
+		fmt.Println(ls.Get(5))
 	}
-	err = ls.Push(Item{Id: 2, Value: "two"})
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(ls.Get(0))
-	fmt.Println(ls.Get(1))
-	fmt.Println(ls.Get(2))
 }
 
 func main() {

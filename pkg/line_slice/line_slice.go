@@ -78,6 +78,7 @@ func NewLineSlice[T any](path string, unmarshaler Unmarshaler[T], marshaler Mars
 	}
 	// build index
 	index := make([]int, 0)
+	index = append(index, 0)
 	_, err = file.Seek(0, io.SeekStart)
 	if err != nil {
 		return nil, err
@@ -95,8 +96,9 @@ func NewLineSlice[T any](path string, unmarshaler Unmarshaler[T], marshaler Mars
 			// len(line) == 0 and err == io.EOF
 			break
 		}
-		index = append(index, len(line))
+		index = append(index, index[len(index)-1]+len(line))
 	}
+	index = index[:len(index)-1]
 	return &lineSlice[T]{
 		file:        file,
 		index:       index,
