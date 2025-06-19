@@ -215,5 +215,5 @@ func testLineSlice() {
 }
 
 func main() {
-	testLineSlice()
+	testMonad()
 }
