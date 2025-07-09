@@ -1,17 +1,17 @@
 package main
 
 import (
-	"ca/pkg/fib"
-	"ca/pkg/int_ntt"
-	"ca/pkg/integer"
-	"ca/pkg/line_slice"
-	"ca/pkg/monad"
-	"ca/pkg/padic"
-	"ca/pkg/ring"
-	"ca/pkg/tup"
-	"ca/pkg/vec"
 	"encoding/json"
 	"fmt"
+	"go_util/pkg/fib"
+	"go_util/pkg/int_ntt"
+	"go_util/pkg/integer"
+	"go_util/pkg/line_slice"
+	"go_util/pkg/monad"
+	"go_util/pkg/padic"
+	"go_util/pkg/ring"
+	"go_util/pkg/tup"
+	"go_util/pkg/vec"
 	"os"
 	"strconv"
 )

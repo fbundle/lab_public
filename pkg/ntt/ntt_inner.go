@@ -1,7 +1,7 @@
 package ntt
 
 import (
-	"ca/pkg/vec"
+	"go_util/pkg/vec"
 	"math/bits"
 	"sync"
 )

@@ -1,6 +1,6 @@
 package ring
 
-import "ca/pkg/integer"
+import "go_util/pkg/integer"
 
 type Set[T any] interface {
 	Equal(T) bool

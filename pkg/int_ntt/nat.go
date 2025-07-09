@@ -1,8 +1,8 @@
 package int_ntt
 
 import (
-	"ca/pkg/ntt"
-	"ca/pkg/vec"
+	"go_util/pkg/ntt"
+	"go_util/pkg/vec"
 	"strings"
 )
 
