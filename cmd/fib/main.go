@@ -1,9 +1,9 @@
 package main
 
 import (
-	"ca/pkg/fib"
-	"ca/pkg/int_ntt"
 	"fmt"
+	"go_util/pkg/fib"
+	"go_util/pkg/int_ntt"
 	"os"
 	"strconv"
 )

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/sat"
+	"go_util/pkg/sat"
 	"os"
 	"time"
 )

@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"ca/pkg/relay"
-	"ca/pkg/rlog"
-	"ca/pkg/rlog_util/kvstore"
-	"ca/pkg/rlog_util/transport"
-	"ca/pkg/uuid"
 	"github.com/gin-gonic/gin"
+	"go_util/pkg/relay"
+	"go_util/pkg/rlog"
+	"go_util/pkg/rlog_util/kvstore"
+	"go_util/pkg/rlog_util/transport"
+	"go_util/pkg/uuid"
 	"gopkg.in/yaml.v2"
 )
 
