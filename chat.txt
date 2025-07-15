@@ -3069,6 +3069,71 @@ func Verify(formula Formula, assignment Assignment) bool {
 	}
 	return s.Verify()
 }
+./pkg/wbt/wbt_builtin.go
+package wbt
+
+import "golang.org/x/exp/constraints"
+
+type OrderedMap[K constraints.Ordered, V any] interface {
+	Get(K) (V, bool)
+	Set(K, V) OrderedMap[K, V]
+	Del(K) OrderedMap[K, V]
+	Iter(func(K, V) bool)
+	Len() int
+	Split(K) (OrderedMap[K, V], OrderedMap[K, V])
+}
+
+func NewOrderedMap[K constraints.Ordered, V any]() OrderedMap[K, V] {
+	return &orderedMap[K, V]{node: nil}
+}
+
+type entry[K constraints.Ordered, V any] struct {
+	key K
+	val V
+}
+
+func (e entry[K, V]) Cmp(o entry[K, V]) int {
+	switch {
+	case e.key < o.key:
+		return -1
+	case e.key > o.key:
+		return 1
+	default:
+		return 0
+	}
+}
+
+type orderedMap[K constraints.Ordered, V any] struct {
+	node *node[entry[K, V]]
+}
+
+func (o *orderedMap[K, V]) Get(k K) (V, bool) {
+	e, ok := get(o.node, entry[K, V]{key: k})
+	return e.val, ok
+}
+
+func (o *orderedMap[K, V]) Set(key K, val V) OrderedMap[K, V] {
+	return &orderedMap[K, V]{node: set(o.node, entry[K, V]{key: key, val: val})}
+}
+
+func (o *orderedMap[K, V]) Del(key K) OrderedMap[K, V] {
+	return &orderedMap[K, V]{node: del(o.node, entry[K, V]{key: key})}
+}
+
+func (o *orderedMap[K, V]) Iter(f func(K, V) bool) {
+	iter(o.node, func(e entry[K, V]) bool {
+		return f(e.key, e.val)
+	})
+}
+
+func (o *orderedMap[K, V]) Len() int {
+	return int(weight(o.node))
+}
+
+func (o *orderedMap[K, V]) Split(k K) (OrderedMap[K, V], OrderedMap[K, V]) {
+	l, r := split(o.node, entry[K, V]{key: k})
+	return &orderedMap[K, V]{node: l}, &orderedMap[K, V]{node: r}
+}
 ./pkg/wbt/wbt.go
 package wbt
 
@@ -3079,7 +3144,7 @@ type WBT[T Comparable[T]] interface {
 	Split(T) (WBT[T], WBT[T])
 	Iter(func(T) bool)
 	Len() int
-	Height() int
+	Height() int // for debug only
 }
 
 func New[T Comparable[T]]() WBT[T] {

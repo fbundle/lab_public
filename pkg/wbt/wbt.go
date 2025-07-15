@@ -7,7 +7,7 @@ type WBT[T Comparable[T]] interface {
 	Split(T) (WBT[T], WBT[T])
 	Iter(func(T) bool)
 	Len() int
-	Height() int
+	Height() int // for debug only
 }
 
 func New[T Comparable[T]]() WBT[T] {
