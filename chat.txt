@@ -3054,6 +3054,7 @@ func (v *vector[T]) Set(i int, x T) Vector[T] {
 func (v *vector[T]) Append(x T) Vector[T] {
 	omap := v.omap.Set(v.length+v.offset, x)
 	return &vector[T]{
+		offset: v.offset,
 		length: v.length + 1,
 		omap:   omap,
 	}
