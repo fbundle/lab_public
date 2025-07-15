@@ -3193,7 +3193,7 @@ func balance[T Comparable[T]](n *node[T]) *node[T] {
 		return n
 	}
 	if weight(n.left) > DELTA*weight(n.right) { // left is guaranteed to be non-nil
-		// left rotate
+		// right rotate
 		//         n
 		//   l           r
 		// ll lr
@@ -3210,7 +3210,7 @@ func balance[T Comparable[T]](n *node[T]) *node[T] {
 		l1 := makeNode(l.key, ll, n1)
 		return l1
 	} else if DELTA*weight(n.left) < weight(n.right) { // right is guaranteed to be non-nil
-		// right rotate
+		// left rotate
 		//         n
 		//   l           r
 		//             rl rr
@@ -3231,37 +3231,37 @@ func balance[T Comparable[T]](n *node[T]) *node[T] {
 	}
 }
 
-func set[T Comparable[T]](n *node[T], key T) *node[T] {
+func set[T Comparable[T]](n *node[T], keyIn T) *node[T] {
 	if n == nil {
-		return makeNode(key, nil, nil)
+		return makeNode(keyIn, nil, nil)
 	}
-	cmp := n.key.Cmp(key)
+	cmp := n.key.Cmp(keyIn)
 	switch {
 	case cmp < 0:
-		r1 := set(n.right, key)
+		r1 := set(n.right, keyIn)
 		n1 := makeNode(n.key, n.left, r1)
 		return balance(n1)
 	case cmp > 0:
-		l1 := set(n.left, key)
+		l1 := set(n.left, keyIn)
 		n1 := makeNode(n.key, l1, n.right)
 		return balance(n1)
 	default:
-		return makeNode(key, n.left, n.right)
+		return makeNode(keyIn, n.left, n.right)
 	}
 }
 
-func del[T Comparable[T]](n *node[T], key T) *node[T] {
+func del[T Comparable[T]](n *node[T], keyIn T) *node[T] {
 	if n == nil {
 		return nil
 	}
-	cmp := n.key.Cmp(key)
+	cmp := n.key.Cmp(keyIn)
 	switch {
 	case cmp < 0:
-		r1 := del(n.right, key)
+		r1 := del(n.right, keyIn)
 		n1 := makeNode(n.key, n.left, r1)
 		return balance(n1)
 	case cmp > 0:
-		l1 := del(n.left, key)
+		l1 := del(n.left, keyIn)
 		n1 := makeNode(n.key, l1, n.right)
 		return balance(n1)
 	default:
@@ -3287,12 +3287,15 @@ func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
 	if r == nil {
 		return l
 	}
+	// merge chooses minimum from right side
+	// or maximum from left side but this is just a small optimization
 	key := getMinKey(r)
 	r1 := del(r, key)
 	n1 := makeNode(key, l, r1)
 	return balance(n1)
 }
 
+// split - ([1, 2, 3, 4], 3) -> [1, 2, 3] , [4]
 func split[T Comparable[T]](n *node[T], key T) (*node[T], *node[T]) {
 	if n == nil {
 		return nil, nil

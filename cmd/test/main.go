@@ -13,6 +13,7 @@ import (
 	"go_util/pkg/tup"
 	"go_util/pkg/vec"
 	"go_util/pkg/wbt"
+	"math/rand"
 	"os"
 	"strconv"
 )
@@ -242,6 +243,44 @@ func testWBT() {
 	fmt.Println(getAllKeys(w))
 	l, r := w.Split(Int(13))
 	fmt.Println(getAllKeys(l), getAllKeys(r))
+
+	// stress test
+	type WH struct {
+		Weight int `json:"weight"`
+		Height int `json:"height"`
+	}
+	statistics := make([]WH, 0)
+	n := 1000000
+	keys := make(map[Int]struct{})
+	for i := 0; i < n; i++ {
+		x := Int(rand.Int())
+		w = w.Set(x)
+		keys[x] = struct{}{}
+		if rand.Float32() < 0.2 {
+			// 20% remove one of the keys
+			j := rand.Intn(len(keys))
+			for k := range keys {
+				j--
+				if j == 0 {
+					delete(keys, k)
+					w = w.Del(k)
+				}
+			}
+		}
+		// write statistics
+		statistics = append(statistics, WH{
+			Weight: w.Len(),
+			Height: w.Height(),
+		})
+	}
+	b, err := json.Marshal(statistics)
+	if err != nil {
+		panic(err)
+	}
+	err = os.WriteFile("tmp/statistics.json", b, 0644)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func main() {
