@@ -10,6 +10,8 @@ type OrderedMap[K constraints.Ordered, V any] interface {
 	Len() int
 	Height() int
 	Split(K) (OrderedMap[K, V], OrderedMap[K, V])
+	Max() (K, V)
+	Min() (K, V)
 }
 
 func NewOrderedMap[K constraints.Ordered, V any]() OrderedMap[K, V] {
@@ -65,4 +67,13 @@ func (o *orderedMap[K, V]) Height() int {
 func (o *orderedMap[K, V]) Split(k K) (OrderedMap[K, V], OrderedMap[K, V]) {
 	l, r := split(o.node, entry[K, V]{key: k})
 	return &orderedMap[K, V]{node: l}, &orderedMap[K, V]{node: r}
+}
+
+func (o *orderedMap[K, V]) Max() (K, V) {
+	e := getMaxEntry(o.node)
+	return e.key, e.val
+}
+func (o *orderedMap[K, V]) Min() (K, V) {
+	e := getMinEntry(o.node)
+	return e.key, e.val
 }

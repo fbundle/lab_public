@@ -1280,416 +1280,6 @@ func (p *proto) Unmarshal(b []byte) (payload interface{}, err error) {
 	}
 	return m.Payload, nil
 }
-./pkg/persistent/list.go
-package persistent
-
-type List[T any] interface {
-	Push(v T) List[T]
-	Pop() (List[T], T)
-	Depth() uint
-	Iter(func(int, T) bool)
-}
-
-func EmptyList[T any]() List[T] {
-	return &list[T]{
-		depth: 0,
-	}
-}
-
-type list[T any] struct {
-	depth uint
-	value T
-	next  *list[T]
-}
-
-func (l *list[T]) Depth() uint {
-	return l.depth
-}
-
-func (l *list[T]) Push(v T) List[T] {
-	return &list[T]{
-		depth: l.depth + 1,
-		value: v,
-		next:  l,
-	}
-}
-
-func (l *list[T]) Pop() (List[T], T) {
-	return l.next, l.value
-}
-
-func (l *list[T]) Iter(f func(int, T) bool) {
-	var ll List[T] = l
-	var v T
-	for ll.Depth() > 0 {
-		i := int(ll.Depth() - 1)
-		ll, v = ll.Pop()
-		if ok := f(i, v); !ok {
-			break
-		}
-	}
-}
-./pkg/persistent/internal/ordmap/avl.go
-package ordmap
-
-// source code: https://github.com/edofic/go-ordmap
-
-type Comparable[A any] interface {
-	Less(A) bool
-}
-
-func New[K Comparable[K], V any]() *Node[K, V] {
-	return nil
-}
-
-type Entry[K, V any] struct {
-	K K
-	V V
-}
-
-type Node[K Comparable[K], V any] struct {
-	entry    Entry[K, V]
-	h        int
-	len      int
-	children [2]*Node[K, V]
-}
-
-func (node *Node[K, V]) height() int {
-	if node == nil {
-		return 0
-	}
-	return node.h
-}
-
-func combinedDepth[K Comparable[K], V any](n1, n2 *Node[K, V]) int {
-	d1 := n1.height()
-	d2 := n2.height()
-	var d int
-	if d1 > d2 {
-		d = d1
-	} else {
-		d = d2
-	}
-	return d + 1
-}
-
-func mk_OrdMap[K Comparable[K], V any](entry Entry[K, V], left, right *Node[K, V]) *Node[K, V] {
-	len := 1
-	if left != nil {
-		len += left.len
-	}
-	if right != nil {
-		len += right.len
-	}
-	return &Node[K, V]{
-		entry:    entry,
-		h:        combinedDepth(left, right),
-		len:      len,
-		children: [2]*Node[K, V]{left, right},
-	}
-}
-
-func (node *Node[K, V]) Get(key K) (value V, ok bool) {
-	finger := node
-	for {
-		if finger == nil {
-			ok = false
-			return // using named returns so we keep the zero value for `value`
-		}
-		if key.Less(finger.entry.K) {
-			finger = finger.children[0]
-		} else if finger.entry.K.Less(key) {
-			finger = finger.children[1]
-		} else {
-			// equal
-			return finger.entry.V, true
-		}
-	}
-}
-
-func (node *Node[K, V]) Insert(key K, value V) *Node[K, V] {
-	if node == nil {
-		return mk_OrdMap(Entry[K, V]{key, value}, nil, nil)
-	}
-	entry, left, right := node.entry, node.children[0], node.children[1]
-	if node.entry.K.Less(key) {
-		right = right.Insert(key, value)
-	} else if key.Less(node.entry.K) {
-		left = left.Insert(key, value)
-	} else { // equals
-		entry = Entry[K, V]{key, value}
-	}
-	return rotate(entry, left, right)
-}
-
-func (node *Node[K, V]) Remove(key K) *Node[K, V] {
-	if node == nil {
-		return nil
-	}
-	entry, left, right := node.entry, node.children[0], node.children[1]
-	if node.entry.K.Less(key) {
-		right = right.Remove(key)
-	} else if key.Less(node.entry.K) {
-		left = left.Remove(key)
-	} else { // equals
-		max := left.Max()
-		if max == nil {
-			return right
-		} else {
-			left = left.Remove(max.K)
-			entry = *max
-		}
-	}
-	return rotate(entry, left, right)
-}
-
-func rotate[K Comparable[K], V any](entry Entry[K, V], left, right *Node[K, V]) *Node[K, V] {
-	if right.height()-left.height() > 1 { // implies right != nil
-		// single left
-		rl := right.children[0]
-		rr := right.children[1]
-		if combinedDepth(left, rl)-rr.height() > 1 {
-			// double rotation
-			return mk_OrdMap(
-				rl.entry,
-				mk_OrdMap(entry, left, rl.children[0]),
-				mk_OrdMap(right.entry, rl.children[1], rr),
-			)
-		}
-		return mk_OrdMap(right.entry, mk_OrdMap(entry, left, rl), rr)
-	}
-	if left.height()-right.height() > 1 { // implies left != nil
-		// single right
-		ll := left.children[0]
-		lr := left.children[1]
-		if combinedDepth(right, lr)-ll.height() > 1 {
-			// double rotation
-			return mk_OrdMap(
-				lr.entry,
-				mk_OrdMap(left.entry, ll, lr.children[0]),
-				mk_OrdMap(entry, lr.children[1], right),
-			)
-		}
-		return mk_OrdMap(left.entry, ll, mk_OrdMap(entry, lr, right))
-	}
-	return mk_OrdMap(entry, left, right)
-}
-
-func (node *Node[K, V]) Len() int {
-	if node == nil {
-		return 0
-	}
-	return node.len
-}
-
-type entriesFrame[K Comparable[K], V any] struct {
-	node     *Node[K, V]
-	leftDone bool
-}
-
-func (node *Node[K, V]) Entries() []Entry[K, V] {
-	elems := make([]Entry[K, V], 0, node.Len())
-	if node == nil {
-		return elems
-	}
-	var preallocated [20]entriesFrame[K, V] // preallocate on stack for common case
-	stack := preallocated[:0]
-	stack = append(stack, entriesFrame[K, V]{node, false})
-	for len(stack) > 0 {
-		top := &stack[len(stack)-1]
-
-		if !top.leftDone {
-			if top.node.children[0] != nil {
-				stack = append(stack, entriesFrame[K, V]{top.node.children[0], false})
-			}
-			top.leftDone = true
-		} else {
-			stack = stack[:len(stack)-1] // pop
-			elems = append(elems, top.node.entry)
-			if top.node.children[1] != nil {
-				stack = append(stack, entriesFrame[K, V]{top.node.children[1], false})
-			}
-		}
-	}
-	return elems
-}
-
-func (node *Node[K, V]) extreme(dir int) *Entry[K, V] {
-	if node == nil {
-		return nil
-	}
-	finger := node
-	for finger.children[dir] != nil {
-		finger = finger.children[dir]
-	}
-	return &finger.entry
-}
-
-func (node *Node[K, V]) Min() *Entry[K, V] {
-	return node.extreme(0)
-}
-
-func (node *Node[K, V]) Max() *Entry[K, V] {
-	return node.extreme(1)
-}
-
-func (node *Node[K, V]) Iterate() Iterator[K, V] {
-	return newIterator[K, V](node, 0, nil)
-}
-
-func (node *Node[K, V]) IterateFrom(k K) Iterator[K, V] {
-	return newIterator(node, 0, &k)
-}
-
-func (node *Node[K, V]) IterateReverse() Iterator[K, V] {
-	return newIterator(node, 1, nil)
-}
-
-func (node *Node[K, V]) IterateReverseFrom(k K) Iterator[K, V] {
-	return newIterator(node, 1, &k)
-}
-
-type iteratorStackFrame[K Comparable[K], V any] struct {
-	node  *Node[K, V]
-	state int8
-}
-
-type Iterator[K Comparable[K], V any] struct {
-	direction    int
-	stack        []iteratorStackFrame[K, V]
-	currentEntry Entry[K, V]
-}
-
-func newIterator[K Comparable[K], V any](root *Node[K, V], direction int, startFrom *K) Iterator[K, V] {
-	if root == nil {
-		return Iterator[K, V]{}
-	}
-	stack := make([]iteratorStackFrame[K, V], 1, root.height())
-	stack[0] = iteratorStackFrame[K, V]{node: root, state: 0}
-	iter := Iterator[K, V]{
-		direction: direction,
-		stack:     stack,
-	}
-	if startFrom != nil {
-		stack[0].state = 2
-		iter.seek(*startFrom)
-	} else {
-		iter.Next()
-	}
-	return iter
-}
-
-func (i *Iterator[K, V]) Done() bool {
-	return len(i.stack) == 0
-}
-
-func (i *Iterator[K, V]) GetKey() K {
-	return i.currentEntry.K
-}
-
-func (i *Iterator[K, V]) GetValue() V {
-	return i.currentEntry.V
-}
-
-func (i *Iterator[K, V]) Next() {
-	for len(i.stack) > 0 {
-		frame := &i.stack[len(i.stack)-1]
-		switch frame.state {
-		case 0:
-			if frame.node == nil {
-				last := len(i.stack) - 1
-				i.stack[last] = iteratorStackFrame[K, V]{} // zero out
-				i.stack = i.stack[:last]                   // pop
-			} else {
-				frame.state = 1
-			}
-		case 1:
-			i.stack = append(i.stack, iteratorStackFrame[K, V]{node: frame.node.children[i.direction], state: 0})
-			frame.state = 2
-		case 2:
-			i.currentEntry = frame.node.entry
-			frame.state = 3
-			return
-		case 3:
-			// override frame - tail call optimisation
-			i.stack[len(i.stack)-1] = iteratorStackFrame[K, V]{node: frame.node.children[1-i.direction], state: 0}
-		}
-
-	}
-}
-
-func (i *Iterator[K, V]) seek(k K) {
-LOOP:
-	for {
-		frame := &i.stack[len(i.stack)-1]
-		if frame.node == nil {
-			last := len(i.stack) - 1
-			i.stack[last] = iteratorStackFrame[K, V]{} // zero out
-			i.stack = i.stack[:last]                   // pop
-			break LOOP
-		}
-		if i.direction == 0 && !(frame.node.entry.K.Less(k)) || (i.direction == 1 && !(k.Less(frame.node.entry.K))) {
-			i.stack = append(i.stack, iteratorStackFrame[K, V]{node: frame.node.children[i.direction], state: 2})
-		} else {
-			// override frame - tail call optimisation
-			i.stack[len(i.stack)-1] = iteratorStackFrame[K, V]{node: frame.node.children[1-i.direction], state: 2}
-		}
-	}
-	if len(i.stack) > 0 {
-		frame := &i.stack[len(i.stack)-1]
-		i.currentEntry = frame.node.entry
-		frame.state = 3
-	}
-}
-./pkg/persistent/map.go
-package persistent
-
-import (
-	"go_util/pkg/persistent/internal/ordmap"
-)
-
-type Ordered[T any] interface {
-	Less(T) bool
-}
-
-type Map[K Ordered[K], V any] interface {
-	Get(k K) (V, bool)
-	Set(k K, v V) Map[K, V]
-	Len() uint
-	Iter(func(K, V) bool)
-}
-
-func EmptyMap[K Ordered[K], V any]() Map[K, V] {
-	return &pmap[K, V]{
-		impl: ordmap.New[K, V](),
-	}
-}
-
-type pmap[K Ordered[K], V any] struct {
-	impl *ordmap.Node[K, V]
-}
-
-func (m *pmap[K, V]) Get(k K) (V, bool) {
-	return m.impl.Get(k)
-}
-
-func (m *pmap[K, V]) Set(k K, v V) Map[K, V] {
-	impl := m.impl.Insert(k, v)
-	return &pmap[K, V]{
-		impl: impl,
-	}
-}
-func (m *pmap[K, V]) Len() uint {
-	return uint(m.impl.Len())
-}
-func (m *pmap[K, V]) Iter(f func(K, V) bool) {
-	for i := m.impl.Iterate(); !i.Done(); i.Next() {
-		k, v := i.GetKey(), i.GetValue()
-		if ok := f(k, v); !ok {
-			break
-		}
-	}
-}
 ./pkg/file/file.go
 package file
 
@@ -3129,6 +2719,8 @@ type OrderedMap[K constraints.Ordered, V any] interface {
 	Len() int
 	Height() int
 	Split(K) (OrderedMap[K, V], OrderedMap[K, V])
+	Max() (K, V)
+	Min() (K, V)
 }
 
 func NewOrderedMap[K constraints.Ordered, V any]() OrderedMap[K, V] {
@@ -3184,6 +2776,15 @@ func (o *orderedMap[K, V]) Height() int {
 func (o *orderedMap[K, V]) Split(k K) (OrderedMap[K, V], OrderedMap[K, V]) {
 	l, r := split(o.node, entry[K, V]{key: k})
 	return &orderedMap[K, V]{node: l}, &orderedMap[K, V]{node: r}
+}
+
+func (o *orderedMap[K, V]) Max() (K, V) {
+	e := getMaxEntry(o.node)
+	return e.key, e.val
+}
+func (o *orderedMap[K, V]) Min() (K, V) {
+	e := getMinEntry(o.node)
+	return e.key, e.val
 }
 ./pkg/wbt/wbt_inner.go
 package wbt
@@ -3349,6 +2950,18 @@ func getMinEntry[T Comparable[T]](n *node[T]) T {
 	}
 }
 
+func getMaxEntry[T Comparable[T]](n *node[T]) T {
+	if n == nil {
+		panic("max of nil tree")
+	}
+	if n.right == nil {
+		return n.entry
+	} else {
+		return getMaxEntry(n.right)
+	}
+
+}
+
 func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
 	if l == nil {
 		return r
@@ -3356,12 +2969,18 @@ func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
 	if r == nil {
 		return l
 	}
-	// merge chooses minimum from the right side
-	// or maximum from left side but this is just a small optimization
-	entry := getMinEntry(r)
-	r1 := del(r, entry)
-	n1 := makeNode(entry, l, r1)
-	return balance(n1)
+	wl, wr := weight(l), weight(r)
+	if wl > wr {
+		entry := getMaxEntry(l)
+		l1 := del(l, entry)
+		n1 := makeNode(entry, l1, r)
+		return balance(n1)
+	} else {
+		entry := getMinEntry(r)
+		r1 := del(r, entry)
+		n1 := makeNode(entry, l, r1)
+		return balance(n1)
+	}
 }
 
 // split - ([1, 2, 3, 4], 3) -> [1, 2, 3] , [4]
@@ -3384,6 +3003,16 @@ func split[T Comparable[T]](n *node[T], entry T) (*node[T], *node[T]) {
 	default:
 		return n.left, set(n.right, n.entry)
 	}
+}
+./pkg/wbt/wbt_vector.go
+package wbt
+
+type Vector[T any] interface {
+	Get(int) (T, bool)
+	Set(int, T) Vector[T]
+	Append(T) Vector[T]
+	Len() int
+	Slice(int, int) Vector[T]
 }
 ./pkg/feature_toggle/feature_toggle.go
 package feature_toggle

@@ -161,6 +161,18 @@ func getMinEntry[T Comparable[T]](n *node[T]) T {
 	}
 }
 
+func getMaxEntry[T Comparable[T]](n *node[T]) T {
+	if n == nil {
+		panic("max of nil tree")
+	}
+	if n.right == nil {
+		return n.entry
+	} else {
+		return getMaxEntry(n.right)
+	}
+
+}
+
 func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
 	if l == nil {
 		return r
@@ -168,12 +180,18 @@ func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
 	if r == nil {
 		return l
 	}
-	// merge chooses minimum from the right side
-	// or maximum from left side but this is just a small optimization
-	entry := getMinEntry(r)
-	r1 := del(r, entry)
-	n1 := makeNode(entry, l, r1)
-	return balance(n1)
+	wl, wr := weight(l), weight(r)
+	if wl > wr {
+		entry := getMaxEntry(l)
+		l1 := del(l, entry)
+		n1 := makeNode(entry, l1, r)
+		return balance(n1)
+	} else {
+		entry := getMinEntry(r)
+		r1 := del(r, entry)
+		n1 := makeNode(entry, l, r1)
+		return balance(n1)
+	}
 }
 
 // split - ([1, 2, 3, 4], 3) -> [1, 2, 3] , [4]
