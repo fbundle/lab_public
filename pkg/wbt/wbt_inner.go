@@ -4,11 +4,11 @@ const (
 	DELTA = 3
 )
 
-type Key[T any] interface {
+type Comparable[T any] interface {
 	Cmp(T) int
 }
 
-type node[T Key[T]] struct {
+type node[T Comparable[T]] struct {
 	weight uint
 	height uint
 	key    T
@@ -16,7 +16,7 @@ type node[T Key[T]] struct {
 	right  *node[T]
 }
 
-func makeNode[T Key[T]](key T, left *node[T], right *node[T]) *node[T] {
+func makeNode[T Comparable[T]](key T, left *node[T], right *node[T]) *node[T] {
 	return &node[T]{
 		weight: 1 + weight(left) + weight(right),
 		height: 1 + max(height(left), height(right)),
@@ -26,21 +26,47 @@ func makeNode[T Key[T]](key T, left *node[T], right *node[T]) *node[T] {
 	}
 }
 
-func height[T Key[T]](n *node[T]) uint {
+func height[T Comparable[T]](n *node[T]) uint {
 	if n == nil {
 		return 0
 	}
 	return n.height
 }
 
-func weight[T Key[T]](n *node[T]) uint {
+func weight[T Comparable[T]](n *node[T]) uint {
 	if n == nil {
 		return 0
 	}
 	return n.weight
 }
 
-func balance[T Key[T]](n *node[T]) *node[T] {
+func get[T Comparable[T]](n *node[T], keyIn T) (keyOut T, ok bool) {
+	if n == nil {
+		return keyOut, false
+	}
+	cmp := n.key.Cmp(keyIn)
+	switch {
+	case cmp < 0:
+		return get(n.right, keyIn)
+	case cmp > 0:
+		return get(n.left, keyIn)
+	default:
+		return n.key, true
+	}
+}
+
+func iter[T Comparable[T]](n *node[T], f func(k T) bool) {
+	if n == nil {
+		return
+	}
+	iter(n.left, f)
+	if !f(n.key) {
+		return
+	}
+	iter(n.right, f)
+}
+
+func balance[T Comparable[T]](n *node[T]) *node[T] {
 	if n == nil {
 		return nil
 	}
@@ -86,22 +112,7 @@ func balance[T Key[T]](n *node[T]) *node[T] {
 	}
 }
 
-func get[T Key[T]](n *node[T], keyIn T) (keyOut T, ok bool) {
-	if n == nil {
-		return keyOut, false
-	}
-	cmp := n.key.Cmp(keyIn)
-	switch {
-	case cmp < 0:
-		return get(n.right, keyIn)
-	case cmp > 0:
-		return get(n.left, keyIn)
-	default:
-		return n.key, true
-	}
-}
-
-func set[T Key[T]](n *node[T], key T) *node[T] {
+func set[T Comparable[T]](n *node[T], key T) *node[T] {
 	if n == nil {
 		return makeNode(key, nil, nil)
 	}
@@ -120,13 +131,66 @@ func set[T Key[T]](n *node[T], key T) *node[T] {
 	}
 }
 
-func iter[T Key[T]](n *node[T], f func(k T) bool) {
+func del[T Comparable[T]](n *node[T], key T) *node[T] {
 	if n == nil {
-		return
+		return nil
 	}
-	iter(n.left, f)
-	if !f(n.key) {
-		return
+	cmp := n.key.Cmp(key)
+	switch {
+	case cmp < 0:
+		r1 := del(n.right, key)
+		n1 := makeNode(n.key, n.left, r1)
+		return balance(n1)
+	case cmp > 0:
+		l1 := del(n.left, key)
+		n1 := makeNode(n.key, l1, n.right)
+		return balance(n1)
+	default:
+		return merge(n.left, n.right)
 	}
-	iter(n.right, f)
+}
+
+func getMinKey[T Comparable[T]](n *node[T]) T {
+	if n == nil {
+		panic("min of nil tree")
+	}
+	if n.left == nil {
+		return n.key
+	} else {
+		return getMinKey(n.left)
+	}
+}
+
+func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
+	if l == nil {
+		return r
+	}
+	if r == nil {
+		return l
+	}
+	key := getMinKey(r)
+	r1 := del(r, key)
+	n1 := makeNode(key, l, r1)
+	return balance(n1)
+}
+
+func split[T Comparable[T]](n *node[T], key T) (*node[T], *node[T]) {
+	if n == nil {
+		return nil, nil
+	}
+	cmp := n.key.Cmp(key)
+	switch {
+	case cmp < 0:
+		rl1, rr1 := split(n.right, key)
+		n1 := makeNode(n.key, n.left, rl1)
+		n2 := balance(n1)
+		return n2, rr1
+	case cmp > 0:
+		ll1, lr1 := split(n.left, key)
+		n1 := makeNode(n.key, lr1, n.right)
+		n2 := balance(n1)
+		return ll1, n2
+	default:
+		return n.left, n.right
+	}
 }

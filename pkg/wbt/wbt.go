@@ -1,18 +1,19 @@
 package wbt
 
-type WBT[T Key[T]] interface {
+type WBT[T Comparable[T]] interface {
 	Get(T) (T, bool)
 	Set(T) WBT[T]
+	Del(T) WBT[T]
 	Iter(func(T) bool)
 	Len() int
 	Height() int
 }
 
-func New[T Key[T]]() WBT[T] {
+func New[T Comparable[T]]() WBT[T] {
 	return &wbt[T]{node: nil}
 }
 
-type wbt[T Key[T]] struct {
+type wbt[T Comparable[T]] struct {
 	node *node[T]
 }
 
@@ -31,7 +32,9 @@ func (w *wbt[T]) Get(keyIn T) (T, bool) {
 func (w *wbt[T]) Set(keyIn T) WBT[T] {
 	return &wbt[T]{node: set(w.node, keyIn)}
 }
-
+func (w *wbt[T]) Del(keyIn T) WBT[T] {
+	return &wbt[T]{node: del(w.node, keyIn)}
+}
 func (w *wbt[T]) Iter(f func(T) bool) {
 	iter(w.node, f)
 }
