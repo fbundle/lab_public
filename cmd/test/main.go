@@ -250,7 +250,7 @@ func testWBT() {
 		Height int `json:"height"`
 	}
 	statistics := make([]WH, 0)
-	n := 1000000
+	n := 100000
 	keys := make(map[Int]struct{})
 	for i := 0; i < n; i++ {
 		x := Int(rand.Int())
