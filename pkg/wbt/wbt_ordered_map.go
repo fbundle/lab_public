@@ -8,6 +8,7 @@ type OrderedMap[K constraints.Ordered, V any] interface {
 	Del(K) OrderedMap[K, V]
 	Iter(func(K, V) bool)
 	Len() int
+	Height() int
 	Split(K) (OrderedMap[K, V], OrderedMap[K, V])
 }
 
@@ -58,6 +59,9 @@ func (o *orderedMap[K, V]) Len() int {
 	return int(weight(o.node))
 }
 
+func (o *orderedMap[K, V]) Height() int {
+	return int(height(o.node))
+}
 func (o *orderedMap[K, V]) Split(k K) (OrderedMap[K, V], OrderedMap[K, V]) {
 	l, r := split(o.node, entry[K, V]{key: k})
 	return &orderedMap[K, V]{node: l}, &orderedMap[K, V]{node: r}

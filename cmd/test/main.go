@@ -216,32 +216,27 @@ func testLineSlice() {
 	}
 }
 
-type Int int
-
-func (i Int) Cmp(j Int) int {
-	if i < j {
-		return -1
-	} else if i > j {
-		return +1
-	} else {
-		return 0
-	}
-}
-
 func testWBT() {
-	getAllKeys := func(w wbt.WBT[Int]) []Int {
-		keys := make([]Int, 0, w.Len())
+	getAllKeys := func(w wbt.OrderedMap[int, struct{}]) []int {
+		keys := make([]int, 0, w.Len())
 		for k := range w.Iter {
 			keys = append(keys, k)
 		}
 		return keys
 	}
 
-	w := wbt.New[Int]()
+	w := wbt.NewOrderedMap[int, struct{}]()
 	fmt.Println(getAllKeys(w))
-	w = w.Set(Int(10)).Set(Int(11)).Set(Int(12)).Set(Int(13)).Set(Int(14)).Set(Int(15)).Del(Int(11))
+	w = w.
+		Set(10, struct{}{}).
+		Set(11, struct{}{}).
+		Set(12, struct{}{}).
+		Set(13, struct{}{}).
+		Set(14, struct{}{}).
+		Set(15, struct{}{}).
+		Del(11)
 	fmt.Println(getAllKeys(w))
-	l, r := w.Split(Int(13))
+	l, r := w.Split(13)
 	fmt.Println(getAllKeys(l), getAllKeys(r))
 
 	// stress test
@@ -251,10 +246,10 @@ func testWBT() {
 	}
 	statistics := make([]WH, 0)
 	n := 100000
-	keys := make(map[Int]struct{})
+	keys := make(map[int]struct{})
 	for i := 0; i < n; i++ {
-		x := Int(rand.Int())
-		w = w.Set(x)
+		x := rand.Int()
+		w = w.Set(x, struct{}{})
 		keys[x] = struct{}{}
 		if rand.Float32() < 0.2 {
 			// 20% remove one of the keys
