@@ -216,17 +216,10 @@ func testLineSlice() {
 	}
 }
 
-func testWBT() {
-	getAllKeys := func(w wbt.OrderedMap[int, struct{}]) []int {
-		keys := make([]int, 0, w.Len())
-		for k := range w.Iter {
-			keys = append(keys, k)
-		}
-		return keys
-	}
+func testWBTOrderedMap() {
 
 	w := wbt.NewOrderedMap[int, struct{}]()
-	fmt.Println(getAllKeys(w))
+	fmt.Println(w.Repr())
 	w = w.
 		Set(10, struct{}{}).
 		Set(11, struct{}{}).
@@ -235,9 +228,10 @@ func testWBT() {
 		Set(14, struct{}{}).
 		Set(15, struct{}{}).
 		Del(11)
-	fmt.Println(getAllKeys(w))
+	fmt.Println(w.Repr())
 	l, r := w.Split(13)
-	fmt.Println(getAllKeys(l), getAllKeys(r))
+	fmt.Println(l.Repr(), r.Repr())
+	return
 
 	// stress test
 	type WH struct {
@@ -278,6 +272,25 @@ func testWBT() {
 	}
 }
 
+func testWBTVector() {
+	v := wbt.NewVector[int](0)
+	v = v.
+		Append(0).
+		Append(1).
+		Append(2).
+		Append(3).
+		Append(4)
+	fmt.Println(v.Repr())
+
+	v = v.Slice(1, 3)
+	fmt.Println(v.Repr())
+
+	v = v.Append(5).Append(6).Append(7).Append(8).Append(9)
+	fmt.Println(v.Repr())
+	v = v.Set(3, 100).Set(4, 101)
+	fmt.Println(v.Repr())
+}
+
 func main() {
-	testWBT()
+	testWBTVector()
 }

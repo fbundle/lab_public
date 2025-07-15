@@ -12,6 +12,7 @@ type OrderedMap[K constraints.Ordered, V any] interface {
 	Split(K) (OrderedMap[K, V], OrderedMap[K, V])
 	Max() (K, V)
 	Min() (K, V)
+	Repr() map[K]V
 }
 
 func NewOrderedMap[K constraints.Ordered, V any]() OrderedMap[K, V] {
@@ -76,4 +77,13 @@ func (o *orderedMap[K, V]) Max() (K, V) {
 func (o *orderedMap[K, V]) Min() (K, V) {
 	e := getMinEntry(o.node)
 	return e.key, e.val
+}
+
+func (o *orderedMap[K, V]) Repr() map[K]V {
+	m := make(map[K]V)
+	o.Iter(func(k K, v V) bool {
+		m[k] = v
+		return true
+	})
+	return m
 }
