@@ -12,6 +12,7 @@ import (
 	"go_util/pkg/ring"
 	"go_util/pkg/tup"
 	"go_util/pkg/vec"
+	"go_util/pkg/wbt"
 	"os"
 	"strconv"
 )
@@ -214,6 +215,33 @@ func testLineSlice() {
 	}
 }
 
+type Int int
+
+func (i Int) Cmp(j Int) int {
+	if i < j {
+		return -1
+	} else if i > j {
+		return +1
+	} else {
+		return 0
+	}
+}
+
+func testWBT() {
+	w := wbt.New[Int]()
+	for k := range w.Iter {
+		fmt.Println(k)
+	}
+	w = w.Set(Int(10))
+	for k := range w.Iter {
+		fmt.Println(k)
+	}
+	w = w.Set(Int(10)).Set(Int(11)).Set(Int(12)).Set(Int(13)).Set(Int(14)).Set(Int(15))
+	for k := range w.Iter {
+		fmt.Println(k)
+	}
+}
+
 func main() {
-	testMonad()
+	testWBT()
 }
