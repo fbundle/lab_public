@@ -4,6 +4,8 @@ type WBT[T Key[T]] interface {
 	Get(T) (T, bool)
 	Set(T) WBT[T]
 	Iter(func(T) bool)
+	Len() int
+	Height() int
 }
 
 func New[T Key[T]]() WBT[T] {
@@ -12,6 +14,14 @@ func New[T Key[T]]() WBT[T] {
 
 type wbt[T Key[T]] struct {
 	node *node[T]
+}
+
+func (w *wbt[T]) Len() int {
+	return int(weight(w.node))
+}
+
+func (w *wbt[T]) Height() int {
+	return int(height(w.node))
 }
 
 func (w *wbt[T]) Get(keyIn T) (T, bool) {

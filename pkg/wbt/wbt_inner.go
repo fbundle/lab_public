@@ -10,6 +10,7 @@ type Key[T any] interface {
 
 type node[T Key[T]] struct {
 	weight uint
+	height uint
 	key    T
 	left   *node[T]
 	right  *node[T]
@@ -18,10 +19,18 @@ type node[T Key[T]] struct {
 func makeNode[T Key[T]](key T, left *node[T], right *node[T]) *node[T] {
 	return &node[T]{
 		weight: 1 + weight(left) + weight(right),
+		height: 1 + max(height(left), height(right)),
 		key:    key,
 		left:   left,
 		right:  right,
 	}
+}
+
+func height[T Key[T]](n *node[T]) uint {
+	if n == nil {
+		return 0
+	}
+	return n.height
 }
 
 func weight[T Key[T]](n *node[T]) uint {
