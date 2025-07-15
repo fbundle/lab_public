@@ -4,6 +4,7 @@ type WBT[T Comparable[T]] interface {
 	Get(T) (T, bool)
 	Set(T) WBT[T]
 	Del(T) WBT[T]
+	Split(T) (WBT[T], WBT[T])
 	Iter(func(T) bool)
 	Len() int
 	Height() int
@@ -34,6 +35,11 @@ func (w *wbt[T]) Set(keyIn T) WBT[T] {
 }
 func (w *wbt[T]) Del(keyIn T) WBT[T] {
 	return &wbt[T]{node: del(w.node, keyIn)}
+}
+
+func (w *wbt[T]) Split(keyIn T) (WBT[T], WBT[T]) {
+	l, r := split(w.node, keyIn)
+	return &wbt[T]{node: l}, &wbt[T]{node: r}
 }
 func (w *wbt[T]) Iter(f func(T) bool) {
 	iter(w.node, f)

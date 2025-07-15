@@ -3076,6 +3076,7 @@ type WBT[T Comparable[T]] interface {
 	Get(T) (T, bool)
 	Set(T) WBT[T]
 	Del(T) WBT[T]
+	Split(T) (WBT[T], WBT[T])
 	Iter(func(T) bool)
 	Len() int
 	Height() int
@@ -3106,6 +3107,11 @@ func (w *wbt[T]) Set(keyIn T) WBT[T] {
 }
 func (w *wbt[T]) Del(keyIn T) WBT[T] {
 	return &wbt[T]{node: del(w.node, keyIn)}
+}
+
+func (w *wbt[T]) Split(keyIn T) (WBT[T], WBT[T]) {
+	l, r := split(w.node, keyIn)
+	return &wbt[T]{node: l}, &wbt[T]{node: r}
 }
 func (w *wbt[T]) Iter(f func(T) bool) {
 	iter(w.node, f)
@@ -3304,7 +3310,7 @@ func split[T Comparable[T]](n *node[T], key T) (*node[T], *node[T]) {
 		n2 := balance(n1)
 		return ll1, n2
 	default:
-		return n.left, n.right
+		return n.left, set(n.right, n.key)
 	}
 }
 ./pkg/feature_toggle/feature_toggle.go

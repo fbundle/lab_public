@@ -228,14 +228,20 @@ func (i Int) Cmp(j Int) int {
 }
 
 func testWBT() {
+	getAllKeys := func(w wbt.WBT[Int]) []Int {
+		keys := make([]Int, 0, w.Len())
+		for k := range w.Iter {
+			keys = append(keys, k)
+		}
+		return keys
+	}
+
 	w := wbt.New[Int]()
-	for k := range w.Iter {
-		fmt.Println(k)
-	}
-	w = w.Set(Int(10)).Set(Int(11)).Set(Int(12)).Set(Int(13)).Set(Int(14)).Set(Int(15)).Del(Int(11)).Del(Int(13)).Del(Int(15))
-	for k := range w.Iter {
-		fmt.Println(k)
-	}
+	fmt.Println(getAllKeys(w))
+	w = w.Set(Int(10)).Set(Int(11)).Set(Int(12)).Set(Int(13)).Set(Int(14)).Set(Int(15)).Del(Int(11))
+	fmt.Println(getAllKeys(w))
+	l, r := w.Split(Int(13))
+	fmt.Println(getAllKeys(l), getAllKeys(r))
 }
 
 func main() {

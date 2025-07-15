@@ -191,6 +191,6 @@ func split[T Comparable[T]](n *node[T], key T) (*node[T], *node[T]) {
 		n2 := balance(n1)
 		return ll1, n2
 	default:
-		return n.left, n.right
+		return n.left, set(n.right, n.key)
 	}
 }
