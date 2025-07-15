@@ -232,11 +232,7 @@ func testWBT() {
 	for k := range w.Iter {
 		fmt.Println(k)
 	}
-	w = w.Set(Int(10))
-	for k := range w.Iter {
-		fmt.Println(k)
-	}
-	w = w.Set(Int(10)).Set(Int(11)).Set(Int(12)).Set(Int(13)).Set(Int(14)).Set(Int(15))
+	w = w.Set(Int(10)).Set(Int(11)).Set(Int(12)).Set(Int(13)).Set(Int(14)).Set(Int(15)).Del(Int(11)).Del(Int(13)).Del(Int(15))
 	for k := range w.Iter {
 		fmt.Println(k)
 	}
