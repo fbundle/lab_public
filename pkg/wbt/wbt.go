@@ -1,16 +1,16 @@
 package wbt
 
-type Node[T Comparable[T]] interface {
+type WBT[T Comparable[T]] interface {
 	Get(T) (T, bool)
-	Set(T) Node[T]
-	Del(T) Node[T]
-	Split(T) (Node[T], Node[T])
+	Set(T) WBT[T]
+	Del(T) WBT[T]
+	Split(T) (WBT[T], WBT[T])
 	Iter(func(T) bool)
 	Weight() int
 	Height() int // for debug only
 }
 
-func New[T Comparable[T]]() Node[T] {
+func New[T Comparable[T]]() WBT[T] {
 	return &wbt[T]{node: nil}
 }
 
@@ -30,14 +30,14 @@ func (w *wbt[T]) Get(keyIn T) (T, bool) {
 	return get(w.node, keyIn)
 }
 
-func (w *wbt[T]) Set(keyIn T) Node[T] {
+func (w *wbt[T]) Set(keyIn T) WBT[T] {
 	return &wbt[T]{node: set(w.node, keyIn)}
 }
-func (w *wbt[T]) Del(keyIn T) Node[T] {
+func (w *wbt[T]) Del(keyIn T) WBT[T] {
 	return &wbt[T]{node: del(w.node, keyIn)}
 }
 
-func (w *wbt[T]) Split(keyIn T) (Node[T], Node[T]) {
+func (w *wbt[T]) Split(keyIn T) (WBT[T], WBT[T]) {
 	l, r := split(w.node, keyIn)
 	return &wbt[T]{node: l}, &wbt[T]{node: r}
 }
