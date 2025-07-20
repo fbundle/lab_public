@@ -118,15 +118,15 @@ func set[T Comparable[T]](n *node[T], entryIn T) *node[T] {
 	}
 	cmp := n.entry.Cmp(entryIn)
 	switch {
-	case cmp < 0:
+	case cmp < 0: // n.entry < entryIn
 		r1 := set(n.right, entryIn)
 		n1 := makeNode(n.entry, n.left, r1)
 		return balance(n1)
-	case cmp > 0:
+	case cmp > 0: // n.entry > entryIn
 		l1 := set(n.left, entryIn)
 		n1 := makeNode(n.entry, l1, n.right)
 		return balance(n1)
-	default:
+	default: // n.entry == entryIn
 		return makeNode(entryIn, n.left, n.right)
 	}
 }
@@ -137,15 +137,15 @@ func del[T Comparable[T]](n *node[T], entryIn T) *node[T] {
 	}
 	cmp := n.entry.Cmp(entryIn)
 	switch {
-	case cmp < 0:
+	case cmp < 0: // n.entry < entryIn
 		r1 := del(n.right, entryIn)
 		n1 := makeNode(n.entry, n.left, r1)
 		return balance(n1)
-	case cmp > 0:
+	case cmp > 0: // n.entry > entryIn
 		l1 := del(n.left, entryIn)
 		n1 := makeNode(n.entry, l1, n.right)
 		return balance(n1)
-	default:
+	default: // n.entry == entryIn
 		return merge(n.left, n.right)
 	}
 }
@@ -156,9 +156,8 @@ func getMinEntry[T Comparable[T]](n *node[T]) T {
 	}
 	if n.left == nil {
 		return n.entry
-	} else {
-		return getMinEntry(n.left)
 	}
+	return getMinEntry(n.left)
 }
 
 func getMaxEntry[T Comparable[T]](n *node[T]) T {
@@ -167,9 +166,8 @@ func getMaxEntry[T Comparable[T]](n *node[T]) T {
 	}
 	if n.right == nil {
 		return n.entry
-	} else {
-		return getMaxEntry(n.right)
 	}
+	return getMaxEntry(n.right)
 
 }
 
@@ -195,23 +193,23 @@ func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
 }
 
 // split - ([1, 2, 3, 4], 3) -> [1, 2] , [3, 4]
-func split[T Comparable[T]](n *node[T], entry T) (*node[T], *node[T]) {
+func split[T Comparable[T]](n *node[T], entryIn T) (*node[T], *node[T]) {
 	if n == nil {
 		return nil, nil
 	}
-	cmp := n.entry.Cmp(entry)
+	cmp := n.entry.Cmp(entryIn)
 	switch {
-	case cmp < 0:
-		rl1, rr1 := split(n.right, entry)
+	case cmp < 0: // n.entry < entryIn
+		rl1, rr1 := split(n.right, entryIn)
 		n1 := makeNode(n.entry, n.left, rl1)
 		n2 := balance(n1)
 		return n2, rr1
-	case cmp > 0:
-		ll1, lr1 := split(n.left, entry)
+	case cmp > 0: // n.entry > entryIn
+		ll1, lr1 := split(n.left, entryIn)
 		n1 := makeNode(n.entry, lr1, n.right)
 		n2 := balance(n1)
 		return ll1, n2
-	default:
+	default: // n.entry == entryIn
 		return n.left, set(n.right, n.entry)
 	}
 }

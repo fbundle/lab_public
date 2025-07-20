@@ -2917,15 +2917,15 @@ func set[T Comparable[T]](n *node[T], entryIn T) *node[T] {
 	}
 	cmp := n.entry.Cmp(entryIn)
 	switch {
-	case cmp < 0:
+	case cmp < 0: // n.entry < entryIn
 		r1 := set(n.right, entryIn)
 		n1 := makeNode(n.entry, n.left, r1)
 		return balance(n1)
-	case cmp > 0:
+	case cmp > 0: // n.entry > entryIn
 		l1 := set(n.left, entryIn)
 		n1 := makeNode(n.entry, l1, n.right)
 		return balance(n1)
-	default:
+	default: // n.entry == entryIn
 		return makeNode(entryIn, n.left, n.right)
 	}
 }
@@ -2936,15 +2936,15 @@ func del[T Comparable[T]](n *node[T], entryIn T) *node[T] {
 	}
 	cmp := n.entry.Cmp(entryIn)
 	switch {
-	case cmp < 0:
+	case cmp < 0: // n.entry < entryIn
 		r1 := del(n.right, entryIn)
 		n1 := makeNode(n.entry, n.left, r1)
 		return balance(n1)
-	case cmp > 0:
+	case cmp > 0: // n.entry > entryIn
 		l1 := del(n.left, entryIn)
 		n1 := makeNode(n.entry, l1, n.right)
 		return balance(n1)
-	default:
+	default: // n.entry == entryIn
 		return merge(n.left, n.right)
 	}
 }
@@ -2955,9 +2955,8 @@ func getMinEntry[T Comparable[T]](n *node[T]) T {
 	}
 	if n.left == nil {
 		return n.entry
-	} else {
-		return getMinEntry(n.left)
 	}
+	return getMinEntry(n.left)
 }
 
 func getMaxEntry[T Comparable[T]](n *node[T]) T {
@@ -2966,9 +2965,8 @@ func getMaxEntry[T Comparable[T]](n *node[T]) T {
 	}
 	if n.right == nil {
 		return n.entry
-	} else {
-		return getMaxEntry(n.right)
 	}
+	return getMaxEntry(n.right)
 
 }
 
@@ -2994,99 +2992,24 @@ func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
 }
 
 // split - ([1, 2, 3, 4], 3) -> [1, 2] , [3, 4]
-func split[T Comparable[T]](n *node[T], entry T) (*node[T], *node[T]) {
+func split[T Comparable[T]](n *node[T], entryIn T) (*node[T], *node[T]) {
 	if n == nil {
 		return nil, nil
 	}
-	cmp := n.entry.Cmp(entry)
+	cmp := n.entry.Cmp(entryIn)
 	switch {
-	case cmp < 0:
-		rl1, rr1 := split(n.right, entry)
+	case cmp < 0: // n.entry < entryIn
+		rl1, rr1 := split(n.right, entryIn)
 		n1 := makeNode(n.entry, n.left, rl1)
 		n2 := balance(n1)
 		return n2, rr1
-	case cmp > 0:
-		ll1, lr1 := split(n.left, entry)
+	case cmp > 0: // n.entry > entryIn
+		ll1, lr1 := split(n.left, entryIn)
 		n1 := makeNode(n.entry, lr1, n.right)
 		n2 := balance(n1)
 		return ll1, n2
-	default:
+	default: // n.entry == entryIn
 		return n.left, set(n.right, n.entry)
-	}
-}
-./pkg/wbt/wbt_vector.go
-package wbt
-
-type Vector[T any] interface {
-	Get(int) T
-	Set(int, T) Vector[T]
-	Append(T) Vector[T]
-	Len() int
-	Slice(int, int) Vector[T]
-	Repr() []T
-}
-
-type vector[T any] struct {
-	offset int
-	length int
-	omap   OrderedMap[int, T]
-}
-
-func (v *vector[T]) Get(i int) T {
-	if i < 0 || i >= v.length {
-		panic("index out of range")
-	}
-	val, _ := v.omap.Get(i + v.offset)
-	return val
-}
-
-func (v *vector[T]) Set(i int, x T) Vector[T] {
-	if i < 0 || i >= v.length {
-		panic("index out of range")
-	}
-	omap := v.omap.Set(i+v.offset, x)
-	return &vector[T]{
-		length: v.length,
-		omap:   omap,
-	}
-}
-
-func (v *vector[T]) Append(x T) Vector[T] {
-	omap := v.omap.Set(v.length+v.offset, x)
-	return &vector[T]{
-		offset: v.offset,
-		length: v.length + 1,
-		omap:   omap,
-	}
-}
-
-func (v *vector[T]) Len() int {
-	return v.length
-}
-
-func (v *vector[T]) Slice(i int, j int) Vector[T] {
-	omap1, _ := v.omap.Split(j + v.offset)
-	_, omap2 := omap1.Split(i + v.offset)
-	return &vector[T]{
-		offset: v.offset + i,
-		length: j - i,
-		omap:   omap2,
-	}
-}
-
-func (v *vector[T]) Repr() []T {
-	m := make([]T, v.length)
-	for key, val := range v.omap.Iter {
-		m[key-v.offset] = val
-	}
-	return m
-}
-
-func NewVector[T any](length int) Vector[T] {
-	return &vector[T]{
-		offset: 0,
-		length: length,
-		omap:   NewOrderedMap[int, T](),
 	}
 }
 ./pkg/feature_toggle/feature_toggle.go
