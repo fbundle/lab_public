@@ -29,7 +29,7 @@ func (e entry[K, V]) Cmp(o entry[K, V]) int {
 	case e.key < o.key:
 		return -1
 	case e.key > o.key:
-		return 1
+		return +1
 	default:
 		return 0
 	}

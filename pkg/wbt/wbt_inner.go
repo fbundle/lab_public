@@ -1,7 +1,7 @@
 package wbt
 
 const (
-	DELTA = 3
+	delta = 3
 )
 
 type Comparable[T any] interface {
@@ -73,7 +73,7 @@ func balance[T Comparable[T]](n *node[T]) *node[T] {
 	if weight(n.left)+weight(n.right) <= 1 {
 		return n
 	}
-	if weight(n.left) > DELTA*weight(n.right) { // left is guaranteed to be non-nil
+	if weight(n.left) > delta*weight(n.right) { // left is guaranteed to be non-nil
 		// right rotate
 		//         n
 		//   l           r
@@ -90,7 +90,7 @@ func balance[T Comparable[T]](n *node[T]) *node[T] {
 		n1 := makeNode(n.entry, lr, r)
 		l1 := makeNode(l.entry, ll, n1)
 		return l1
-	} else if DELTA*weight(n.left) < weight(n.right) { // right is guaranteed to be non-nil
+	} else if delta*weight(n.left) < weight(n.right) { // right is guaranteed to be non-nil
 		// left rotate
 		//         n
 		//   l           r
