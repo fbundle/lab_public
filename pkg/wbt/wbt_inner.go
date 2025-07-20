@@ -194,7 +194,7 @@ func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
 	}
 }
 
-// split - ([1, 2, 3, 4], 3) -> [1, 2, 3] , [4]
+// split - ([1, 2, 3, 4], 3) -> [1, 2] , [3, 4]
 func split[T Comparable[T]](n *node[T], entry T) (*node[T], *node[T]) {
 	if n == nil {
 		return nil, nil

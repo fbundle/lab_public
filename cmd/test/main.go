@@ -217,7 +217,6 @@ func testLineSlice() {
 }
 
 func testWBTOrderedMap() {
-
 	w := wbt.NewOrderedMap[int, struct{}]()
 	fmt.Println(w.Repr())
 	w = w.
@@ -258,7 +257,7 @@ func testWBTOrderedMap() {
 		}
 		// write statistics
 		statistics = append(statistics, WH{
-			Weight: w.Len(),
+			Weight: w.Weight(),
 			Height: w.Height(),
 		})
 	}
@@ -272,25 +271,6 @@ func testWBTOrderedMap() {
 	}
 }
 
-func testWBTVector() {
-	v := wbt.NewVector[int](0)
-	v = v.
-		Append(0).
-		Append(1).
-		Append(2).
-		Append(3).
-		Append(4)
-	fmt.Println(v.Repr())
-
-	v = v.Slice(1, 3)
-	fmt.Println(v.Repr())
-
-	v = v.Append(5).Append(6).Append(7).Append(8).Append(9)
-	fmt.Println(v.Repr())
-	v = v.Set(3, 100).Set(4, 101)
-	fmt.Println(v.Repr())
-}
-
 func main() {
-	testWBTVector()
+	testWBTOrderedMap()
 }
