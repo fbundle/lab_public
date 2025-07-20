@@ -2906,9 +2906,8 @@ func balance[T Comparable[T]](n *node[T]) *node[T] {
 		n1 := makeNode(n.entry, l, rl)
 		r1 := makeNode(r.entry, n1, rr)
 		return r1
-	} else {
-		return n
 	}
+	return n
 }
 
 func set[T Comparable[T]](n *node[T], entryIn T) *node[T] {
