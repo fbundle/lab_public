@@ -146,11 +146,6 @@ func ins[T any](n *node[T], i uint, entry T) *node[T] {
 		n1 := makeNode(entry, n.left, r1)
 		return balance(n1)
 	}
-	if i < weight(n.left)+1+weight(n.right) {
-		r1 := ins(n.right, i-(weight(n.left)+1), entry)
-		n1 := makeNode(n.entry, n.left, r1)
-		return balance(n1)
-	}
 	if i <= weight(n.left)+1+weight(n.right) {
 		r1 := ins(n.right, i-(weight(n.left)+1), entry)
 		n1 := makeNode(n.entry, n.left, r1)
