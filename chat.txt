@@ -1877,7 +1877,7 @@ func split[T any](n *node[T], i uint) (*node[T], *node[T]) {
 		return ll1, n2
 	}
 	if i < weight(n.left)+1 {
-		r1 := set(n.right, 0, n.entry)
+		r1 := ins(n.right, 0, n.entry)
 		return n.left, r1
 	}
 	if i < weight(n.left)+1+weight(n.right) {

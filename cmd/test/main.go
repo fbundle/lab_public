@@ -296,7 +296,14 @@ func testPersistentVector() {
 	v = v.Del(4)
 	fmt.Println(v.Repr(), v.Weight())
 
-	stressTest := true
+	v1, v2 := v.Split(3)
+	fmt.Println(v1.Repr(), v1.Weight())
+	fmt.Println(v2.Repr(), v2.Weight())
+
+	v = v1.Concat(v2)
+	fmt.Println(v.Repr(), v.Weight())
+
+	stressTest := false
 	if !stressTest {
 		return
 	}
