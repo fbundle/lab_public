@@ -9,10 +9,10 @@ import (
 	"go_util/pkg/line_slice"
 	"go_util/pkg/monad"
 	"go_util/pkg/padic"
+	"go_util/pkg/persistent/ordered_map"
 	"go_util/pkg/ring"
 	"go_util/pkg/tup"
 	"go_util/pkg/vec"
-	"go_util/pkg/wbt"
 	"math/rand"
 	"os"
 	"strconv"
@@ -217,7 +217,7 @@ func testLineSlice() {
 }
 
 func testWBTOrderedMap() {
-	w := wbt.NewOrderedMap[int, struct{}]()
+	w := ordered_map.NewOrderedMap[int, struct{}]()
 	fmt.Println(w.Repr())
 	w = w.
 		Set(10, struct{}{}).
@@ -275,21 +275,6 @@ func testWBTOrderedMap() {
 	}
 }
 
-func testWBTVector() {
-	v := wbt.NewVector[int](0)
-	fmt.Println(v.Repr())
-	v = v.PushBack(10).PushBack(11).PushBack(12).PushBack(13)
-	fmt.Println(v.Repr())
-	v = v.Slice(1, 3)
-	fmt.Println(v.Repr())
-	v = v.PushBack(14).PushBack(15).PushFront(9).PushFront(8)
-	fmt.Println(v.Repr())
-	v = v.Slice(1, 5)
-	fmt.Println(v.Repr())
-	v = v.PushBack(16).PushBack(17).PushFront(7).PushFront(6)
-	fmt.Println(v.Repr())
-}
-
 func main() {
-	testWBTVector()
+	testWBTOrderedMap()
 }

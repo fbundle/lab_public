@@ -1280,6 +1280,312 @@ func (p *proto) Unmarshal(b []byte) (payload interface{}, err error) {
 	}
 	return m.Payload, nil
 }
+./pkg/persistent/ordered_map/ordered_map.go
+package ordered_map
+
+import "golang.org/x/exp/constraints"
+
+type OrderedMap[K constraints.Ordered, V any] interface {
+	Get(K) (V, bool)
+	Set(K, V) OrderedMap[K, V]
+	Del(K) OrderedMap[K, V]
+	Iter(func(K, V) bool)
+	Weight() int
+	Height() int
+	Split(K) (OrderedMap[K, V], OrderedMap[K, V])
+	Max() (K, V)
+	Min() (K, V)
+	Repr() map[K]V
+}
+
+func NewOrderedMap[K constraints.Ordered, V any]() OrderedMap[K, V] {
+	return &orderedMap[K, V]{node: nil}
+}
+
+type entry[K constraints.Ordered, V any] struct {
+	key K
+	val V
+}
+
+func (e entry[K, V]) Cmp(o entry[K, V]) int {
+	switch {
+	case e.key < o.key:
+		return -1
+	case e.key > o.key:
+		return +1
+	default:
+		return 0
+	}
+}
+
+type orderedMap[K constraints.Ordered, V any] struct {
+	node *node[entry[K, V]]
+}
+
+func (o *orderedMap[K, V]) Get(k K) (V, bool) {
+	e, ok := get(o.node, entry[K, V]{key: k})
+	return e.val, ok
+}
+
+func (o *orderedMap[K, V]) Set(key K, val V) OrderedMap[K, V] {
+	return &orderedMap[K, V]{node: set(o.node, entry[K, V]{key: key, val: val})}
+}
+
+func (o *orderedMap[K, V]) Del(key K) OrderedMap[K, V] {
+	return &orderedMap[K, V]{node: del(o.node, entry[K, V]{key: key})}
+}
+
+func (o *orderedMap[K, V]) Iter(f func(K, V) bool) {
+	iter(o.node, func(e entry[K, V]) bool {
+		return f(e.key, e.val)
+	})
+}
+
+func (o *orderedMap[K, V]) Weight() int {
+	return int(weight(o.node))
+}
+
+func (o *orderedMap[K, V]) Height() int {
+	return int(height(o.node))
+}
+func (o *orderedMap[K, V]) Split(k K) (OrderedMap[K, V], OrderedMap[K, V]) {
+	l, r := split(o.node, entry[K, V]{key: k})
+	return &orderedMap[K, V]{node: l}, &orderedMap[K, V]{node: r}
+}
+
+func (o *orderedMap[K, V]) Max() (K, V) {
+	e := getMaxEntry(o.node)
+	return e.key, e.val
+}
+func (o *orderedMap[K, V]) Min() (K, V) {
+	e := getMinEntry(o.node)
+	return e.key, e.val
+}
+
+func (o *orderedMap[K, V]) Repr() map[K]V {
+	m := make(map[K]V)
+	o.Iter(func(k K, v V) bool {
+		m[k] = v
+		return true
+	})
+	return m
+}
+./pkg/persistent/ordered_map/ordered_map_inner.go
+package ordered_map
+
+const (
+	delta = 3
+)
+
+type Comparable[T any] interface {
+	Cmp(T) int
+}
+
+// node - implementation of ordered map using weight balance tree
+type node[T Comparable[T]] struct {
+	weight uint
+	height uint
+	entry  T
+	left   *node[T]
+	right  *node[T]
+}
+
+func makeNode[T Comparable[T]](entry T, left *node[T], right *node[T]) *node[T] {
+	return &node[T]{
+		weight: 1 + weight(left) + weight(right),
+		height: 1 + max(height(left), height(right)),
+		entry:  entry,
+		left:   left,
+		right:  right,
+	}
+}
+
+func height[T Comparable[T]](n *node[T]) uint {
+	if n == nil {
+		return 0
+	}
+	return n.height
+}
+
+func weight[T Comparable[T]](n *node[T]) uint {
+	if n == nil {
+		return 0
+	}
+	return n.weight
+}
+
+func get[T Comparable[T]](n *node[T], entryIn T) (entryOut T, ok bool) {
+	if n == nil {
+		return entryOut, false
+	}
+	cmp := n.entry.Cmp(entryIn)
+	switch {
+	case cmp < 0:
+		return get(n.right, entryIn)
+	case cmp > 0:
+		return get(n.left, entryIn)
+	default:
+		return n.entry, true
+	}
+}
+
+func iter[T Comparable[T]](n *node[T], f func(k T) bool) {
+	if n == nil {
+		return
+	}
+	iter(n.left, f)
+	if !f(n.entry) {
+		return
+	}
+	iter(n.right, f)
+}
+
+func balance[T Comparable[T]](n *node[T]) *node[T] {
+	if n == nil {
+		return nil
+	}
+	if weight(n.left)+weight(n.right) <= 1 {
+		return n
+	}
+	if weight(n.left) > delta*weight(n.right) { // left is guaranteed to be non-nil
+		// right rotate
+		//         n
+		//   l           r
+		// ll lr
+		//
+		//      becomes
+		//
+		//         l
+		//   ll          n
+		//             lr r
+
+		l, r := n.left, n.right
+		ll, lr := l.left, l.right
+		n1 := makeNode(n.entry, lr, r)
+		l1 := makeNode(l.entry, ll, n1)
+		return l1
+	} else if delta*weight(n.left) < weight(n.right) { // right is guaranteed to be non-nil
+		// left rotate
+		//         n
+		//   l           r
+		//             rl rr
+		//
+		//      becomes
+		//
+		//         r
+		//   n          rr
+		//  l rl
+
+		l, r := n.left, n.right
+		rl, rr := r.left, r.right
+		n1 := makeNode(n.entry, l, rl)
+		r1 := makeNode(r.entry, n1, rr)
+		return r1
+	}
+	return n
+}
+
+func set[T Comparable[T]](n *node[T], entryIn T) *node[T] {
+	if n == nil {
+		return makeNode(entryIn, nil, nil)
+	}
+	cmp := n.entry.Cmp(entryIn)
+	switch {
+	case cmp < 0: // n.entry < entryIn
+		r1 := set(n.right, entryIn)
+		n1 := makeNode(n.entry, n.left, r1)
+		return balance(n1)
+	case cmp > 0: // n.entry > entryIn
+		l1 := set(n.left, entryIn)
+		n1 := makeNode(n.entry, l1, n.right)
+		return balance(n1)
+	default: // n.entry == entryIn
+		return makeNode(entryIn, n.left, n.right)
+	}
+}
+
+func del[T Comparable[T]](n *node[T], entryIn T) *node[T] {
+	if n == nil {
+		return nil
+	}
+	cmp := n.entry.Cmp(entryIn)
+	switch {
+	case cmp < 0: // n.entry < entryIn
+		r1 := del(n.right, entryIn)
+		n1 := makeNode(n.entry, n.left, r1)
+		return balance(n1)
+	case cmp > 0: // n.entry > entryIn
+		l1 := del(n.left, entryIn)
+		n1 := makeNode(n.entry, l1, n.right)
+		return balance(n1)
+	default: // n.entry == entryIn
+		return merge(n.left, n.right)
+	}
+}
+
+func getMinEntry[T Comparable[T]](n *node[T]) T {
+	if n == nil {
+		panic("min of nil tree")
+	}
+	if n.left == nil {
+		return n.entry
+	}
+	return getMinEntry(n.left)
+}
+
+func getMaxEntry[T Comparable[T]](n *node[T]) T {
+	if n == nil {
+		panic("max of nil tree")
+	}
+	if n.right == nil {
+		return n.entry
+	}
+	return getMaxEntry(n.right)
+
+}
+
+func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
+	if l == nil {
+		return r
+	}
+	if r == nil {
+		return l
+	}
+	wl, wr := weight(l), weight(r)
+	if wl > wr {
+		entry := getMaxEntry(l)
+		l1 := del(l, entry)
+		n1 := makeNode(entry, l1, r)
+		return balance(n1)
+	} else {
+		entry := getMinEntry(r)
+		r1 := del(r, entry)
+		n1 := makeNode(entry, l, r1)
+		return balance(n1)
+	}
+}
+
+// split - ([1, 2, 3, 4], 3) -> [1, 2] , [3, 4]
+func split[T Comparable[T]](n *node[T], entryIn T) (*node[T], *node[T]) {
+	if n == nil {
+		return nil, nil
+	}
+	cmp := n.entry.Cmp(entryIn)
+	switch {
+	case cmp < 0: // n.entry < entryIn
+		rl1, rr1 := split(n.right, entryIn)
+		n1 := makeNode(n.entry, n.left, rl1)
+		n2 := balance(n1)
+		return n2, rr1
+	case cmp > 0: // n.entry > entryIn
+		ll1, lr1 := split(n.left, entryIn)
+		n1 := makeNode(n.entry, lr1, n.right)
+		n2 := balance(n1)
+		return ll1, n2
+	default: // n.entry == entryIn
+		return n.left, set(n.right, n.entry)
+	}
+}
 ./pkg/file/file.go
 package file
 
@@ -2658,455 +2964,6 @@ func Verify(formula Formula, assignment Assignment) bool {
 		Assignment: assignment,
 	}
 	return s.Verify()
-}
-./pkg/wbt/wbt.go
-package wbt
-
-type WBT[T Comparable[T]] interface {
-	Get(T) (T, bool)
-	Set(T) WBT[T]
-	Del(T) WBT[T]
-	Split(T) (WBT[T], WBT[T])
-	Iter(func(T) bool)
-	Weight() int
-	Height() int // for debug only
-}
-
-func New[T Comparable[T]]() WBT[T] {
-	return &wbt[T]{node: nil}
-}
-
-type wbt[T Comparable[T]] struct {
-	node *node[T]
-}
-
-func (w *wbt[T]) Weight() int {
-	return int(weight(w.node))
-}
-
-func (w *wbt[T]) Height() int {
-	return int(height(w.node))
-}
-
-func (w *wbt[T]) Get(keyIn T) (T, bool) {
-	return get(w.node, keyIn)
-}
-
-func (w *wbt[T]) Set(keyIn T) WBT[T] {
-	return &wbt[T]{node: set(w.node, keyIn)}
-}
-func (w *wbt[T]) Del(keyIn T) WBT[T] {
-	return &wbt[T]{node: del(w.node, keyIn)}
-}
-
-func (w *wbt[T]) Split(keyIn T) (WBT[T], WBT[T]) {
-	l, r := split(w.node, keyIn)
-	return &wbt[T]{node: l}, &wbt[T]{node: r}
-}
-func (w *wbt[T]) Iter(f func(T) bool) {
-	iter(w.node, f)
-}
-./pkg/wbt/wbt_ordered_map.go
-package wbt
-
-import "golang.org/x/exp/constraints"
-
-type OrderedMap[K constraints.Ordered, V any] interface {
-	Get(K) (V, bool)
-	Set(K, V) OrderedMap[K, V]
-	Del(K) OrderedMap[K, V]
-	Iter(func(K, V) bool)
-	Weight() int
-	Height() int
-	Split(K) (OrderedMap[K, V], OrderedMap[K, V])
-	Max() (K, V)
-	Min() (K, V)
-	Repr() map[K]V
-}
-
-func NewOrderedMap[K constraints.Ordered, V any]() OrderedMap[K, V] {
-	return &orderedMap[K, V]{node: nil}
-}
-
-type entry[K constraints.Ordered, V any] struct {
-	key K
-	val V
-}
-
-func (e entry[K, V]) Cmp(o entry[K, V]) int {
-	switch {
-	case e.key < o.key:
-		return -1
-	case e.key > o.key:
-		return +1
-	default:
-		return 0
-	}
-}
-
-type orderedMap[K constraints.Ordered, V any] struct {
-	node *node[entry[K, V]]
-}
-
-func (o *orderedMap[K, V]) Get(k K) (V, bool) {
-	e, ok := get(o.node, entry[K, V]{key: k})
-	return e.val, ok
-}
-
-func (o *orderedMap[K, V]) Set(key K, val V) OrderedMap[K, V] {
-	return &orderedMap[K, V]{node: set(o.node, entry[K, V]{key: key, val: val})}
-}
-
-func (o *orderedMap[K, V]) Del(key K) OrderedMap[K, V] {
-	return &orderedMap[K, V]{node: del(o.node, entry[K, V]{key: key})}
-}
-
-func (o *orderedMap[K, V]) Iter(f func(K, V) bool) {
-	iter(o.node, func(e entry[K, V]) bool {
-		return f(e.key, e.val)
-	})
-}
-
-func (o *orderedMap[K, V]) Weight() int {
-	return int(weight(o.node))
-}
-
-func (o *orderedMap[K, V]) Height() int {
-	return int(height(o.node))
-}
-func (o *orderedMap[K, V]) Split(k K) (OrderedMap[K, V], OrderedMap[K, V]) {
-	l, r := split(o.node, entry[K, V]{key: k})
-	return &orderedMap[K, V]{node: l}, &orderedMap[K, V]{node: r}
-}
-
-func (o *orderedMap[K, V]) Max() (K, V) {
-	e := getMaxEntry(o.node)
-	return e.key, e.val
-}
-func (o *orderedMap[K, V]) Min() (K, V) {
-	e := getMinEntry(o.node)
-	return e.key, e.val
-}
-
-func (o *orderedMap[K, V]) Repr() map[K]V {
-	m := make(map[K]V)
-	o.Iter(func(k K, v V) bool {
-		m[k] = v
-		return true
-	})
-	return m
-}
-./pkg/wbt/wbt_inner.go
-package wbt
-
-const (
-	delta = 3
-)
-
-type Comparable[T any] interface {
-	Cmp(T) int
-}
-
-type node[T Comparable[T]] struct {
-	weight uint
-	height uint
-	entry  T
-	left   *node[T]
-	right  *node[T]
-}
-
-func makeNode[T Comparable[T]](entry T, left *node[T], right *node[T]) *node[T] {
-	return &node[T]{
-		weight: 1 + weight(left) + weight(right),
-		height: 1 + max(height(left), height(right)),
-		entry:  entry,
-		left:   left,
-		right:  right,
-	}
-}
-
-func height[T Comparable[T]](n *node[T]) uint {
-	if n == nil {
-		return 0
-	}
-	return n.height
-}
-
-func weight[T Comparable[T]](n *node[T]) uint {
-	if n == nil {
-		return 0
-	}
-	return n.weight
-}
-
-func get[T Comparable[T]](n *node[T], entryIn T) (entryOut T, ok bool) {
-	if n == nil {
-		return entryOut, false
-	}
-	cmp := n.entry.Cmp(entryIn)
-	switch {
-	case cmp < 0:
-		return get(n.right, entryIn)
-	case cmp > 0:
-		return get(n.left, entryIn)
-	default:
-		return n.entry, true
-	}
-}
-
-func iter[T Comparable[T]](n *node[T], f func(k T) bool) {
-	if n == nil {
-		return
-	}
-	iter(n.left, f)
-	if !f(n.entry) {
-		return
-	}
-	iter(n.right, f)
-}
-
-func balance[T Comparable[T]](n *node[T]) *node[T] {
-	if n == nil {
-		return nil
-	}
-	if weight(n.left)+weight(n.right) <= 1 {
-		return n
-	}
-	if weight(n.left) > delta*weight(n.right) { // left is guaranteed to be non-nil
-		// right rotate
-		//         n
-		//   l           r
-		// ll lr
-		//
-		//      becomes
-		//
-		//         l
-		//   ll          n
-		//             lr r
-
-		l, r := n.left, n.right
-		ll, lr := l.left, l.right
-		n1 := makeNode(n.entry, lr, r)
-		l1 := makeNode(l.entry, ll, n1)
-		return l1
-	} else if delta*weight(n.left) < weight(n.right) { // right is guaranteed to be non-nil
-		// left rotate
-		//         n
-		//   l           r
-		//             rl rr
-		//
-		//      becomes
-		//
-		//         r
-		//   n          rr
-		//  l rl
-
-		l, r := n.left, n.right
-		rl, rr := r.left, r.right
-		n1 := makeNode(n.entry, l, rl)
-		r1 := makeNode(r.entry, n1, rr)
-		return r1
-	}
-	return n
-}
-
-func set[T Comparable[T]](n *node[T], entryIn T) *node[T] {
-	if n == nil {
-		return makeNode(entryIn, nil, nil)
-	}
-	cmp := n.entry.Cmp(entryIn)
-	switch {
-	case cmp < 0: // n.entry < entryIn
-		r1 := set(n.right, entryIn)
-		n1 := makeNode(n.entry, n.left, r1)
-		return balance(n1)
-	case cmp > 0: // n.entry > entryIn
-		l1 := set(n.left, entryIn)
-		n1 := makeNode(n.entry, l1, n.right)
-		return balance(n1)
-	default: // n.entry == entryIn
-		return makeNode(entryIn, n.left, n.right)
-	}
-}
-
-func del[T Comparable[T]](n *node[T], entryIn T) *node[T] {
-	if n == nil {
-		return nil
-	}
-	cmp := n.entry.Cmp(entryIn)
-	switch {
-	case cmp < 0: // n.entry < entryIn
-		r1 := del(n.right, entryIn)
-		n1 := makeNode(n.entry, n.left, r1)
-		return balance(n1)
-	case cmp > 0: // n.entry > entryIn
-		l1 := del(n.left, entryIn)
-		n1 := makeNode(n.entry, l1, n.right)
-		return balance(n1)
-	default: // n.entry == entryIn
-		return merge(n.left, n.right)
-	}
-}
-
-func getMinEntry[T Comparable[T]](n *node[T]) T {
-	if n == nil {
-		panic("min of nil tree")
-	}
-	if n.left == nil {
-		return n.entry
-	}
-	return getMinEntry(n.left)
-}
-
-func getMaxEntry[T Comparable[T]](n *node[T]) T {
-	if n == nil {
-		panic("max of nil tree")
-	}
-	if n.right == nil {
-		return n.entry
-	}
-	return getMaxEntry(n.right)
-
-}
-
-func merge[T Comparable[T]](l *node[T], r *node[T]) *node[T] {
-	if l == nil {
-		return r
-	}
-	if r == nil {
-		return l
-	}
-	wl, wr := weight(l), weight(r)
-	if wl > wr {
-		entry := getMaxEntry(l)
-		l1 := del(l, entry)
-		n1 := makeNode(entry, l1, r)
-		return balance(n1)
-	} else {
-		entry := getMinEntry(r)
-		r1 := del(r, entry)
-		n1 := makeNode(entry, l, r1)
-		return balance(n1)
-	}
-}
-
-// split - ([1, 2, 3, 4], 3) -> [1, 2] , [3, 4]
-func split[T Comparable[T]](n *node[T], entryIn T) (*node[T], *node[T]) {
-	if n == nil {
-		return nil, nil
-	}
-	cmp := n.entry.Cmp(entryIn)
-	switch {
-	case cmp < 0: // n.entry < entryIn
-		rl1, rr1 := split(n.right, entryIn)
-		n1 := makeNode(n.entry, n.left, rl1)
-		n2 := balance(n1)
-		return n2, rr1
-	case cmp > 0: // n.entry > entryIn
-		ll1, lr1 := split(n.left, entryIn)
-		n1 := makeNode(n.entry, lr1, n.right)
-		n2 := balance(n1)
-		return ll1, n2
-	default: // n.entry == entryIn
-		return n.left, set(n.right, n.entry)
-	}
-}
-./pkg/wbt/wbt_vector.go
-package wbt
-
-type Vector[T any] interface {
-	Get(int) T
-	Set(int, T) Vector[T]
-	Iter(func(int, T) bool)
-	Len() int
-	Slice(int, int) Vector[T]
-	Repr() []T
-	PushBack(T) Vector[T]
-	PushFront(T) Vector[T]
-}
-
-type vector[T any] struct {
-	offset int
-	length int
-	data   OrderedMap[int, T]
-}
-
-func NewVector[T any](length int) Vector[T] {
-	return &vector[T]{
-		offset: 0,
-		length: length,
-		data:   NewOrderedMap[int, T](),
-	}
-}
-
-func (v *vector[T]) Len() int {
-	return v.length
-}
-
-func (v *vector[T]) Get(i int) T {
-	if i < 0 || i >= v.length {
-		panic("index out of range")
-	}
-	val, _ := v.data.Get(v.offset + i)
-	return val
-}
-
-func (v *vector[T]) Iter(f func(int, T) bool) {
-	for i := 0; i < v.length; i++ {
-		if !f(i, v.Get(i)) {
-			break
-		}
-	}
-}
-
-func (v *vector[T]) Set(i int, val T) Vector[T] {
-	if i < 0 || i >= v.length {
-		panic("index out of range")
-	}
-	return &vector[T]{
-		offset: v.offset,
-		length: v.length,
-		data:   v.data.Set(v.offset+i, val),
-	}
-}
-
-func (v *vector[T]) Slice(beg int, end int) Vector[T] {
-	if beg < 0 || end > v.length || beg > end {
-		panic("index out of range")
-	}
-	data := v.data
-	data, _ = data.Split(v.offset + end)
-	_, data = data.Split(v.offset + beg)
-	return &vector[T]{
-		offset: v.offset + beg,
-		length: end - beg,
-		data:   data,
-	}
-}
-
-func (v *vector[T]) Repr() []T {
-	vs := make([]T, v.length)
-	v.Iter(func(i int, val T) bool {
-		vs[i] = val
-		return true
-	})
-	return vs
-}
-
-func (v *vector[T]) PushBack(val T) Vector[T] {
-	return &vector[T]{
-		offset: v.offset,
-		length: v.length + 1,
-		data:   v.data.Set(v.offset+v.length, val),
-	}
-}
-
-func (v *vector[T]) PushFront(val T) Vector[T] {
-	return &vector[T]{
-		offset: v.offset - 1,
-		length: v.length + 1,
-		data:   v.data.Set(v.offset-1, val),
-	}
 }
 ./pkg/feature_toggle/feature_toggle.go
 package feature_toggle

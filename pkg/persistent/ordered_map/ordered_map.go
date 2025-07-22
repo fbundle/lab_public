@@ -1,4 +1,4 @@
-package wbt
+package ordered_map
 
 import "golang.org/x/exp/constraints"
 

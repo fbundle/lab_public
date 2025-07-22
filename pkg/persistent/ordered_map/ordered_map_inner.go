@@ -1,4 +1,4 @@
-package wbt
+package ordered_map
 
 const (
 	delta = 3
@@ -8,6 +8,7 @@ type Comparable[T any] interface {
 	Cmp(T) int
 }
 
+// node - implementation of ordered map using weight balance tree
 type node[T Comparable[T]] struct {
 	weight uint
 	height uint
