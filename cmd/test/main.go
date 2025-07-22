@@ -10,6 +10,7 @@ import (
 	"go_util/pkg/monad"
 	"go_util/pkg/padic"
 	"go_util/pkg/persistent/ordered_map"
+	"go_util/pkg/persistent/vector"
 	"go_util/pkg/ring"
 	"go_util/pkg/tup"
 	"go_util/pkg/vec"
@@ -216,7 +217,7 @@ func testLineSlice() {
 	}
 }
 
-func testWBTOrderedMap() {
+func testPersistentOrderedMap() {
 	w := ordered_map.NewOrderedMap[int, struct{}]()
 	fmt.Println(w.Repr())
 	w = w.
@@ -231,15 +232,15 @@ func testWBTOrderedMap() {
 	l, r := w.Split(13)
 	fmt.Println(l.Repr(), r.Repr())
 
-	stressTest := false
+	stressTest := true
 	if !stressTest {
 		return
 	}
 
 	// stress test
 	type WH struct {
-		Weight int `json:"weight"`
-		Height int `json:"height"`
+		Weight uint `json:"weight"`
+		Height uint `json:"height"`
 	}
 	statistics := make([]WH, 0)
 	n := 100000
@@ -275,6 +276,63 @@ func testWBTOrderedMap() {
 	}
 }
 
+func testPersistentVector() {
+	v := vector.NewVector[int]()
+	fmt.Println(v.Repr(), v.Weight())
+	v = v.Ins(v.Weight(), 0)
+	v = v.Ins(v.Weight(), 1)
+	v = v.Ins(v.Weight(), 2)
+	v = v.Ins(v.Weight(), 3)
+	v = v.Ins(v.Weight(), 4)
+	v = v.Ins(v.Weight(), 5)
+	fmt.Println(v.Repr(), v.Weight())
+
+	v = v.Set(2, 22)
+	fmt.Println(v.Repr(), v.Weight())
+
+	v = v.Ins(3, 33)
+	fmt.Println(v.Repr(), v.Weight())
+
+	v = v.Del(4)
+	fmt.Println(v.Repr(), v.Weight())
+
+	stressTest := true
+	if !stressTest {
+		return
+	}
+
+	type WH struct {
+		Weight uint `json:"weight"`
+		Height uint `json:"height"`
+	}
+	statistics := make([]WH, 0)
+	n := 100000
+
+	for i := 0; i < n; i++ {
+		x := rand.Int()
+		v = v.Ins(v.Weight(), x)
+		if rand.Float32() < 0.2 {
+			// 20% remove one of the entry
+			j := uint(rand.Intn(int(v.Weight())))
+			v = v.Del(j)
+		}
+		// write statistics
+		statistics = append(statistics, WH{
+			Weight: v.Weight(),
+			Height: v.Height(),
+		})
+	}
+	b, err := json.Marshal(statistics)
+	if err != nil {
+		panic(err)
+	}
+	err = os.WriteFile("tmp/statistics.json", b, 0644)
+	if err != nil {
+		panic(err)
+
+	}
+}
+
 func main() {
-	testWBTOrderedMap()
+	testPersistentVector()
 }

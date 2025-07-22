@@ -17,16 +17,6 @@ type node[T Comparable[T]] struct {
 	right  *node[T]
 }
 
-func makeNode[T Comparable[T]](entry T, left *node[T], right *node[T]) *node[T] {
-	return &node[T]{
-		weight: 1 + weight(left) + weight(right),
-		height: 1 + max(height(left), height(right)),
-		entry:  entry,
-		left:   left,
-		right:  right,
-	}
-}
-
 func height[T Comparable[T]](n *node[T]) uint {
 	if n == nil {
 		return 0
@@ -39,6 +29,15 @@ func weight[T Comparable[T]](n *node[T]) uint {
 		return 0
 	}
 	return n.weight
+}
+func makeNode[T Comparable[T]](entry T, left *node[T], right *node[T]) *node[T] {
+	return &node[T]{
+		weight: 1 + weight(left) + weight(right),
+		height: 1 + max(height(left), height(right)),
+		entry:  entry,
+		left:   left,
+		right:  right,
+	}
 }
 
 func get[T Comparable[T]](n *node[T], entryIn T) (entryOut T, ok bool) {
