@@ -116,19 +116,21 @@ func (n *nodeWrapper) Open(ctx context.Context, flags uint32) (fs.FileHandle, ui
 	return nil, 0, syscall.EISDIR
 }
 
-// Create file
 func (n *nodeWrapper) Create(ctx context.Context, name string, flags uint32, mode uint32) (fs.FileHandle, *fs.Inode, uint32, syscall.Errno) {
 	child := NewFileNode()
 	n.n.children[name] = child
+
 	ino := n.NewInode(ctx, &nodeWrapper{n: child}, fs.StableAttr{Mode: fuse.S_IFREG})
+	n.AddChild(name, ino, false) // <-- this is the key
 	return &fileWrapper{f: child.file}, ino, fuse.FOPEN_KEEP_CACHE, 0
 }
 
-// Make directory
 func (n *nodeWrapper) Mkdir(ctx context.Context, name string, mode uint32, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
 	child := NewDirNode()
 	n.n.children[name] = child
+
 	ino := n.NewInode(ctx, &nodeWrapper{n: child}, fs.StableAttr{Mode: fuse.S_IFDIR})
+	n.AddChild(name, ino, false) // <-- attach to parent inode
 	return ino, 0
 }
 
