@@ -1,204 +1,94 @@
+// Hellofs implements a simple "hello world" file system.
 package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"syscall"
-	"time"
 
-	"github.com/hanwen/go-fuse/v2/fs"
-	"github.com/hanwen/go-fuse/v2/fuse"
+	"bazil.org/fuse"
+	"bazil.org/fuse/fs"
+	_ "bazil.org/fuse/fs/fstestutil"
 )
 
-// --- In-memory file ---
-type MemFile struct {
-	data []byte
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "  %s MOUNTPOINT\n", os.Args[0])
+	flag.PrintDefaults()
 }
 
-func NewMemFile() *MemFile {
-	return &MemFile{}
-}
-
-func (f *MemFile) Size() int {
-	return len(f.data)
-}
-
-func (f *MemFile) Read(offset int, buf []byte) int {
-	if offset >= len(f.data) {
-		return 0
-	}
-	n := copy(buf, f.data[offset:])
-	return n
-}
-
-func (f *MemFile) Write(offset int, buf []byte) int {
-	end := offset + len(buf)
-	if end > len(f.data) {
-		newData := make([]byte, end)
-		copy(newData, f.data)
-		f.data = newData
-	}
-	copy(f.data[offset:], buf)
-	return len(buf)
-}
-
-func (f *MemFile) Truncate(size int) {
-	if size < len(f.data) {
-		f.data = f.data[:size]
-	} else if size > len(f.data) {
-		f.data = append(f.data, make([]byte, size-len(f.data))...)
-	}
-}
-
-// --- In-memory node (file or directory) ---
-type MemNode struct {
-	file     *MemFile
-	children map[string]*MemNode
-}
-
-func NewDirNode() *MemNode {
-	return &MemNode{children: make(map[string]*MemNode)}
-}
-
-func NewFileNode() *MemNode {
-	return &MemNode{file: NewMemFile()}
-}
-
-// --- FUSE wrapper ---
-type nodeWrapper struct {
-	fs.Inode
-	n *MemNode
-}
-
-// Lookup file or dir
-func (n *nodeWrapper) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-	child, ok := n.n.children[name]
-	if !ok {
-		return nil, syscall.ENOENT
-	}
-	var mode uint32 = fuse.S_IFREG
-	if child.file == nil {
-		mode = fuse.S_IFDIR
-	}
-	return n.NewInode(ctx, &nodeWrapper{n: child}, fs.StableAttr{Mode: mode}), 0
-}
-
-// Read directory
-func (n *nodeWrapper) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
-	entries := make([]fuse.DirEntry, 0, len(n.n.children))
-	for name, child := range n.n.children {
-		mode := uint32(fuse.S_IFREG)
-		if child.file == nil {
-			mode = fuse.S_IFDIR
-		}
-		entries = append(entries, fuse.DirEntry{Name: name, Mode: mode})
-	}
-	return fs.NewListDirStream(entries), 0
-}
-
-// Get attributes
-func (n *nodeWrapper) Getattr(ctx context.Context, f fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
-	if n.n.file != nil {
-		out.Size = uint64(n.n.file.Size())
-		out.Mode = fuse.S_IFREG | 0644
-	} else {
-		out.Mode = fuse.S_IFDIR | 0755
-	}
-	return 0
-}
-
-// Open file
-func (n *nodeWrapper) Open(ctx context.Context, flags uint32) (fs.FileHandle, uint32, syscall.Errno) {
-	if n.n.file != nil {
-		return &fileWrapper{f: n.n.file}, fuse.FOPEN_KEEP_CACHE, 0
-	}
-	return nil, 0, syscall.EISDIR
-}
-
-func (n *nodeWrapper) Create(ctx context.Context, name string, flags uint32, mode uint32) (fs.FileHandle, *fs.Inode, uint32, syscall.Errno) {
-	child := NewFileNode()
-	n.n.children[name] = child
-
-	ino := n.NewInode(ctx, &nodeWrapper{n: child}, fs.StableAttr{Mode: fuse.S_IFREG})
-	n.AddChild(name, ino, false) // <-- this is the key
-	return &fileWrapper{f: child.file}, ino, fuse.FOPEN_KEEP_CACHE, 0
-}
-
-func (n *nodeWrapper) Mkdir(ctx context.Context, name string, mode uint32, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-	child := NewDirNode()
-	n.n.children[name] = child
-
-	ino := n.NewInode(ctx, &nodeWrapper{n: child}, fs.StableAttr{Mode: fuse.S_IFDIR})
-	n.AddChild(name, ino, false) // <-- attach to parent inode
-	return ino, 0
-}
-
-// Remove file
-func (n *nodeWrapper) Unlink(ctx context.Context, name string) syscall.Errno {
-	delete(n.n.children, name)
-	return 0
-}
-
-// Remove directory
-func (n *nodeWrapper) Rmdir(ctx context.Context, name string) syscall.Errno {
-	delete(n.n.children, name)
-	return 0
-}
-
-// Set attributes (truncate)
-func (n *nodeWrapper) Setattr(ctx context.Context, f fs.FileHandle, in *fuse.SetAttrIn, out *fuse.AttrOut) syscall.Errno {
-	if n.n.file == nil {
-		return syscall.EPERM
-	}
-	if int(in.Size) != n.n.file.Size() {
-		n.n.file.Truncate(int(in.Size))
-		out.Size = in.Size
-	}
-	return 0
-}
-
-// --- File handle wrapper ---
-type fileWrapper struct {
-	fs.FileHandle
-	f *MemFile
-}
-
-func (f *fileWrapper) Read(ctx context.Context, dest []byte, off int64) (fuse.ReadResult, syscall.Errno) {
-	n := f.f.Read(int(off), dest)
-	return fuse.ReadResultData(dest[:n]), 0
-}
-
-func (f *fileWrapper) Write(ctx context.Context, data []byte, off int64) (uint32, syscall.Errno) {
-	n := f.f.Write(int(off), data)
-	return uint32(n), 0
-}
-
-func (f *fileWrapper) Flush(ctx context.Context) syscall.Errno               { return 0 }
-func (f *fileWrapper) Fsync(ctx context.Context, flags uint32) syscall.Errno { return 0 }
-func (f *fileWrapper) Release(ctx context.Context) syscall.Errno             { return 0 }
-
-// --- Mount ---
 func main() {
-	root := NewDirNode()
-	rootInode := &nodeWrapper{n: root}
+	flag.Usage = usage
+	flag.Parse()
 
-	mnt := "tmp"
-	_ = os.MkdirAll(mnt, 0755)
-
-	zeroDur := time.Duration(0)
-	opts := &fs.Options{
-		MountOptions: fuse.MountOptions{
-			Debug: true,
-		},
-		EntryTimeout: &zeroDur,
-		AttrTimeout:  &zeroDur,
+	if flag.NArg() != 1 {
+		usage()
+		os.Exit(2)
 	}
+	mountpoint := flag.Arg(0)
 
-	server, err := fs.Mount(mnt, rootInode, opts)
+	c, err := fuse.Mount(
+		mountpoint,
+		fuse.FSName("helloworld"),
+		fuse.Subtype("hellofs"),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Mounted at", mnt)
-	server.Wait()
+	defer c.Close()
+
+	err = fs.Serve(c, FS{})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+// FS implements the hello world file system.
+type FS struct{}
+
+func (FS) Root() (fs.Node, error) {
+	return Dir{}, nil
+}
+
+// Dir implements both Node and Handle for the root directory.
+type Dir struct{}
+
+func (Dir) Attr(ctx context.Context, a *fuse.Attr) error {
+	a.Inode = 1
+	a.Mode = os.ModeDir | 0o555
+	return nil
+}
+
+func (Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
+	if name == "hello" {
+		return File{}, nil
+	}
+	return nil, syscall.ENOENT
+}
+
+var dirDirs = []fuse.Dirent{
+	{Inode: 2, Name: "hello", Type: fuse.DT_File},
+}
+
+func (Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
+	return dirDirs, nil
+}
+
+// File implements both Node and Handle for the hello file.
+type File struct{}
+
+const greeting = "hello, world\n"
+
+func (File) Attr(ctx context.Context, a *fuse.Attr) error {
+	a.Inode = 2
+	a.Mode = 0o444
+	a.Size = uint64(len(greeting))
+	return nil
+}
+
+func (File) ReadAll(ctx context.Context) ([]byte, error) {
+	return []byte(greeting), nil
 }
