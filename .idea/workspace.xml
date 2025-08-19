@@ -5,8 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b16f107d-c96f-4e25-8395-7b2db2a7446a" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/pkg/vfs/util.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pkg/vfs/vfs.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmd/fuse_example/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/fuse_example/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmd/test/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/test/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/fuse_util/node/node.go" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,6 +39,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "DefaultGoTemplateProperty": "Go File",
+    "Go Build.go build github.com/fbundle/go_util/cmd/test.executor": "Run",
     "Go Build.go build go_util/cmd/test.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.GoLinterPluginOnboarding": "true",
@@ -61,7 +65,16 @@
       <recent name="$PROJECT_DIR$/pkg/persistent/internal" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Go Build.go build github.com/fbundle/go_util/cmd/test">
+    <configuration name="go build github.com/fbundle/go_util/cmd/test" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="go_util" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="github.com/fbundle/go_util/cmd/test" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$/cmd/test/main.go" />
+      <method v="2" />
+    </configuration>
     <configuration name="go build go_util/cmd/test" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
       <module name="go_util" />
       <working_directory value="$PROJECT_DIR$" />
@@ -73,6 +86,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Go Build.go build github.com/fbundle/go_util/cmd/test" />
         <item itemvalue="Go Build.go build go_util/cmd/test" />
       </list>
     </recent_temporary>
