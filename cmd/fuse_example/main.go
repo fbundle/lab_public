@@ -1,94 +1,396 @@
-// Hellofs implements a simple "hello world" file system.
+// Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
 	"context"
 	"flag"
-	"fmt"
+	"io"
 	"log"
 	"os"
-	"syscall"
+	"strings"
 
-	"bazil.org/fuse"
-	"bazil.org/fuse/fs"
-	_ "bazil.org/fuse/fs/fstestutil"
+	"github.com/jacobsa/fuse"
+	"github.com/jacobsa/fuse/fuseops"
+	"github.com/jacobsa/fuse/fuseutil"
+	"github.com/jacobsa/fuse/samples/hellofs"
+	"github.com/jacobsa/timeutil"
 )
 
-func usage() {
-	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "  %s MOUNTPOINT\n", os.Args[0])
-	flag.PrintDefaults()
-}
+var fType = flag.String("type", "", "The name of the samples/ sub-dir.")
+var fMountPoint = flag.String("mount_point", "", "Path to mount point.")
+var fReadyFile = flag.Uint64("ready_file", 0, "FD to signal when ready.")
+
+var fReadOnly = flag.Bool("read_only", false, "Mount in read-only mode.")
+var fDebug = flag.Bool("debug", false, "Enable debug logging.")
 
 func main() {
-	flag.Usage = usage
 	flag.Parse()
 
-	if flag.NArg() != 1 {
-		usage()
-		os.Exit(2)
-	}
-	mountpoint := flag.Arg(0)
-
-	c, err := fuse.Mount(
-		mountpoint,
-		fuse.FSName("helloworld"),
-		fuse.Subtype("hellofs"),
-	)
+	// Create an appropriate file system.
+	server, err := hellofs.NewHelloFS(timeutil.RealClock())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("makeFS: %v", err)
 	}
-	defer c.Close()
 
-	err = fs.Serve(c, FS{})
+	// Mount the file system.
+	if *fMountPoint == "" {
+		log.Fatalf("You must set --mount_point.")
+	}
+
+	cfg := &fuse.MountConfig{
+		ReadOnly: *fReadOnly,
+		FuseImpl: fuse.FUSEImplMacFUSE,
+	}
+
+	if *fDebug {
+		cfg.DebugLogger = log.New(os.Stderr, "fuse: ", 0)
+	}
+
+	mfs, err := fuse.Mount(*fMountPoint, server, cfg)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Mount: %v", err)
+	}
+
+	// Wait for it to be unmounted.
+	if err = mfs.Join(context.Background()); err != nil {
+		log.Fatalf("Join: %v", err)
 	}
 }
 
-// FS implements the hello world file system.
-type FS struct{}
+// Create a file system with a fixed structure that looks like this:
+//
+//	hello
+//	dir/
+//	    world
+//
+// Each file contains the string "Hello, world!".
+func NewHelloFS(clock timeutil.Clock) (fuse.Server, error) {
+	fs := &helloFS{
+		Clock: clock,
+	}
 
-func (FS) Root() (fs.Node, error) {
-	return Dir{}, nil
+	return fuseutil.NewFileSystemServer(fs), nil
 }
 
-// Dir implements both Node and Handle for the root directory.
-type Dir struct{}
+type helloFS struct {
+	fuseutil.NotImplementedFileSystem
 
-func (Dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Inode = 1
-	a.Mode = os.ModeDir | 0o555
+	Clock timeutil.Clock
+}
+
+const (
+	rootInode fuseops.InodeID = fuseops.RootInodeID + iota
+	helloInode
+	dirInode
+	worldInode
+)
+
+type inodeInfo struct {
+	attributes fuseops.InodeAttributes
+
+	// File or directory?
+	dir bool
+
+	// For directories, children.
+	children []fuseutil.Dirent
+
+	// For directories, childrenPlus.
+	childrenPlus []fuseutil.DirentPlus
+}
+
+// We have a fixed directory structure.
+var gInodeInfo = map[fuseops.InodeID]inodeInfo{
+	// root
+	rootInode: inodeInfo{
+		attributes: fuseops.InodeAttributes{
+			Nlink: 1,
+			Mode:  0555 | os.ModeDir,
+		},
+		dir: true,
+		children: []fuseutil.Dirent{
+			fuseutil.Dirent{
+				Offset: 1,
+				Inode:  helloInode,
+				Name:   "hello",
+				Type:   fuseutil.DT_File,
+			},
+			fuseutil.Dirent{
+				Offset: 2,
+				Inode:  dirInode,
+				Name:   "dir",
+				Type:   fuseutil.DT_Directory,
+			},
+		},
+		childrenPlus: []fuseutil.DirentPlus{
+			fuseutil.DirentPlus{
+				Dirent: fuseutil.Dirent{
+					Offset: 1,
+					Inode:  helloInode,
+					Name:   "hello",
+					Type:   fuseutil.DT_File,
+				},
+				Entry: fuseops.ChildInodeEntry{
+					Child: helloInode,
+					Attributes: fuseops.InodeAttributes{
+						Nlink: 1,
+						Mode:  0444,
+						Size:  uint64(len("Hello, world!")),
+					},
+				},
+			},
+			fuseutil.DirentPlus{
+				Dirent: fuseutil.Dirent{
+					Offset: 2,
+					Inode:  dirInode,
+					Name:   "dir",
+					Type:   fuseutil.DT_Directory,
+				},
+				Entry: fuseops.ChildInodeEntry{
+					Child: dirInode,
+					Attributes: fuseops.InodeAttributes{
+						Nlink: 1,
+						Mode:  0555 | os.ModeDir,
+					},
+				},
+			},
+		},
+	},
+
+	// hello
+	helloInode: inodeInfo{
+		attributes: fuseops.InodeAttributes{
+			Nlink: 1,
+			Mode:  0444,
+			Size:  uint64(len("Hello, world!")),
+		},
+	},
+
+	// dir
+	dirInode: inodeInfo{
+		attributes: fuseops.InodeAttributes{
+			Nlink: 1,
+			Mode:  0555 | os.ModeDir,
+		},
+		dir: true,
+		children: []fuseutil.Dirent{
+			fuseutil.Dirent{
+				Offset: 1,
+				Inode:  worldInode,
+				Name:   "world",
+				Type:   fuseutil.DT_File,
+			},
+		},
+		childrenPlus: []fuseutil.DirentPlus{
+			fuseutil.DirentPlus{
+				Dirent: fuseutil.Dirent{
+					Offset: 1,
+					Inode:  worldInode,
+					Name:   "world",
+					Type:   fuseutil.DT_File,
+				},
+				Entry: fuseops.ChildInodeEntry{
+					Child: worldInode,
+					Attributes: fuseops.InodeAttributes{
+						Nlink: 1,
+						Mode:  0444,
+						Size:  uint64(len("Hello, world!")),
+					},
+				},
+			},
+		},
+	},
+
+	// world
+	worldInode: inodeInfo{
+		attributes: fuseops.InodeAttributes{
+			Nlink: 1,
+			Mode:  0444,
+			Size:  uint64(len("Hello, world!")),
+		},
+	},
+}
+
+func findChildInode(
+	name string,
+	children []fuseutil.Dirent) (fuseops.InodeID, error) {
+	for _, e := range children {
+		if e.Name == name {
+			return e.Inode, nil
+		}
+	}
+
+	return 0, fuse.ENOENT
+}
+
+func (fs *helloFS) patchAttributes(
+	attr *fuseops.InodeAttributes) {
+	now := fs.Clock.Now()
+	attr.Atime = now
+	attr.Mtime = now
+	attr.Crtime = now
+}
+
+func (fs *helloFS) StatFS(
+	ctx context.Context,
+	op *fuseops.StatFSOp) error {
 	return nil
 }
 
-func (Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
-	if name == "hello" {
-		return File{}, nil
+func (fs *helloFS) LookUpInode(
+	ctx context.Context,
+	op *fuseops.LookUpInodeOp) error {
+	// Find the info for the parent.
+	parentInfo, ok := gInodeInfo[op.Parent]
+	if !ok {
+		return fuse.ENOENT
 	}
-	return nil, syscall.ENOENT
-}
 
-var dirDirs = []fuse.Dirent{
-	{Inode: 2, Name: "hello", Type: fuse.DT_File},
-}
+	// Find the child within the parent.
+	childInode, err := findChildInode(op.Name, parentInfo.children)
+	if err != nil {
+		return err
+	}
 
-func (Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	return dirDirs, nil
-}
+	// Copy over information.
+	op.Entry.Child = childInode
+	op.Entry.Attributes = gInodeInfo[childInode].attributes
 
-// File implements both Node and Handle for the hello file.
-type File struct{}
+	// Patch attributes.
+	fs.patchAttributes(&op.Entry.Attributes)
 
-const greeting = "hello, world\n"
-
-func (File) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Inode = 2
-	a.Mode = 0o444
-	a.Size = uint64(len(greeting))
 	return nil
 }
 
-func (File) ReadAll(ctx context.Context) ([]byte, error) {
-	return []byte(greeting), nil
+func (fs *helloFS) GetInodeAttributes(
+	ctx context.Context,
+	op *fuseops.GetInodeAttributesOp) error {
+	// Find the info for this inode.
+	info, ok := gInodeInfo[op.Inode]
+	if !ok {
+		return fuse.ENOENT
+	}
+
+	// Copy over its attributes.
+	op.Attributes = info.attributes
+
+	// Patch attributes.
+	fs.patchAttributes(&op.Attributes)
+
+	return nil
+}
+
+func (fs *helloFS) OpenDir(
+	ctx context.Context,
+	op *fuseops.OpenDirOp) error {
+	// Allow opening any directory.
+	return nil
+}
+
+func (fs *helloFS) ReadDir(
+	ctx context.Context,
+	op *fuseops.ReadDirOp) error {
+	// Find the info for this inode.
+	info, ok := gInodeInfo[op.Inode]
+	if !ok {
+		return fuse.ENOENT
+	}
+
+	if !info.dir {
+		return fuse.EIO
+	}
+
+	entries := info.children
+
+	// Grab the range of interest.
+	if op.Offset > fuseops.DirOffset(len(entries)) {
+		return nil
+	}
+
+	entries = entries[op.Offset:]
+
+	// Resume at the specified offset into the array.
+	for _, e := range entries {
+		n := fuseutil.WriteDirent(op.Dst[op.BytesRead:], e)
+		if n == 0 {
+			break
+		}
+
+		op.BytesRead += n
+	}
+
+	return nil
+}
+
+func (fs *helloFS) ReadDirPlus(
+	ctx context.Context,
+	op *fuseops.ReadDirPlusOp) error {
+	// Find the info for this inode.
+	info, ok := gInodeInfo[op.Inode]
+	if !ok {
+		return fuse.ENOENT
+	}
+
+	if !info.dir {
+		return fuse.EIO
+	}
+
+	entriesPlus := info.childrenPlus
+
+	// Grab the range of interest.
+	if op.Offset > fuseops.DirOffset(len(entriesPlus)) {
+		return nil
+	}
+
+	entriesPlus = entriesPlus[op.Offset:]
+
+	// Resume at the specified offset into the array.
+	for _, e := range entriesPlus {
+		entryPlus := e
+		fs.patchAttributes(&entryPlus.Entry.Attributes)
+		n := fuseutil.WriteDirentPlus(op.Dst[op.BytesRead:], entryPlus)
+		if n == 0 {
+			break
+		}
+
+		op.BytesRead += n
+	}
+
+	return nil
+}
+
+func (fs *helloFS) OpenFile(
+	ctx context.Context,
+	op *fuseops.OpenFileOp) error {
+	// Allow opening any file.
+	return nil
+}
+
+func (fs *helloFS) ReadFile(
+	ctx context.Context,
+	op *fuseops.ReadFileOp) error {
+	// Let io.ReaderAt deal with the semantics.
+	reader := strings.NewReader("Hello, world!")
+
+	var err error
+	op.BytesRead, err = reader.ReadAt(op.Dst, op.Offset)
+
+	// Special case: FUSE doesn't expect us to return io.EOF.
+	if err == io.EOF {
+		return nil
+	}
+
+	return err
 }
