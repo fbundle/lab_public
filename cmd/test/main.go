@@ -344,27 +344,35 @@ func testPersistentVector() {
 
 func testVFS() {
 	fs := vfs.NewMemFS()
-	a, err := fs.Mkdir("a")
+	a, err := fs.MkChild("a")
 	if err != nil {
 		panic(err)
 	}
-	b, err := fs.Mkdir("b")
+	b, err := fs.MkChild("b")
 	if err != nil {
 		panic(err)
 	}
-	a_c, err := a.Mkdir("c")
+	a_c, err := a.MkChild("c")
 	if err != nil {
 		panic(err)
 	}
-	a_c_1, err := a_c.Create("1")
+	a_c_1, err := a_c.MkChild("1")
 	if err != nil {
 		panic(err)
 	}
-	b_2, err := b.Create("2")
+	_, err = a_c_1.OpenOrCreate()
 	if err != nil {
 		panic(err)
 	}
-	err = a_c.Unlink("1")
+	b_2, err := b.MkChild("2")
+	if err != nil {
+		panic(err)
+	}
+	_, err = b_2.OpenOrCreate()
+	if err != nil {
+		panic(err)
+	}
+	err = a_c_1.Delete()
 	if err != nil {
 		panic(err)
 	}

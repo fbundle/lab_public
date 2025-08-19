@@ -17,15 +17,13 @@ type Node interface {
 	Iter(yield func(name string, child Node) bool)
 	LookUp(name string) (Node, bool)
 
-	Mkdir(name string) (Node, error)
-	Rmdir(name string) error
+	MkChild(name string) (Node, error)
+	RmChild(name string) error
 
-	Create(name string) (Node, error)
-	Unlink(name string) error
+	OpenOrCreate() (File, error)
+	Delete() error
 
-	Open(name string) (File, error)
-
-	File() (File, bool)
+	File() File
 }
 
 func Resolve(path []string, node Node) (Node, bool) {
@@ -46,8 +44,8 @@ func Walk(node Node) func(yield func(path []string, node Node) bool) {
 
 func walk(node Node, prefix []string) func(yield func(path []string, node Node) bool) {
 	return func(yield func(path []string, node Node) bool) {
-		_, isFile := node.File()
-		if isFile {
+		file := node.File()
+		if file != nil {
 			if ok := yield(prefix, node); !ok {
 				return
 			}
@@ -65,7 +63,7 @@ func walk(node Node, prefix []string) func(yield func(path []string, node Node) 
 // in-memory file system implementation
 
 func NewMemFS() Node {
-	return newNodeDir()
+	return newNode()
 }
 
 func newMemFile() File {
@@ -110,15 +108,9 @@ func (f *memFile) Close() error {
 	return nil
 }
 
-func newNodeFile(file File) *node {
+func newNode() *node {
 	return &node{
-		file: file,
-	}
-}
-
-func newNodeDir() *node {
-	return &node{
-		children: make(map[string]*node),
+		children: nil,
 	}
 }
 
@@ -128,11 +120,17 @@ type node struct {
 }
 
 func (n *node) LookUp(name string) (Node, bool) {
+	if n.children == nil {
+		return nil, false
+	}
 	child, ok := n.children[name]
 	return child, ok
 }
 
 func (n *node) Iter(yield func(name string, child Node) bool) {
+	if n.children == nil {
+		return
+	}
 	names := make([]string, 0, len(n.children))
 	for k := range n.children {
 		names = append(names, k)
@@ -145,76 +143,46 @@ func (n *node) Iter(yield func(name string, child Node) bool) {
 	}
 }
 
-func (n *node) isFile() bool {
-	return n.file != nil
-}
-
-func (n *node) mkChild(name string, child *node) (Node, error) {
-	if n.isFile() {
-		return nil, errors.New("node is a file")
+func (n *node) MkChild(name string) (Node, error) {
+	if n.children == nil {
+		n.children = make(map[string]*node)
 	}
 	if _, ok := n.children[name]; ok {
 		return nil, errors.New("child exists")
 	}
+	child := newNode()
 	n.children[name] = child
 	return child, nil
 }
 
-func (n *node) rmChildIf(name string, cond func(child *node) error) error {
-	if n.isFile() {
-		return errors.New("node is a file")
-	}
+func (n *node) RmChild(name string) error {
 	if _, ok := n.children[name]; !ok {
 		return errors.New("child not exists")
 	}
-	child := n.children[name]
-	if err := cond(child); err != nil {
-		return err
-	}
 	delete(n.children, name)
+
+	if len(n.children) == 0 {
+		n.children = nil
+	}
 	return nil
 }
 
-func (n *node) Mkdir(name string) (Node, error) {
-	return n.mkChild(name, newNodeDir())
-}
-
-func (n *node) Rmdir(name string) error {
-	return n.rmChildIf(name, func(child *node) error {
-		if child.isFile() {
-			return errors.New("node is a file")
-		}
-		if len(child.children) > 0 {
-			return errors.New("node not empty")
-		}
-		return nil
-	})
-}
-
-func (n *node) Create(name string) (Node, error) {
-	return n.mkChild(name, newNodeFile(newMemFile()))
-}
-
-func (n *node) Unlink(name string) error {
-	return n.rmChildIf(name, func(child *node) error {
-		if !child.isFile() {
-			return errors.New("node is not a file")
-		}
-		return nil
-	})
-}
-
-func (n *node) Open(name string) (File, error) {
-	child, ok := n.children[name]
-	if !ok {
-		return nil, errors.New("child not exists")
+func (n *node) OpenOrCreate() (File, error) {
+	if n.file == nil {
+		n.file = newMemFile()
 	}
-	if !child.isFile() {
-		return nil, errors.New("child is not a file")
-	}
-	return child.file, nil
+	return n.file, nil
 }
 
-func (n *node) File() (File, bool) {
-	return n.file, n.isFile()
+func (n *node) Delete() error {
+	if n.file == nil {
+		return errors.New("file not exists")
+	}
+	file := n.file
+	n.file = nil
+	return file.Close()
+}
+
+func (n *node) File() File {
+	return n.file
 }
