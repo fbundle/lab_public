@@ -63,6 +63,28 @@ func (n *nodeWrapper) Open(ctx context.Context, flags uint32) (fs.FileHandle, ui
 	}
 	return nil, 0, syscall.EISDIR
 }
+func (n *nodeWrapper) Mkdir(ctx context.Context, name string, mode uint32, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
+	// create a new directory Node in your model
+	child := node.NewNode(nil)
+	n.n.Set(name, child)
+
+	stable := fs.StableAttr{Mode: fuse.S_IFDIR}
+	wrapper := &nodeWrapper{n: child}
+	return n.NewInode(ctx, wrapper, stable), 0
+}
+
+func (n *nodeWrapper) Create(ctx context.Context, name string, flags uint32, mode uint32) (fs.FileHandle, *fs.Inode, syscall.Errno) {
+	// create a new file Node in your model
+	child := node.NewNode(node.NewMemFile())
+	n.n.Set(name, child)
+
+	stable := fs.StableAttr{Mode: fuse.S_IFREG}
+	wrapper := &nodeWrapper{n: child}
+	ino := n.NewInode(ctx, wrapper, stable)
+
+	fh := &fileWrapper{f: child.File()}
+	return fh, ino, 0
+}
 
 type fileWrapper struct {
 	fs.FileHandle
