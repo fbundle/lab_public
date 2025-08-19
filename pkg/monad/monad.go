@@ -1,6 +1,6 @@
 package monad
 
-type Iterator[T any] = func() (v T, ok bool)
+type Iterator[T any] = func() (v T, ok bool) // TODO - make Iterator[T] = iter.Seq[T]
 type Monad[T any] func() Iterator[T]
 
 func (m Monad[T]) Slice() []T {
