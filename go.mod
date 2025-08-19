@@ -10,6 +10,9 @@ require (
 
 require (
 	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/hanwen/go-fuse v1.0.0 // indirect
+	github.com/hanwen/go-fuse/v2 v2.8.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
 	gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
