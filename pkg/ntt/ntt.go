@@ -1,7 +1,7 @@
 package ntt
 
 import (
-	"go_util/pkg/vec"
+	"github.com/fbundle/go_util/pkg/vec"
 )
 
 type Block = vec.Vec[uint64]

@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"go_util/pkg/relay"
+	"github.com/fbundle/go_util/pkg/relay"
 )
 
 var listenAddr *string

@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"go_util/pkg/relay"
-	"go_util/pkg/relay/proto/gen/relay_pb"
+	"github.com/fbundle/go_util/pkg/relay"
+	"github.com/fbundle/go_util/pkg/relay/proto/gen/relay_pb"
 	"os"
 	"strings"
 )

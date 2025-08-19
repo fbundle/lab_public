@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"go_util/pkg/relay"
-	"go_util/pkg/rlog"
-	"go_util/pkg/rlog_util/kvstore"
-	"go_util/pkg/rlog_util/transport"
-	"go_util/pkg/uuid"
+	"github.com/fbundle/go_util/pkg/relay"
+	"github.com/fbundle/go_util/pkg/rlog"
+	"github.com/fbundle/go_util/pkg/rlog_util/kvstore"
+	"github.com/fbundle/go_util/pkg/rlog_util/transport"
+	"github.com/fbundle/go_util/pkg/uuid"
 	"gopkg.in/yaml.v2"
 )
 

@@ -1,7 +1,7 @@
 package ntt
 
 import (
-	"go_util/pkg/vend/uint128"
+	"github.com/fbundle/go_util/pkg/vend/uint128"
 )
 
 // p : operations on finite field of order p

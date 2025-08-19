@@ -1,8 +1,8 @@
 package int_ntt
 
 import (
-	"go_util/pkg/ntt"
-	"go_util/pkg/vec"
+	"github.com/fbundle/go_util/pkg/ntt"
+	"github.com/fbundle/go_util/pkg/vec"
 	"strings"
 )
 

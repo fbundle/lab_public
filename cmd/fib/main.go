@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"go_util/pkg/fib"
-	"go_util/pkg/int_ntt"
+	"github.com/fbundle/go_util/pkg/fib"
+	"github.com/fbundle/go_util/pkg/int_ntt"
 	"os"
 	"strconv"
 )

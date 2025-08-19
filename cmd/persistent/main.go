@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go_util/pkg/persistent"
+	"github.com/fbundle/go_util/pkg/persistent"
 )
 
 type Int int

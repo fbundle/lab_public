@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"go_util/pkg/kvstore_client"
+	"github.com/fbundle/go_util/pkg/kvstore_client"
 	"io/ioutil"
 	"os/exec"
 	"strings"

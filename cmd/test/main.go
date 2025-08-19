@@ -3,20 +3,21 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"go_util/pkg/fib"
-	"go_util/pkg/int_ntt"
-	"go_util/pkg/integer"
-	"go_util/pkg/line_slice"
-	"go_util/pkg/monad"
-	"go_util/pkg/padic"
-	"go_util/pkg/persistent/ordered_map"
-	"go_util/pkg/persistent/vector"
-	"go_util/pkg/ring"
-	"go_util/pkg/tup"
-	"go_util/pkg/vec"
 	"math/rand"
 	"os"
 	"strconv"
+
+	"github.com/fbundle/go_util/pkg/fib"
+	"github.com/fbundle/go_util/pkg/int_ntt"
+	"github.com/fbundle/go_util/pkg/integer"
+	"github.com/fbundle/go_util/pkg/line_slice"
+	"github.com/fbundle/go_util/pkg/monad"
+	"github.com/fbundle/go_util/pkg/padic"
+	"github.com/fbundle/go_util/pkg/persistent/ordered_map"
+	"github.com/fbundle/go_util/pkg/persistent/vector"
+	"github.com/fbundle/go_util/pkg/ring"
+	"github.com/fbundle/go_util/pkg/tup"
+	"github.com/fbundle/go_util/pkg/vec"
 )
 
 func testPAdic() {
