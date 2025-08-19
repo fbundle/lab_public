@@ -138,10 +138,7 @@ func main() {
 	var root node.Node = node.NewNode(nil)
 
 	mnt := "tmp"
-	err := os.MkdirAll(mnt, 0755)
-	if err != nil {
-		log.Fatal(err)
-	}
+	_ = os.MkdirAll(mnt, 0755)
 	if err := Mount(root, mnt); err != nil {
 		log.Fatal(err)
 	}
