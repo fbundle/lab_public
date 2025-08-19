@@ -17,10 +17,10 @@ type Node interface {
 	Iter(yield func(name string, child Node) bool)
 	LookUp(name string) (Node, bool)
 
-	Mkdir(name string) error
+	Mkdir(name string) (Node, error)
 	Rmdir(name string) error
 
-	Create(name string) error
+	Create(name string) (Node, error)
 	Unlink(name string) error
 
 	Open(name string) (File, error)
@@ -63,6 +63,10 @@ func walk(node Node, prefix []string) func(yield func(path []string, node Node) 
 }
 
 // in-memory file system implementation
+
+func NewMemFS() Node {
+	return newNodeDir()
+}
 
 func newMemFile() File {
 	return &memFile{
@@ -145,15 +149,15 @@ func (n *node) isFile() bool {
 	return n.file != nil
 }
 
-func (n *node) mkChild(name string, child *node) error {
+func (n *node) mkChild(name string, child *node) (Node, error) {
 	if n.isFile() {
-		return errors.New("node is a file")
+		return nil, errors.New("node is a file")
 	}
 	if _, ok := n.children[name]; ok {
-		return errors.New("child exists")
+		return nil, errors.New("child exists")
 	}
 	n.children[name] = child
-	return nil
+	return child, nil
 }
 
 func (n *node) rmChildIf(name string, cond func(child *node) error) error {
@@ -171,7 +175,7 @@ func (n *node) rmChildIf(name string, cond func(child *node) error) error {
 	return nil
 }
 
-func (n *node) Mkdir(name string) error {
+func (n *node) Mkdir(name string) (Node, error) {
 	return n.mkChild(name, newNodeDir())
 }
 
@@ -187,7 +191,7 @@ func (n *node) Rmdir(name string) error {
 	})
 }
 
-func (n *node) Create(name string) error {
+func (n *node) Create(name string) (Node, error) {
 	return n.mkChild(name, newNodeFile(newMemFile()))
 }
 

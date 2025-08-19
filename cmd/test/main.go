@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/fbundle/go_util/pkg/fib"
 	"github.com/fbundle/go_util/pkg/int_ntt"
@@ -19,6 +18,7 @@ import (
 	"github.com/fbundle/go_util/pkg/ring"
 	"github.com/fbundle/go_util/pkg/tup"
 	"github.com/fbundle/go_util/pkg/vec"
+	"github.com/fbundle/go_util/pkg/vfs"
 )
 
 func testPAdic() {
@@ -341,29 +341,40 @@ func testPersistentVector() {
 
 	}
 }
-func pathConsume(path string) (string, string) {
-	if len(path) > 0 && path[0] == '/' {
-		path = path[1:]
+
+func testVFS() {
+	fs := vfs.NewMemFS()
+	a, err := fs.Mkdir("a")
+	if err != nil {
+		panic(err)
 	}
-	if len(path) > 0 && path[len(path)-1] == '/' {
-		path = path[:len(path)-1]
+	b, err := fs.Mkdir("b")
+	if err != nil {
+		panic(err)
 	}
-	parts := strings.SplitN(path, "/", 2)
-	parts = append(parts, "")
-	return parts[0], parts[1]
-}
-func testPath() {
-	var p = "a/b/c/"
-	var x string
-	for {
-		x, p = pathConsume(p)
-		if len(x) == 0 {
-			break
-		}
-		fmt.Println(x, p)
+	a_c, err := a.Mkdir("c")
+	if err != nil {
+		panic(err)
+	}
+	a_c_1, err := a_c.Create("1")
+	if err != nil {
+		panic(err)
+	}
+	b_2, err := b.Create("2")
+	if err != nil {
+		panic(err)
+	}
+	err = a_c.Unlink("1")
+	if err != nil {
+		panic(err)
+	}
+	_, _ = a_c_1, b_2
+	for path, node := range vfs.Walk(fs) {
+		fmt.Println(path)
+		_ = node
 	}
 }
 
 func main() {
-	testPath()
+	testVFS()
 }
