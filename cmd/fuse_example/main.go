@@ -25,7 +25,6 @@ import (
 	"github.com/jacobsa/fuse"
 	"github.com/jacobsa/fuse/fuseops"
 	"github.com/jacobsa/fuse/fuseutil"
-	"github.com/jacobsa/fuse/samples/hellofs"
 	"github.com/jacobsa/timeutil"
 )
 
@@ -40,7 +39,7 @@ func main() {
 	flag.Parse()
 
 	// Create an appropriate file system.
-	server, err := hellofs.NewHelloFS(timeutil.RealClock())
+	server, err := NewHelloFS(timeutil.RealClock())
 	if err != nil {
 		log.Fatalf("makeFS: %v", err)
 	}
