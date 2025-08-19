@@ -4,13 +4,14 @@ import (
 	"sync"
 
 	"github.com/fbundle/go_util/pkg/sync_util"
+	"github.com/hanwen/go-fuse/v2/fuse"
 )
 
 type File interface {
-	Size() int
 	Read(offset int, buffer []byte) int
 	Write(offset int, buffer []byte) int
 	Truncate(size int)
+	Attr() *fuse.Attr
 }
 
 type Node interface {
@@ -19,23 +20,31 @@ type Node interface {
 	Get(name string) Node
 	Set(name string, child Node)
 	Del(name string)
+	Attr() *fuse.Attr
 }
 
 func NewFile() File {
 	return &file{
 		mu:   sync.RWMutex{},
 		data: nil,
+		attr: &fuse.Attr{
+			Mode: fuse.S_IFREG | 0777,
+		},
 	}
 }
 
 func NewFileNode(file File) Node {
 	return &node{
 		file: file,
+		attr: file.Attr(),
 	}
 }
 func NewDirNode() Node {
 	return &node{
 		children: &sync_util.Map[string, Node]{},
+		attr: &fuse.Attr{
+			Mode: fuse.S_IFDIR | 0777,
+		},
 	}
 }
 
@@ -44,12 +53,13 @@ func NewDirNode() Node {
 type file struct {
 	mu   sync.RWMutex
 	data []byte
+	attr *fuse.Attr
 }
 
-func (f *file) Size() int {
+func (f *file) Attr() *fuse.Attr {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	return len(f.data)
+	return f.attr
 }
 
 func (f *file) Read(offset int, buffer []byte) int {
@@ -63,17 +73,20 @@ func (f *file) Write(offset int, buffer []byte) int {
 	defer f.mu.Unlock()
 	if len(f.data) < offset+len(buffer) {
 		f.data = append(f.data, make([]byte, offset+len(buffer)-len(f.data))...)
+		f.attr.Size = uint64(len(f.data))
 	}
 	return copy(f.data[offset:], buffer)
 }
 
 func (f *file) Truncate(size int) {
 	f.data = f.data[:size]
+	f.attr.Size = uint64(len(f.data))
 }
 
 type node struct {
 	file     File
 	children *sync_util.Map[string, Node]
+	attr     *fuse.Attr
 }
 
 func (n *node) File() File {
@@ -109,4 +122,7 @@ func (n *node) Del(name string) {
 		return
 	}
 	n.children.Delete(name)
+}
+func (n *node) Attr() *fuse.Attr {
+	return n.attr
 }

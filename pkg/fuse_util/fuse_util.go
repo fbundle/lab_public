@@ -1,6 +1,9 @@
 package fuse_util
 
 // code from https://github.com/hanwen/go-fuse/blob/c4c5426c1bc1388683d9727ae435aa6b50f7c8d9/fuse/nodefs/memnode.go#L1
+// Copyright 2016 the Go-FUSE Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 import (
 	"fmt"
@@ -31,12 +34,28 @@ type memNodeFs struct {
 	nextFree int
 }
 
+func (fs *memNodeFs) String() string {
+	return fmt.Sprintf("MemNodeFs(%s)", fs.backingStorePrefix)
+}
+
+func (fs *memNodeFs) Root() nodefs.Node {
+	return fs.root
+}
+
+func (fs *memNodeFs) SetDebug(bool) {
+}
+
+func (fs *memNodeFs) OnMount(*nodefs.FileSystemConnector) {
+}
+
+func (fs *memNodeFs) OnUnmount() {
+}
+
 func (fs *memNodeFs) newNode() *memNode {
 	fs.mutex.Lock()
 	id := fs.nextFree
 	fs.nextFree++
 	fs.mutex.Unlock()
-
 	n := &memNode{
 		Node: nodefs.NewDefaultNode(),
 		fs:   fs,
@@ -51,36 +70,6 @@ func (fs *memNodeFs) newNode() *memNode {
 func (fs *memNodeFs) Filename(n *nodefs.Inode) string {
 	mn := n.Node().(*memNode)
 	return mn.filename()
-}
-
-type memNodeFile struct {
-	nodefs.File
-	node *memNode
-}
-
-func (n *memNodeFile) String() string {
-	return fmt.Sprintf("memNodeFile(%s)", n.File.String())
-}
-
-func (n *memNodeFile) InnerFile() nodefs.File {
-	return n.File
-}
-
-func (n *memNodeFile) Flush() fuse.Status {
-	code := n.File.Flush()
-
-	if !code.Ok() {
-		return code
-	}
-
-	st := syscall.Stat_t{}
-	err := syscall.Stat(n.node.filename(), &st)
-
-	n.node.mu.Lock()
-	defer n.node.mu.Unlock()
-	n.node.info.Size = uint64(st.Size)
-	n.node.info.Blocks = uint64(st.Blocks)
-	return fuse.ToStatus(err)
 }
 
 type memNode struct {
@@ -160,6 +149,36 @@ func (n *memNode) Create(name string, flags uint32, mode uint32, context *fuse.C
 	}
 	n.Inode().NewChild(name, false, ch)
 	return ch.newFile(f), ch.Inode(), fuse.OK
+}
+
+type memNodeFile struct {
+	nodefs.File
+	node *memNode
+}
+
+func (n *memNodeFile) String() string {
+	return fmt.Sprintf("memNodeFile(%s)", n.File.String())
+}
+
+func (n *memNodeFile) InnerFile() nodefs.File {
+	return n.File
+}
+
+func (n *memNodeFile) Flush() fuse.Status {
+	code := n.File.Flush()
+
+	if !code.Ok() {
+		return code
+	}
+
+	st := syscall.Stat_t{}
+	err := syscall.Stat(n.node.filename(), &st)
+
+	n.node.mu.Lock()
+	defer n.node.mu.Unlock()
+	n.node.info.Size = uint64(st.Size)
+	n.node.info.Blocks = uint64(st.Blocks)
+	return fuse.ToStatus(err)
 }
 
 func (n *memNode) newFile(f *os.File) nodefs.File {
