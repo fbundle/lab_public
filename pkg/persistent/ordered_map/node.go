@@ -8,23 +8,25 @@ type Comparable[T any] interface {
 	Cmp(T) int
 }
 
-// node - implementation of ordered map using weight balance tree
+// implement persistent ordered map using weight balanced tree
+
 type node[T Comparable[T]] struct {
-	weight uint
-	height uint
-	entry  T
-	left   *node[T]
-	right  *node[T]
+	weight uint64
+	// height uint64
+	entry T
+	left  *node[T]
+	right *node[T]
 }
 
-func height[T Comparable[T]](n *node[T]) uint {
+func height[T Comparable[T]](n *node[T]) uint64 {
 	if n == nil {
 		return 0
 	}
-	return n.height
+	// return n.height
+	return 0
 }
 
-func weight[T Comparable[T]](n *node[T]) uint {
+func weight[T Comparable[T]](n *node[T]) uint64 {
 	if n == nil {
 		return 0
 	}
@@ -33,10 +35,10 @@ func weight[T Comparable[T]](n *node[T]) uint {
 func makeNode[T Comparable[T]](entry T, left *node[T], right *node[T]) *node[T] {
 	return &node[T]{
 		weight: 1 + weight(left) + weight(right),
-		height: 1 + max(height(left), height(right)),
-		entry:  entry,
-		left:   left,
-		right:  right,
+		// height: 1 + max(height(left), height(right)),
+		entry: entry,
+		left:  left,
+		right: right,
 	}
 }
 
@@ -55,15 +57,19 @@ func get[T Comparable[T]](n *node[T], entryIn T) (entryOut T, ok bool) {
 	}
 }
 
-func iter[T Comparable[T]](n *node[T], f func(k T) bool) {
+func iter[T Comparable[T]](n *node[T], f func(entryOut T) bool) bool {
 	if n == nil {
-		return
+		return true // continue
 	}
-	iter(n.left, f)
-	if !f(n.entry) {
-		return
+	ok := iter(n.left, f)
+	if !ok {
+		return false
 	}
-	iter(n.right, f)
+	ok = f(n.entry)
+	if !ok {
+		return false
+	}
+	return iter(n.right, f)
 }
 
 func balance[T Comparable[T]](n *node[T]) *node[T] {
