@@ -1,4 +1,4 @@
-module go_util
+module github.com/fbundle/go_util
 
 go 1.24.5
 

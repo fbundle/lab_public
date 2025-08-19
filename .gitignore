@@ -27,3 +27,4 @@ go.work.sum
 # user defined
 main
 tmp
+chat.txt
