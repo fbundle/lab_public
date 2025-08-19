@@ -74,6 +74,36 @@ func (fs *memNodeFs) Filename(n *nodefs.Inode) string {
 	return mn.filename()
 }
 
+type memNodeFile struct {
+	nodefs.File
+	node *memNode
+}
+
+func (n *memNodeFile) String() string {
+	return fmt.Sprintf("memNodeFile(%s)", n.File.String())
+}
+
+func (n *memNodeFile) InnerFile() nodefs.File {
+	return n.File
+}
+
+func (n *memNodeFile) Flush() fuse.Status {
+	code := n.File.Flush()
+
+	if !code.Ok() {
+		return code
+	}
+
+	st := syscall.Stat_t{}
+	err := syscall.Stat(n.node.filename(), &st)
+
+	n.node.mu.Lock()
+	defer n.node.mu.Unlock()
+	n.node.info.Size = uint64(st.Size)
+	n.node.info.Blocks = uint64(st.Blocks)
+	return fuse.ToStatus(err)
+}
+
 type memNode struct {
 	nodefs.Node
 	fs *memNodeFs
@@ -151,36 +181,6 @@ func (n *memNode) Create(name string, flags uint32, mode uint32, context *fuse.C
 	}
 	n.Inode().NewChild(name, false, ch)
 	return ch.newFile(f), ch.Inode(), fuse.OK
-}
-
-type memNodeFile struct {
-	nodefs.File
-	node *memNode
-}
-
-func (n *memNodeFile) String() string {
-	return fmt.Sprintf("memNodeFile(%s)", n.File.String())
-}
-
-func (n *memNodeFile) InnerFile() nodefs.File {
-	return n.File
-}
-
-func (n *memNodeFile) Flush() fuse.Status {
-	code := n.File.Flush()
-
-	if !code.Ok() {
-		return code
-	}
-
-	st := syscall.Stat_t{}
-	err := syscall.Stat(n.node.filename(), &st)
-
-	n.node.mu.Lock()
-	defer n.node.mu.Unlock()
-	n.node.info.Size = uint64(st.Size)
-	n.node.info.Blocks = uint64(st.Blocks)
-	return fuse.ToStatus(err)
 }
 
 func (n *memNode) newFile(f *os.File) nodefs.File {
