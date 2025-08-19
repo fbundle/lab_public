@@ -24,6 +24,42 @@ type Node interface {
 	Unlink(name string) error
 
 	Open(name string) (File, error)
+
+	File() (File, bool)
+}
+
+func Resolve(path []string, node Node) (Node, bool) {
+	if len(path) == 0 {
+		return node, true
+	}
+	name := path[0]
+	child, ok := node.LookUp(name)
+	if !ok {
+		return child, false
+	}
+	return Resolve(path[1:], child)
+}
+
+func Walk(node Node) func(yield func(path []string, node Node) bool) {
+	return walk(node, nil)
+}
+
+func walk(node Node, prefix []string) func(yield func(path []string, node Node) bool) {
+	return func(yield func(path []string, node Node) bool) {
+		_, isFile := node.File()
+		if isFile {
+			if ok := yield(prefix, node); !ok {
+				return
+			}
+		}
+		for name, child := range node.Iter {
+			for path, node := range walk(child, append(prefix, name)) {
+				if ok := yield(path, node); !ok {
+					return
+				}
+			}
+		}
+	}
 }
 
 // in-memory file system implementation
@@ -173,4 +209,8 @@ func (n *node) Open(name string) (File, error) {
 		return nil, errors.New("child is not a file")
 	}
 	return child.file, nil
+}
+
+func (n *node) File() (File, bool) {
+	return n.file, n.isFile()
 }
