@@ -14,8 +14,8 @@ type File interface {
 
 type Node interface {
 	Iter(yield func(name string, child Node) bool)
-	LookUp(name string) (Node, bool)
 
+	FnChild(name string) (Node, bool)
 	MkChild(name string) (Node, error)
 	RmChild(name string) error
 
@@ -30,7 +30,7 @@ func Resolve(path []string, node Node) (Node, bool) {
 		return node, true
 	}
 	name := path[0]
-	child, ok := node.LookUp(name)
+	child, ok := node.FnChild(name)
 	if !ok {
 		return child, false
 	}
@@ -115,7 +115,7 @@ type node struct {
 	children map[string]*node
 }
 
-func (n *node) LookUp(name string) (Node, bool) {
+func (n *node) FnChild(name string) (Node, bool) {
 	if n.children == nil {
 		return nil, false
 	}
