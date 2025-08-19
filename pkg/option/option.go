@@ -40,11 +40,13 @@ func Match[T1 any, T2 any](o Option[T1], f func(T1) T2, g func() T2) T2 {
 
 func (o Option[T]) Monad() monad.Monad[T] {
 	consume := false
-	return func() (v T, ok bool) {
-		if consume {
-			return o.value, false
+	return func() func() (v T, ok bool) {
+		return func() (v T, ok bool) {
+			if consume {
+				return o.value, false
+			}
+			consume = true
+			return o.value, true
 		}
-		consume = true
-		return o.value, true
 	}
 }
