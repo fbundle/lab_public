@@ -73,7 +73,7 @@ func (n *nodeWrapper) Mkdir(ctx context.Context, name string, mode uint32, out *
 	return n.NewInode(ctx, wrapper, stable), 0
 }
 
-func (n *nodeWrapper) Create(ctx context.Context, name string, flags uint32, mode uint32) (fs.FileHandle, *fs.Inode, syscall.Errno) {
+func (n *nodeWrapper) Create(ctx context.Context, name string, flags uint32, mode uint32, out *fuse.EntryOut) (inode *fs.Inode, fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
 	// create a new file Node in your model
 	child := node.NewNode(node.NewMemFile())
 	n.n.Set(name, child)
@@ -82,8 +82,14 @@ func (n *nodeWrapper) Create(ctx context.Context, name string, flags uint32, mod
 	wrapper := &nodeWrapper{n: child}
 	ino := n.NewInode(ctx, wrapper, stable)
 
-	fh := &fileWrapper{f: child.File()}
-	return fh, ino, 0
+	fh = &fileWrapper{f: child.File()}
+	return ino, fh, fuse.FOPEN_KEEP_CACHE, 0
+}
+
+// Make sure nodeWrapper implements NodeCreater and NodeMkdirer
+func (n *nodeWrapper) EnsureInterfaces() {
+	var _ fs.NodeCreater = n
+	var _ fs.NodeMkdirer = n
 }
 
 type fileWrapper struct {
