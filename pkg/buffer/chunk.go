@@ -4,7 +4,6 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"telescope/util/side_channel"
 )
 
 // TODO - experimental for core.text.Line
@@ -38,7 +37,7 @@ func NewChunkFromData[T any](data T, cancel func()) *Chunk[T] {
 
 func NewChunkFromOffset[T any](offset int64) *Chunk[T] {
 	if offset < 0 {
-		side_channel.Panic("invalid offset")
+		panic("invalid offset")
 	}
 	return &Chunk[T]{
 		raw: offset,
@@ -60,7 +59,7 @@ func (l *Chunk[T]) Repr(reader Reader, delim byte, unmarshal func([]byte) T) T {
 	} else {
 		buf, ok := pool.Load(i)
 		if !ok {
-			side_channel.Panic("invalid line")
+			panic("invalid line")
 		}
 		return buf.(T)
 	}

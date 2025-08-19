@@ -219,7 +219,7 @@ func testLineSlice() {
 }
 
 func testPersistentOrderedMap() {
-	w := ordered_map.NewOrderedMap[int, struct{}]()
+	w := ordered_map.EmptyOrderedMap[int, struct{}]()
 	fmt.Println(w.Repr())
 	w = w.
 		Set(10, struct{}{}).
@@ -240,8 +240,8 @@ func testPersistentOrderedMap() {
 
 	// stress test
 	type WH struct {
-		Weight uint `json:"weight"`
-		Height uint `json:"height"`
+		Weight int `json:"weight"`
+		Height int `json:"height"`
 	}
 	statistics := make([]WH, 0)
 	n := 100000
@@ -263,8 +263,8 @@ func testPersistentOrderedMap() {
 		}
 		// write statistics
 		statistics = append(statistics, WH{
-			Weight: w.Weight(),
-			Height: w.Height(),
+			Weight: w.Len(),
+			Height: 0,
 		})
 	}
 	b, err := json.Marshal(statistics)
@@ -310,24 +310,24 @@ func testPersistentVector() {
 	}
 
 	type WH struct {
-		Weight uint `json:"weight"`
-		Height uint `json:"height"`
+		Weight int `json:"weight"`
+		Height int `json:"height"`
 	}
 	statistics := make([]WH, 0)
 	n := 100000
 
 	for i := 0; i < n; i++ {
 		x := rand.Int()
-		v = v.Ins(v.Weight(), x)
+		v = v.Ins(v.Len(), x)
 		if rand.Float32() < 0.2 {
 			// 20% remove one of the entry
-			j := uint(rand.Intn(int(v.Weight())))
+			j := int(rand.Intn(int(v.Len())))
 			v = v.Del(j)
 		}
 		// write statistics
 		statistics = append(statistics, WH{
-			Weight: v.Weight(),
-			Height: v.Height(),
+			Weight: v.Len(),
+			Height: v.Len(),
 		})
 	}
 	b, err := json.Marshal(statistics)
