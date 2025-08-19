@@ -69,6 +69,11 @@ func (n *fsNode) Rename(oldName string, newParent nodefs.Node, newName string, c
 	return fuse.OK
 }
 
+func (n *fsNode) Open(flags uint32, context *fuse.Context) (ifile nodefs.File, code fuse.Status) {
+	file := n.node.File()
+	return newFsFile(file), fuse.OK
+}
+
 func (n *fsNode) Create(name string, flags uint32, mode uint32, context *fuse.Context) (ifile nodefs.File, inode *nodefs.Inode, code fuse.Status) {
 	file := node.NewFile()
 	child := newFsNode(node.NewFileNode(file))
