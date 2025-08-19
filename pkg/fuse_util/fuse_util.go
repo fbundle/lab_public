@@ -1,5 +1,7 @@
 package fuse_util
 
+// code from https://github.com/hanwen/go-fuse/blob/c4c5426c1bc1388683d9727ae435aa6b50f7c8d9/fuse/nodefs/memnode.go#L1
+
 import (
 	"fmt"
 	"os"
