@@ -181,7 +181,7 @@ func main() {
 	root := NewDirNode()
 	rootInode := &nodeWrapper{n: root}
 
-	mnt := "mnt"
+	mnt := "tmp"
 	_ = os.MkdirAll(mnt, 0755)
 
 	zeroDur := time.Duration(0)
