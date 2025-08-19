@@ -43,30 +43,35 @@ func init() {
 }
 
 func TestTimer_Put(t *testing.T) {
-	q := time_queue.New()
+	q := time_queue.New[*record]()
 	go func() {
 		time.Sleep(time.Until(zero))
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
-		for _, record := range recordList {
-			q.Put(&time_queue.Item{
-				Schedule: record.scheduleTime,
-				Value:    record,
+		for _, r := range recordList {
+			q.Schedule(time_queue.Item[*record]{
+				Time:  r.scheduleTime,
+				Value: r,
 			})
-			record.putTime = time.Now()
+			r.putTime = time.Now()
 			<-ticker.C // i-th record is scheduled at i x interval
 		}
 	}()
 	counter := 0
 	ctx, cancel := context.WithCancel(context.Background())
-	q.DispatchLoop(ctx, func(item *time_queue.Item) {
-		record := item.Value.(*record)
-		record.collectTime = time.Now()
+	defer cancel()
+	for item := range q.Dispatch(ctx) {
+		r := item.Value
+		r.collectTime = time.Now()
 		counter++
 		if counter >= slots {
-			cancel()
+			break
 		}
-	})
+	}
+	for item := range q.Flush(time.Now()) {
+		r := item.Value
+		r.collectTime = time.Now()
+	}
 
 	for i, r := range recordList {
 		fmt.Printf("[%d] put %v schedule %v collect %v\n", i, r.putTime.Sub(zero), r.scheduleTime.Sub(zero), r.collectTime.Sub(zero))
