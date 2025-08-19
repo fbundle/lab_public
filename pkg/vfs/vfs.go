@@ -1,5 +1,7 @@
 package vfs
 
+import "errors"
+
 type File interface {
 	Read(offset uint64, length uint64, reader func([]byte)) error
 	Write(offset uint64, length uint64, writer func([]byte)) error
@@ -7,16 +9,17 @@ type File interface {
 	Close() error
 }
 
-type FileSystem interface {
-	Mkdir(path string) error
-	Rmdir(path string) error
+type Node interface {
+	Iter(yield func(name string, child Node) bool)
+	LookUp(name string) (Node, bool)
 
-	Iter(dir string) func(yield func(name string) bool)
+	Mkdir(name string) error
+	Rmdir(name string) error
 
-	Create(path string) error
-	Unlink(path string) error
+	Create(name string) error
+	Unlink(name string) error
 
-	Open(path string) (File, error)
+	Open(name string) (File, error)
 }
 
 // in-memory file system implementation
@@ -47,48 +50,99 @@ func (f *memFile) Close() error {
 	return nil
 }
 
-func newNode(file File) FileSystem {
-	var children map[string]FileSystem = nil
-	if file != nil {
-		children = make(map[string]FileSystem)
-	}
+func newNodeFile(file File) *node {
 	return &node{
-		file:     file,
-		children: children,
+		file: file,
+	}
+}
+
+func newNodeDir() *node {
+	return &node{
+		children: make(map[string]*node),
 	}
 }
 
 type node struct {
 	file     File
-	children map[string]FileSystem
+	children map[string]*node
 }
 
-func (n *node) Mkdir(path string) error {
-	//TODO implement me
-	panic("implement me")
+func (n *node) LookUp(name string) (Node, bool) {
+	child, ok := n.children[name]
+	return child, ok
 }
 
-func (n *node) Rmdir(path string) error {
-	//TODO implement me
-	panic("implement me")
+func (n *node) Iter(yield func(name string, child Node) bool) {
+	for name, child := range n.children {
+		if ok := yield(name, child); !ok {
+			return
+		}
+	}
 }
 
-func (n *node) Iter(dir string) func(yield func(name string) bool) {
-	//TODO implement me
-	panic("implement me")
+func (n *node) isFile() bool {
+	return n.file != nil
 }
 
-func (n *node) Create(path string) error {
-	//TODO implement me
-	panic("implement me")
+func (n *node) mkChild(name string, child *node) error {
+	if n.isFile() {
+		return errors.New("node is a file")
+	}
+	if _, ok := n.children[name]; ok {
+		return errors.New("child exists")
+	}
+	n.children[name] = child
+	return nil
 }
 
-func (n *node) Unlink(path string) error {
-	//TODO implement me
-	panic("implement me")
+func (n *node) rmChildIf(name string, cond func(child *node) error) error {
+	if n.isFile() {
+		return errors.New("node is a file")
+	}
+	if _, ok := n.children[name]; !ok {
+		return errors.New("child not exists")
+	}
+	child := n.children[name]
+	if err := cond(child); err != nil {
+		return err
+	}
+	delete(n.children, name)
+	return nil
 }
 
-func (n *node) Open(path string) (File, error) {
-	//TODO implement me
-	panic("implement me")
+func (n *node) Mkdir(name string) error {
+	return n.mkChild(name, newNodeDir())
+}
+
+func (n *node) Rmdir(name string) error {
+	return n.rmChildIf(name, func(child *node) error {
+		if child.isFile() {
+			return errors.New("node is a file")
+		}
+		return nil
+	})
+}
+
+func (n *node) Create(name string) error {
+	return n.mkChild(name, newNodeFile(newMemFile()))
+}
+
+func (n *node) Unlink(name string) error {
+	return n.rmChildIf(name, func(child *node) error {
+		if !child.isFile() {
+			return errors.New("node is not a file")
+		}
+		return nil
+	})
+}
+
+func (n *node) Open(name string) (File, error) {
+	child, ok := n.children[name]
+	if !ok {
+		return nil, errors.New("child not exists")
+	}
+	if !child.isFile() {
+		return nil, errors.New("child is not a file")
+	}
+	return child.file, nil
 }
