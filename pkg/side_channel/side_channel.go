@@ -8,17 +8,20 @@ import (
 )
 
 var (
-	writeMu    sync.Mutex = sync.Mutex{}
-	writeCount bool       = false
+	mu              sync.Mutex = sync.Mutex{}
+	writeCount      bool       = false
+	sideChannelPath string     = ".side_channel.log"
 )
 
+func SetOutput(path string) {
+	mu.Lock()
+	defer mu.Unlock()
+	sideChannelPath = path
+}
+
 func writeln(vs []any, msg string) bool {
-	sideChannelPath, ok := os.LookupEnv("SIDE_CHANNEL_PATH")
-	if !ok {
-		sideChannelPath = ".side_channel.log"
-	}
-	writeMu.Lock()
-	defer writeMu.Unlock()
+	mu.Lock()
+	defer mu.Unlock()
 
 	if !writeCount { // first call
 		writeCount = true
