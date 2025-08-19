@@ -1,8 +1,12 @@
 package vfs
 
-import "errors"
+import (
+	"errors"
+	"sort"
+)
 
 type File interface {
+	Length() uint64
 	Read(offset uint64, length uint64, reader func([]byte)) error
 	Write(offset uint64, length uint64, writer func([]byte)) error
 	Truncate(length uint64) error
@@ -34,16 +38,32 @@ type memFile struct {
 	data []byte
 }
 
+func (f *memFile) Length() uint64 {
+	return uint64(len(f.data))
+}
+
 func (f *memFile) Read(offset uint64, length uint64, reader func([]byte)) error {
+	if offset > uint64(len(f.data)) {
+		return errors.New("index out of range")
+	}
+	length = min(length, uint64(len(f.data))-offset)
 	reader(f.data[offset : offset+length])
 	return nil
 }
 func (f *memFile) Write(offset uint64, length uint64, writer func([]byte)) error {
+	if offset+length > uint64(len(f.data)) {
+		f.data = append(f.data, make([]byte, offset+length-uint64(len(f.data)))...)
+	}
 	writer(f.data[offset : offset+length])
 	return nil
 }
 func (f *memFile) Truncate(length uint64) error {
-	f.data = f.data[0:length]
+	if length > uint64(len(f.data)) {
+		f.data = append(f.data, make([]byte, length-uint64(len(f.data)))...)
+	}
+	if length < uint64(len(f.data)) {
+		f.data = f.data[0:length]
+	}
 	return nil
 }
 func (f *memFile) Close() error {
@@ -73,8 +93,13 @@ func (n *node) LookUp(name string) (Node, bool) {
 }
 
 func (n *node) Iter(yield func(name string, child Node) bool) {
-	for name, child := range n.children {
-		if ok := yield(name, child); !ok {
+	names := make([]string, 0, len(n.children))
+	for k := range n.children {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if ok := yield(name, n.children[name]); !ok {
 			return
 		}
 	}
@@ -118,6 +143,9 @@ func (n *node) Rmdir(name string) error {
 	return n.rmChildIf(name, func(child *node) error {
 		if child.isFile() {
 			return errors.New("node is a file")
+		}
+		if len(child.children) > 0 {
+			return errors.New("node not empty")
 		}
 		return nil
 	})
