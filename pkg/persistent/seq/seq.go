@@ -1,7 +1,5 @@
 package seq
 
-import "telescope/util/side_channel"
-
 func Empty[T any]() Seq[T] {
 	return Seq[T]{node: nil}
 }
@@ -61,7 +59,7 @@ func (s Seq[T]) Repr() []T {
 
 func Slice[T any](s Seq[T], beg int, end int) Seq[T] {
 	if beg > end {
-		side_channel.Panic("slice out of range")
+		panic("slice out of range")
 		return Empty[T]()
 	}
 	s, _ = s.Split(end)

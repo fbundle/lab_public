@@ -3,9 +3,10 @@ package proto_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/proto"
 	"io"
 	"testing"
+
+	"github.com/fbundle/go_util/pkg/proto"
 )
 
 type Message struct {

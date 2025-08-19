@@ -1,11 +1,12 @@
 package relay
 
 import (
-	"ca/pkg/relay/proto/gen/relay_pb"
 	"encoding/binary"
 	"errors"
-	"google.golang.org/protobuf/proto"
 	"io"
+
+	"github.com/fbundle/go_util/pkg/relay/proto/gen/relay_pb"
+	"google.golang.org/protobuf/proto"
 )
 
 var sizeError = errors.New("size")

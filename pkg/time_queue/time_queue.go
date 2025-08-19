@@ -1,10 +1,12 @@
 package time_queue
 
 import (
-	pq "ca/pkg/priority_queue"
 	"context"
+
 	"sync"
 	"time"
+
+	pq "github.com/fbundle/go_util/pkg/priority_queue"
 )
 
 type Item struct {

@@ -1,10 +1,11 @@
 package relay
 
 import (
-	"ca/pkg/relay/proto/gen/relay_pb"
 	"errors"
 	"fmt"
 	"net"
+
+	"github.com/fbundle/go_util/pkg/relay/proto/gen/relay_pb"
 )
 
 var (

@@ -1,12 +1,13 @@
 package time_queue_test
 
 import (
-	"ca/pkg/time_queue"
 	"context"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/fbundle/go_util/pkg/time_queue"
 )
 
 type record struct {

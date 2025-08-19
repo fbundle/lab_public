@@ -3,9 +3,10 @@ package logger_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/logger"
 	"os"
 	"testing"
+
+	"github.com/fbundle/go_util/pkg/logger"
 )
 
 func TestLogger(t *testing.T) {

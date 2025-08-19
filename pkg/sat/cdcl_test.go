@@ -3,10 +3,11 @@ package sat_test
 import (
 	"context"
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/sat"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/fbundle/go_util/pkg/sat"
 )
 
 func TestCDCL(t *testing.T) {

@@ -2,9 +2,10 @@ package proto_test
 
 import (
 	"fmt"
-	"github.com/khanh-nguyen-code/go_util/pkg/proto"
 	"reflect"
 	"testing"
+
+	"github.com/fbundle/go_util/pkg/proto"
 )
 
 type structA struct {

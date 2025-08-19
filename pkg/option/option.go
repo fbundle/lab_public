@@ -1,6 +1,6 @@
 package option
 
-import "ca/pkg/monad"
+import "github.com/fbundle/go_util/pkg/monad"
 
 type Option[T any] struct {
 	value  T

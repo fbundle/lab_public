@@ -1,9 +1,10 @@
 package priority_queue_test
 
 import (
-	"ca/pkg/priority_queue"
 	"fmt"
 	"testing"
+
+	"github.com/fbundle/go_util/pkg/priority_queue"
 )
 
 func TestQueue(t *testing.T) {
