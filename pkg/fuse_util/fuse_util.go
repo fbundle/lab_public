@@ -13,15 +13,6 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse/nodefs"
 )
 
-// test code
-func testNewMemNode() nodefs.Node {
-	return &memNode{}
-}
-
-func testMemNodeFile() nodefs.File {
-	return &memNodeFile{}
-}
-
 // NewMemNodeFSRoot creates an in-memory node-based filesystem. Files
 // are written into a backing store under the given prefix.
 func NewMemNodeFSRoot(prefix string) nodefs.Node {
@@ -40,28 +31,12 @@ type memNodeFs struct {
 	nextFree int
 }
 
-func (fs *memNodeFs) String() string {
-	return fmt.Sprintf("MemNodeFs(%s)", fs.backingStorePrefix)
-}
-
-func (fs *memNodeFs) Root() nodefs.Node {
-	return fs.root
-}
-
-func (fs *memNodeFs) SetDebug(bool) {
-}
-
-func (fs *memNodeFs) OnMount(*nodefs.FileSystemConnector) {
-}
-
-func (fs *memNodeFs) OnUnmount() {
-}
-
 func (fs *memNodeFs) newNode() *memNode {
 	fs.mutex.Lock()
 	id := fs.nextFree
 	fs.nextFree++
 	fs.mutex.Unlock()
+
 	n := &memNode{
 		Node: nodefs.NewDefaultNode(),
 		fs:   fs,
