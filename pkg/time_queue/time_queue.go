@@ -88,6 +88,11 @@ func (q *Queue[T]) Flush(now time.Time) iter.Seq[Item[T]] {
 func (q *Queue[T]) Dispatch(ctx context.Context) iter.Seq[Item[T]] {
 	return func(yield func(Item[T]) bool) {
 		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			q.mu.Lock()
 			wait, item, ok := func() (wait *cv, item Item[T], ok bool) {
 				i := q.pq.Peek()
@@ -109,7 +114,7 @@ func (q *Queue[T]) Dispatch(ctx context.Context) iter.Seq[Item[T]] {
 			if ok {
 				ok = yield(item)
 				if !ok {
-					break
+					return
 				}
 			} else {
 				<-q.wait.done() // wait for next item
