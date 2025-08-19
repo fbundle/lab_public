@@ -14,7 +14,7 @@ import (
 	"github.com/fbundle/go_util/pkg/monad"
 	"github.com/fbundle/go_util/pkg/padic"
 	"github.com/fbundle/go_util/pkg/persistent/ordered_map"
-	"github.com/fbundle/go_util/pkg/persistent/vector"
+	"github.com/fbundle/go_util/pkg/persistent/seq"
 	"github.com/fbundle/go_util/pkg/ring"
 	"github.com/fbundle/go_util/pkg/tup"
 	"github.com/fbundle/go_util/pkg/vec"
@@ -278,31 +278,31 @@ func testPersistentOrderedMap() {
 }
 
 func testPersistentVector() {
-	v := vector.NewVector[int]()
-	fmt.Println(v.Repr(), v.Weight())
-	v = v.Ins(v.Weight(), 0)
-	v = v.Ins(v.Weight(), 1)
-	v = v.Ins(v.Weight(), 2)
-	v = v.Ins(v.Weight(), 3)
-	v = v.Ins(v.Weight(), 4)
-	v = v.Ins(v.Weight(), 5)
-	fmt.Println(v.Repr(), v.Weight())
+	v := seq.Empty[int]()
+	fmt.Println(v.Repr(), v.Len())
+	v = v.Ins(v.Len(), 0)
+	v = v.Ins(v.Len(), 1)
+	v = v.Ins(v.Len(), 2)
+	v = v.Ins(v.Len(), 3)
+	v = v.Ins(v.Len(), 4)
+	v = v.Ins(v.Len(), 5)
+	fmt.Println(v.Repr(), v.Len())
 
 	v = v.Set(2, 22)
-	fmt.Println(v.Repr(), v.Weight())
+	fmt.Println(v.Repr(), v.Len())
 
 	v = v.Ins(3, 33)
-	fmt.Println(v.Repr(), v.Weight())
+	fmt.Println(v.Repr(), v.Len())
 
 	v = v.Del(4)
-	fmt.Println(v.Repr(), v.Weight())
+	fmt.Println(v.Repr(), v.Len())
 
 	v1, v2 := v.Split(3)
-	fmt.Println(v1.Repr(), v1.Weight())
-	fmt.Println(v2.Repr(), v2.Weight())
+	fmt.Println(v1.Repr(), v1.Len())
+	fmt.Println(v2.Repr(), v2.Len())
 
-	v = v1.Concat(v2)
-	fmt.Println(v.Repr(), v.Weight())
+	v = seq.Merge(v1, v2)
+	fmt.Println(v.Repr(), v.Len())
 
 	stressTest := false
 	if !stressTest {

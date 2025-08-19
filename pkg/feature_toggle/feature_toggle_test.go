@@ -2,9 +2,10 @@ package feature_toggle_test
 
 import (
 	"fmt"
-	ft "github.com/khanh-nguyen-code/go_util/pkg/feature_toggle"
 	"sync"
 	"testing"
+
+	ft "github.com/fbundle/go_util/pkg/feature_toggle"
 )
 
 type storage struct {

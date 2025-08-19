@@ -1,4 +1,0 @@
-# Use goreman to run `go get github.com/mattn/goreman`
-rlog0: go run kvstore.go --config test_config.json --id 0
-rlog1: go run kvstore.go --config test_config.json --id 1
-rlog2: go run kvstore.go --config test_config.json --id 2
