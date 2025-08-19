@@ -2,7 +2,8 @@ package subsciber_pool
 
 import (
 	"sync/atomic"
-	"telescope/util/sync_util"
+
+	"github.com/fbundle/go_util/pkg/sync_util"
 )
 
 type Pool[T any] struct {
