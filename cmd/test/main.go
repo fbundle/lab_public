@@ -360,7 +360,7 @@ func testVFS() {
 	if err != nil {
 		panic(err)
 	}
-	_, err = a_c_1.OpenOrCreate()
+	_, err = a_c_1.OpenFile()
 	if err != nil {
 		panic(err)
 	}
@@ -368,11 +368,11 @@ func testVFS() {
 	if err != nil {
 		panic(err)
 	}
-	_, err = b_2.OpenOrCreate()
+	_, err = b_2.OpenFile()
 	if err != nil {
 		panic(err)
 	}
-	err = a_c_1.Delete()
+	err = a_c_1.CloseFile()
 	if err != nil {
 		panic(err)
 	}

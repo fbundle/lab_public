@@ -10,7 +10,6 @@ type File interface {
 	Read(offset uint64, length uint64, reader func([]byte)) error
 	Write(offset uint64, length uint64, writer func([]byte)) error
 	Truncate(length uint64) error
-	Close() error
 }
 
 type Node interface {
@@ -20,8 +19,8 @@ type Node interface {
 	MkChild(name string) (Node, error)
 	RmChild(name string) error
 
-	OpenOrCreate() (File, error)
-	Delete() error
+	OpenFile() (File, error)
+	CloseFile() error
 
 	File() File
 }
@@ -104,9 +103,6 @@ func (f *memFile) Truncate(length uint64) error {
 	}
 	return nil
 }
-func (f *memFile) Close() error {
-	return nil
-}
 
 func newNode() *node {
 	return &node{
@@ -156,6 +152,9 @@ func (n *node) MkChild(name string) (Node, error) {
 }
 
 func (n *node) RmChild(name string) error {
+	if n.children == nil {
+		return errors.New("child not exists")
+	}
 	if _, ok := n.children[name]; !ok {
 		return errors.New("child not exists")
 	}
@@ -167,20 +166,19 @@ func (n *node) RmChild(name string) error {
 	return nil
 }
 
-func (n *node) OpenOrCreate() (File, error) {
+func (n *node) OpenFile() (File, error) {
 	if n.file == nil {
 		n.file = newMemFile()
 	}
 	return n.file, nil
 }
 
-func (n *node) Delete() error {
+func (n *node) CloseFile() error {
 	if n.file == nil {
 		return errors.New("file not exists")
 	}
-	file := n.file
 	n.file = nil
-	return file.Close()
+	return nil
 }
 
 func (n *node) File() File {
