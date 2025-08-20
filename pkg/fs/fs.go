@@ -18,14 +18,10 @@ type FileWriter interface {
 	Truncate(length uint64) error
 }
 
-type Name = string
-
-type Path = []Name
-
 type FileSystem interface {
-	OpenOrCreate(path Path) (File, error)
-	Delete(path Path) error
+	OpenOrCreate(path []string) (File, error)
+	Delete(path []string) error
 
-	List(prefix Path) func(yield func(name Name, file File) bool)
-	Walk() func(yield func(path Path, file File) bool)
+	List(prefix []string) (func(yield func(name string, file File) bool), error)
+	Walk(prefix []string) (func(yield func(path []string, file File) bool), error)
 }
