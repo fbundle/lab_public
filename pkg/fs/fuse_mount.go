@@ -43,10 +43,13 @@ func MountMemPathFS(mountpoint string) error {
 
 type memFS struct {
 	fuseutil.NotImplementedFileSystem
-	fs          *memPathFS
+	fs *memPathFS
+	// inodeToKey *twoWayMap[fuseops.InodeID, string]
+
 	inodeToPath map[fuseops.InodeID]Path
 	pathToInode map[string]fuseops.InodeID
-	nextInode   fuseops.InodeID
+
+	nextInode fuseops.InodeID
 }
 
 func newMemFS(p *memPathFS) *memFS {
@@ -62,14 +65,16 @@ func newMemFS(p *memPathFS) *memFS {
 }
 
 func (m *memFS) inodeForPath(pth Path) fuseops.InodeID {
-	key := strings.Join(pth, PathSeparator)
+	key := pathToKey(pth)
 	if ino, ok := m.pathToInode[key]; ok {
 		return ino
 	}
 	ino := m.nextInode
 	m.nextInode++
+
 	m.pathToInode[key] = ino
 	m.inodeToPath[ino] = append(Path{}, pth...)
+
 	return ino
 }
 
@@ -85,8 +90,7 @@ func (m *memFS) LookUpInode(ctx context.Context, op *fuseops.LookUpInodeOp) erro
 	if !ok {
 		return fuse.ENOENT
 	}
-	child := slices.Clone(parent)
-	child = append(child, op.Name)
+	child := append(slices.Clone(parent), op.Name)
 	key := pathToKey(child)
 	if file, ok := m.fs.files[key]; ok {
 		ino := m.inodeForPath(child)
@@ -119,7 +123,7 @@ func (m *memFS) GetInodeAttributes(ctx context.Context, op *fuseops.GetInodeAttr
 		op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}
 		return nil
 	}
-	key := strings.Join(pth, PathSeparator)
+	key := pathToKey(pth)
 	if file, ok := m.fs.files[key]; ok {
 		if file == nil {
 			op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}
@@ -194,8 +198,7 @@ func (m *memFS) MkDir(ctx context.Context, op *fuseops.MkDirOp) error {
 	if !ok {
 		return fuse.ENOENT
 	}
-	child := slices.Clone(parent)
-	child = append(child, op.Name)
+	child := append(slices.Clone(parent), op.Name)
 	key := pathToKey(child)
 	m.fs.files[key] = nil
 	ino := m.inodeForPath(child)
@@ -208,8 +211,7 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 	if !ok {
 		return fuse.ENOENT
 	}
-	child := slices.Clone(parent)
-	child = append(child, op.Name)
+	child := append(slices.Clone(parent), op.Name)
 	key := pathToKey(child)
 	m.fs.files[key] = NewMemFile()
 	ino := m.inodeForPath(child)
@@ -225,7 +227,7 @@ func (m *memFS) ReadFile(ctx context.Context, op *fuseops.ReadFileOp) error {
 	if !ok {
 		return fuse.ENOENT
 	}
-	key := strings.Join(pth, PathSeparator)
+	key := pathToKey(pth)
 	file, ok := m.fs.files[key]
 	if !ok || file == nil {
 		return fuse.ENOENT
@@ -243,7 +245,7 @@ func (m *memFS) WriteFile(ctx context.Context, op *fuseops.WriteFileOp) error {
 	if !ok {
 		return fuse.ENOENT
 	}
-	key := strings.Join(pth, PathSeparator)
+	key := pathToKey(pth)
 	file, ok := m.fs.files[key]
 	if !ok || file == nil {
 		return fuse.ENOENT
@@ -260,7 +262,7 @@ func (m *memFS) SetInodeAttributes(ctx context.Context, op *fuseops.SetInodeAttr
 		if !ok {
 			return fuse.ENOENT
 		}
-		key := strings.Join(pth, PathSeparator)
+		key := pathToKey(pth)
 		file, ok := m.fs.files[key]
 		if !ok || file == nil {
 			return fuse.ENOENT
@@ -277,8 +279,7 @@ func (m *memFS) Unlink(ctx context.Context, op *fuseops.UnlinkOp) error {
 	if !ok {
 		return fuse.ENOENT
 	}
-	child := slices.Clone(parent)
-	child = append(child, op.Name)
+	child := append(slices.Clone(parent), op.Name)
 	key := pathToKey(child)
 	delete(m.fs.files, key)
 	return nil
@@ -289,8 +290,7 @@ func (m *memFS) RmDir(ctx context.Context, op *fuseops.RmDirOp) error {
 	if !ok {
 		return fuse.ENOENT
 	}
-	child := slices.Clone(parent)
-	child = append(child, op.Name)
+	child := append(slices.Clone(parent), op.Name)
 	key := pathToKey(child)
 	prefix := key + PathSeparator
 	for k := range m.fs.files {
