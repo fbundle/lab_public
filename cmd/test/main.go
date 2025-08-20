@@ -16,9 +16,9 @@ import (
 	"github.com/fbundle/go_util/pkg/persistent/ordered_map"
 	"github.com/fbundle/go_util/pkg/persistent/seq"
 	"github.com/fbundle/go_util/pkg/ring"
+	"github.com/fbundle/go_util/pkg/trie"
 	"github.com/fbundle/go_util/pkg/tup"
 	"github.com/fbundle/go_util/pkg/vec"
-	"github.com/fbundle/go_util/pkg/vfs"
 )
 
 func testPAdic() {
@@ -342,47 +342,28 @@ func testPersistentVector() {
 	}
 }
 
-func testVFS() {
-	fs := vfs.NewMemFS()
-	a, err := fs.MkChild("a")
-	if err != nil {
-		panic(err)
-	}
-	b, err := fs.MkChild("b")
-	if err != nil {
-		panic(err)
-	}
-	a_c, err := a.MkChild("c")
-	if err != nil {
-		panic(err)
-	}
-	a_c_1, err := a_c.MkChild("1")
-	if err != nil {
-		panic(err)
-	}
-	_, err = a_c_1.OpenFile()
-	if err != nil {
-		panic(err)
-	}
-	b_2, err := b.MkChild("2")
-	if err != nil {
-		panic(err)
-	}
-	_, err = b_2.OpenFile()
-	if err != nil {
-		panic(err)
-	}
-	err = a_c_1.CloseFile()
-	if err != nil {
-		panic(err)
-	}
-	_, _ = a_c_1, b_2
-	for path, node := range fs.Walk() {
+func testTrie() {
+	t := trie.NewSimpleTrie[string, int](0)
+
+	t.Store([]string{"a", "b", "c"}, 1)
+	t.Store([]string{"a", "b", "d"}, 2)
+	t.Store([]string{"x", "e"}, 3)
+
+	for path, _ := range t.IterBFS([]string{}) {
 		fmt.Println(path)
-		_ = node
+	}
+	fmt.Println("---")
+	for path, _ := range t.IterDFS([]string{}) {
+		fmt.Println(path)
+	}
+
+	t.Delete([]string{"a", "b", "c"})
+	fmt.Println("---")
+	for path, _ := range t.IterBFS([]string{}) {
+		fmt.Println(path)
 	}
 }
 
 func main() {
-	testVFS()
+	testTrie()
 }
