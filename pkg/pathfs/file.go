@@ -27,7 +27,10 @@ func (f *memFile) Read(offset uint64, length uint64, reader func([]byte)) error 
 	if offset > uint64(len(f.data)) {
 		return errors.New("index out of range")
 	}
-	length = min(length, uint64(len(f.data))-offset)
+	remaining := uint64(len(f.data)) - offset
+	if length > remaining {
+		length = remaining
+	}
 	reader(f.data[offset : offset+length])
 	return nil
 }
