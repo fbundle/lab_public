@@ -1,12 +1,14 @@
 package fs
 
 import (
+	"fmt"
 	"strings"
 )
 
 func ensurePath(path []string) {
 	for _, name := range path {
 		if len(name) == 0 || strings.Contains(name, "/") {
+			fmt.Println(path)
 			panic("invalid path")
 		}
 	}
