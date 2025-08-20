@@ -42,10 +42,7 @@ func (m *flatMemFS) Create(path []string) (File, error) {
 }
 
 func (m *flatMemFS) Delete(path []string) error {
-	key, ok := pathToKey(path)
-	if !ok {
-		return ErrPath
-	}
+	key := pathToKey(path)
 	m.files.Delete(key)
 	return nil
 }
