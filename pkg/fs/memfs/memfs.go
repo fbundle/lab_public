@@ -10,7 +10,12 @@ import (
 
 var ErrPath = errors.New("path")
 
-var _ fs.FileSystem = (*flatMemFS)(nil)
+func NewFlatMemFS(makeFile func() fs.File) fs.FileSystem {
+	return &flatMemFS{
+		makeFile: makeFile,
+		files:    sync_util.Map[string, fs.File]{},
+	}
+}
 
 type flatMemFS struct {
 	makeFile func() fs.File
@@ -40,8 +45,21 @@ func (n *flatMemFS) Delete(path []string) error {
 }
 
 func (n *flatMemFS) List(prefix []string) (func(yield func(name string, file fs.File) bool), error) {
-	//TODO implement me
-	panic("implement me")
+
+	it, err := n.Walk(prefix)
+	if err != nil {
+		return nil, err
+	}
+	return func(yield func(name string, file fs.File) bool) {
+		for path, file := range it {
+			if len(path) == len(prefix)+1 { // 1 level below
+				name := path[len(path)-1]
+				if ok := yield(name, file); !ok {
+					return
+				}
+			}
+		}
+	}, nil
 }
 
 func (n *flatMemFS) Walk(prefix []string) (func(yield func(path []string, file fs.File) bool), error) {
