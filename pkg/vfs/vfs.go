@@ -24,6 +24,9 @@ type Node interface {
 	CloseFile() error
 
 	File() File
+
+	Resolve(path []string) Node
+	Walk(prefix []string) func(yield func(path []string, node Node) bool)
 }
 
 // in-memory file system implementation
@@ -133,4 +136,16 @@ func (n *node) CloseFile() error {
 func (n *node) File() File {
 	file := toTree(n).Data
 	return file
+}
+
+func (n *node) Resolve(path []string) Node {
+	return toNode(toTree(n).Resolve(path))
+}
+
+func (n *node) Walk(prefix []string) func(yield func(path []string, node Node) bool) {
+	return func(yield func(path []string, node Node) bool) {
+		toTree(n).Walk(prefix)(func(path []string, node *named_tree.Tree[File]) bool {
+			return yield(path, toNode(node))
+		})
+	}
 }

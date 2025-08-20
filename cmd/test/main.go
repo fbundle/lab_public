@@ -377,7 +377,7 @@ func testVFS() {
 		panic(err)
 	}
 	_, _ = a_c_1, b_2
-	for path, node := range vfs.Walk(fs) {
+	for path, node := range fs.Walk() {
 		fmt.Println(path)
 		_ = node
 	}

@@ -52,6 +52,8 @@ type FileHandle struct{ file vfs.File }
 // Directory attribute
 func (d *NodeDir) Getattr(ctx context.Context, out *fuse.AttrOut) syscall.Errno {
 	out.Mode = fuse.S_IFDIR | 0o755
+	out.Uid = uint32(os.Getuid())
+	out.Gid = uint32(os.Getgid())
 	out.Nlink = 1
 	return 0
 }
@@ -59,6 +61,8 @@ func (d *NodeDir) Getattr(ctx context.Context, out *fuse.AttrOut) syscall.Errno 
 // File attribute
 func (n *NodeFile) Getattr(ctx context.Context, out *fuse.AttrOut) syscall.Errno {
 	out.Mode = fuse.S_IFREG | 0o644
+	out.Uid = uint32(os.Getuid())
+	out.Gid = uint32(os.Getgid())
 	out.Nlink = 1
 	out.Size = n.file.Length()
 	return 0
@@ -202,7 +206,9 @@ func (h *FileHandle) Read(ctx context.Context, dest []byte, off int64) (fuse.Rea
 
 // Handle: Write implementation.
 func (h *FileHandle) Write(ctx context.Context, data []byte, off int64) (uint32, syscall.Errno) {
-	if err := h.file.Write(uint64(off), uint64(len(data)), func(dst []byte) { copy(dst, data) }); err != nil {
+	if err := h.file.Write(uint64(off), uint64(len(data)), func(dst []byte) {
+		copy(dst, data)
+	}); err != nil {
 		return 0, syscall.EIO
 	}
 	return uint32(len(data)), 0
@@ -217,7 +223,7 @@ func main() {
 	}
 
 	backend := vfs.NewMemPathFS()
-	if demoFile, err := backend.OpenOrCreate([]string{"hello.txt"}); err == nil {
+	if demoFile, err := backend.OpenOrCreate([]string{"xyz/hello.txt"}); err == nil {
 		_ = demoFile.Truncate(0)
 		_ = demoFile.Write(0, uint64(len("Hello from PathFS\n")), func(b []byte) { copy(b, []byte("Hello from PathFS\n")) })
 	}
