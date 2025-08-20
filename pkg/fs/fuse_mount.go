@@ -11,6 +11,20 @@ import (
 	"github.com/jacobsa/fuse/fuseutil"
 )
 
+func Mount(fs FileSystem, mountpoint string) error {
+	return nil
+}
+
+type memPathFS struct {
+	files map[string]FileWriter
+}
+
+const (
+	PathSeparator = "/"
+)
+
+type Path = []string
+
 // MountMemPathFS mounts an in-memory PathFS at mountpoint using jacobsa/fuse.
 // Directories are represented by nil File entries. Files are 0666 and directories 0777.
 // UID/GID use the current process. allow_other is not enabled.
@@ -21,8 +35,7 @@ func MountMemPathFS(mountpoint string) error {
 	if err := os.MkdirAll(mountpoint, 0o755); err != nil {
 		return err
 	}
-	under := NewMemPathFS()
-	mp := under.(*memPathFS)
+	mp := &memPathFS{files: make(map[string]FileWriter)}
 	server := fuseutil.NewFileSystemServer(newMemFS(mp))
 	mfs, err := fuse.Mount(mountpoint, server, &fuse.MountConfig{ReadOnly: false})
 	if err != nil {
@@ -80,7 +93,7 @@ func (m *memFS) LookUpInode(ctx context.Context, op *fuseops.LookUpInodeOp) erro
 		if file == nil {
 			op.Entry.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}
 		} else {
-			op.Entry.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: 0o666, Size: file.Length()}
+			op.Entry.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: 0o666, Size: file.Size()}
 		}
 		return nil
 	}
@@ -110,7 +123,7 @@ func (m *memFS) GetInodeAttributes(ctx context.Context, op *fuseops.GetInodeAttr
 		if file == nil {
 			op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}
 		} else {
-			op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: 0o666, Size: file.Length()}
+			op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: 0o666, Size: file.Size()}
 		}
 		return nil
 	}
