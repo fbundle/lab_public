@@ -1,44 +1,42 @@
 package vfs
 
-import (
-	"strings"
-)
+import "strings"
 
 type PathFS interface {
 	OpenOrCreate(path []string) (File, error)
-	Unlink(path []string) error
+	Delete(path []string) error
 
 	Walk(yield func(path []string, file File) bool)
 }
 
+type memPathFS struct {
+	files map[string]File
+}
+
 func NewMemPathFS() PathFS {
-	return &pathFS{
-		fileMap: make(map[string]File),
+	return &memPathFS{
+		files: make(map[string]File),
 	}
 }
 
-type pathFS struct {
-	fileMap map[string]File
-}
-
-func (p *pathFS) OpenOrCreate(path []string) (File, error) {
+func (p *memPathFS) OpenOrCreate(path []string) (File, error) {
 	key := strings.Join(path, "/")
-	file, ok := p.fileMap[key]
+	file, ok := p.files[key]
 	if !ok {
 		file = newMemFile()
-		p.fileMap[key] = file
+		p.files[key] = file
 	}
 	return file, nil
 }
 
-func (p *pathFS) Unlink(path []string) error {
+func (p *memPathFS) Delete(path []string) error {
 	key := strings.Join(path, "/")
-	delete(p.fileMap, key)
+	delete(p.files, key)
 	return nil
 }
 
-func (p *pathFS) Walk(yield func(path []string, file File) bool) {
-	for key, file := range p.fileMap {
+func (p *memPathFS) Walk(yield func(path []string, file File) bool) {
+	for key, file := range p.files {
 		path := strings.Split(key, "/")
 		if ok := yield(path, file); !ok {
 			return

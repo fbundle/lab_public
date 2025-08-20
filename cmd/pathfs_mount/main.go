@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -37,6 +38,8 @@ type NodeDir struct {
 	fs.Inode
 	store vfs.PathFS
 	path  []string // path prefix represented by this directory
+	uid   uint32
+	gid   uint32
 }
 
 // NodeFile represents a file backed by vfs.File.
@@ -44,6 +47,8 @@ type NodeFile struct {
 	fs.Inode
 	file vfs.File
 	name string
+	uid  uint32
+	gid  uint32
 }
 
 // FileHandle implements fs.FileHandle for NodeFile I/O.
@@ -51,18 +56,23 @@ type FileHandle struct{ file vfs.File }
 
 // Directory attribute
 func (d *NodeDir) Getattr(ctx context.Context, out *fuse.AttrOut) syscall.Errno {
-	out.Mode = fuse.S_IFDIR | 0o755
-	out.Uid = uint32(os.Getuid())
-	out.Gid = uint32(os.Getgid())
+	out.Mode = fuse.S_IFDIR | 0o777
+	out.Uid = d.uid
+	out.Gid = d.gid
 	out.Nlink = 1
 	return 0
 }
 
+// Dir: Setattr acknowledges attribute updates (e.g., times) and returns current attrs.
+func (d *NodeDir) Setattr(ctx context.Context, in *fuse.SetAttrIn, out *fuse.AttrOut) syscall.Errno {
+	return d.Getattr(ctx, out)
+}
+
 // File attribute
 func (n *NodeFile) Getattr(ctx context.Context, out *fuse.AttrOut) syscall.Errno {
-	out.Mode = fuse.S_IFREG | 0o644
-	out.Uid = uint32(os.Getuid())
-	out.Gid = uint32(os.Getgid())
+	out.Mode = fuse.S_IFREG | 0o777
+	out.Uid = n.uid
+	out.Gid = n.gid
 	out.Nlink = 1
 	out.Size = n.file.Length()
 	return 0
@@ -105,12 +115,21 @@ func (d *NodeDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 	}
 
 	if isDir && !isFile {
-		ch := &NodeDir{store: d.store, path: childPath}
+		ch := &NodeDir{store: d.store, path: childPath, uid: d.uid, gid: d.gid}
+		out.Attr.Mode = fuse.S_IFDIR | 0o777
+		out.Attr.Uid = d.uid
+		out.Attr.Gid = d.gid
+		out.Attr.Nlink = 1
 		return d.NewInode(ctx, ch, fs.StableAttr{Mode: uint32(fuse.S_IFDIR)}), 0
 	}
 
 	// Prefer file when both match (file node at exact path also has deeper keys).
-	ch := &NodeFile{file: theFile, name: name}
+	ch := &NodeFile{file: theFile, name: name, uid: d.uid, gid: d.gid}
+	out.Attr.Mode = fuse.S_IFREG | 0o777
+	out.Attr.Uid = d.uid
+	out.Attr.Gid = d.gid
+	out.Attr.Nlink = 1
+	out.Attr.Size = theFile.Length()
 	return d.NewInode(ctx, ch, fs.StableAttr{Mode: uint32(fuse.S_IFREG)}), 0
 }
 
@@ -151,7 +170,11 @@ func (d *NodeDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 
 // Dir: Mkdir is accepted (directories are implicit), no specific storage needed.
 func (d *NodeDir) Mkdir(ctx context.Context, name string, mode uint32, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-	child := &NodeDir{store: d.store, path: append(append([]string{}, d.path...), name)}
+	child := &NodeDir{store: d.store, path: append(append([]string{}, d.path...), name), uid: d.uid, gid: d.gid}
+	out.Attr.Mode = fuse.S_IFDIR | 0o777
+	out.Attr.Uid = d.uid
+	out.Attr.Gid = d.gid
+	out.Attr.Nlink = 1
 	return d.NewInode(ctx, child, fs.StableAttr{Mode: uint32(fuse.S_IFDIR)}), 0
 }
 
@@ -162,7 +185,12 @@ func (d *NodeDir) Create(ctx context.Context, name string, flags uint32, mode ui
 	if err != nil {
 		return nil, nil, 0, syscall.EIO
 	}
-	n := &NodeFile{file: f, name: name}
+	n := &NodeFile{file: f, name: name, uid: d.uid, gid: d.gid}
+	out.Attr.Mode = fuse.S_IFREG | 0o777
+	out.Attr.Uid = d.uid
+	out.Attr.Gid = d.gid
+	out.Attr.Nlink = 1
+	out.Attr.Size = 0
 	inode := d.NewInode(ctx, n, fs.StableAttr{Mode: uint32(fuse.S_IFREG)})
 	return inode, &FileHandle{file: f}, 0, 0
 }
@@ -216,6 +244,9 @@ func (h *FileHandle) Write(ctx context.Context, data []byte, off int64) (uint32,
 
 func main() {
 	mountPoint := flag.String("mount_point", "/tmp/mnt", "mount point directory")
+	allowOther := flag.Bool("allow_other", false, "allow access by other users")
+	uidFlag := flag.Int("uid", -1, "ownership UID to report (default: current user or $SUDO_UID when running as root)")
+	gidFlag := flag.Int("gid", -1, "ownership GID to report (default: current group or $SUDO_GID when running as root)")
 	flag.Parse()
 
 	if err := os.MkdirAll(*mountPoint, 0o755); err != nil {
@@ -228,10 +259,32 @@ func main() {
 		_ = demoFile.Write(0, uint64(len("Hello from PathFS\n")), func(b []byte) { copy(b, []byte("Hello from PathFS\n")) })
 	}
 
-	root := &NodeDir{store: backend, path: nil}
+	// Determine effective UID/GID for ownership reporting
+	effectiveUID := os.Getuid()
+	effectiveGID := os.Getgid()
+	if effectiveUID == 0 {
+		if v := os.Getenv("SUDO_UID"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+				effectiveUID = n
+			}
+		}
+		if v := os.Getenv("SUDO_GID"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+				effectiveGID = n
+			}
+		}
+	}
+	if *uidFlag >= 0 {
+		effectiveUID = *uidFlag
+	}
+	if *gidFlag >= 0 {
+		effectiveGID = *gidFlag
+	}
+
+	root := &NodeDir{store: backend, path: nil, uid: uint32(effectiveUID), gid: uint32(effectiveGID)}
 	server, err := fs.Mount(*mountPoint, root, &fs.Options{
 		MountOptions: fuse.MountOptions{
-			AllowOther: false,
+			AllowOther: *allowOther,
 			Name:       "pathfs",
 			FsName:     path.Base(*mountPoint),
 		},
