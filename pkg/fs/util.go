@@ -1,21 +1,25 @@
 package fs
 
 import (
-	"fmt"
 	"strings"
 )
 
-func ensurePath(path []string) {
+func ensurePath(path []string) []string {
+	var pathOut []string = nil
 	for _, name := range path {
-		if len(name) == 0 || strings.Contains(name, "/") {
-			fmt.Println(path)
+		if len(name) == 0 {
+			continue
+		}
+		if strings.Contains(name, "/") {
 			panic("invalid path")
 		}
+		pathOut = append(pathOut, name)
 	}
+	return pathOut
 }
 
 func pathToKey(path []string) string {
-	ensurePath(path)
+	path = ensurePath(path)
 	return strings.Join(path, "/")
 }
 

@@ -105,15 +105,15 @@ func (m *memFS) LookUpInode(ctx context.Context, op *fuseops.LookUpInodeOp) erro
 }
 
 func (m *memFS) GetInodeAttributes(ctx context.Context, op *fuseops.GetInodeAttributesOp) error {
-	pth, ok := m.getPathFromInode(op.Inode)
+	path, ok := m.getPathFromInode(op.Inode)
 	if !ok {
 		return fuse.ENOENT
 	}
-	if len(pth) == 0 {
+	if len(path) == 0 {
 		op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}
 		return nil
 	}
-	key := pathToKey(pth)
+	key := pathToKey(path)
 	if file, ok := m.mp.files[key]; ok {
 		if file == nil {
 			op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}
