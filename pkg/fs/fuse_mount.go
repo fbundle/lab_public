@@ -12,6 +12,8 @@ import (
 )
 
 func Mount(fs FileSystem, mountpoint string) error {
+
+	fuseutil.FileSystem()
 	return nil
 }
 
