@@ -77,7 +77,7 @@ func (m *memFS) getInodeFromPath(path Path) fuseops.InodeID {
 	m.nextInode++
 
 	m.pathToInode[key] = ino
-	m.inodeToPath[ino] = append(Path{}, path...)
+	m.inodeToPath[ino] = slices.Clone(path)
 
 	return ino
 }
