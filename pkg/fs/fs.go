@@ -19,8 +19,9 @@ type FileWriter interface {
 }
 
 type FileSystem interface {
-	OpenOrCreate(path []string) (File, error)
+	Create(path []string) (File, error)
 	Delete(path []string) error
+	Load(path []string) (File, error)
 
 	List(prefix []string) (func(yield func(name string, file File) bool), error)
 	Walk(prefix []string) (func(yield func(path []string, file File) bool), error)
