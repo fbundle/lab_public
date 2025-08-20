@@ -1,19 +1,21 @@
 package named_tree
 
+import "errors"
+
 type Tree[T any] struct {
 	Data     T
 	children map[string]*Tree[T]
 }
 
-func (n *Tree[T]) Set(name string, child *Tree[T]) *Tree[T] {
+func (n *Tree[T]) Set(name string, child *Tree[T]) (*Tree[T], error) {
 	if n.children == nil {
 		n.children = make(map[string]*Tree[T])
 	}
 	if _, ok := n.children[name]; ok {
-		panic("child name already exists")
+		return nil, errors.New("child name already exists")
 	}
 	n.children[name] = child
-	return child
+	return child, nil
 }
 
 func (n *Tree[T]) Get(name string) (*Tree[T], bool) {
@@ -24,17 +26,18 @@ func (n *Tree[T]) Get(name string) (*Tree[T], bool) {
 	return child, ok
 }
 
-func (n *Tree[T]) Del(name string) {
+func (n *Tree[T]) Del(name string) error {
 	if n.children == nil {
-		panic("child name does not exist")
+		return errors.New("child name does not exist")
 	}
 	if _, ok := n.children[name]; !ok {
-		panic("child name does not exist")
+		return errors.New("child name does not exist")
 	}
 	delete(n.children, name)
 	if len(n.children) == 0 {
 		n.children = nil
 	}
+	return nil
 }
 
 func (n *Tree[T]) Iter(yield func(name string, child *Tree[T]) bool) {
