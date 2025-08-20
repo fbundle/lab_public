@@ -1,6 +1,12 @@
 package pathfs
 
-import "strings"
+import (
+	"strings"
+)
+
+const (
+	PathSeparator = "/"
+)
 
 type PathFS interface {
 	OpenOrCreate(path []string) (File, error)
@@ -20,7 +26,7 @@ func NewMemPathFS() PathFS {
 }
 
 func (p *memPathFS) OpenOrCreate(path []string) (File, error) {
-	key := strings.Join(path, "/")
+	key := strings.Join(path, PathSeparator)
 	file, ok := p.files[key]
 	if !ok {
 		file = newMemFile()
@@ -30,14 +36,14 @@ func (p *memPathFS) OpenOrCreate(path []string) (File, error) {
 }
 
 func (p *memPathFS) Delete(path []string) error {
-	key := strings.Join(path, "/")
+	key := strings.Join(path, PathSeparator)
 	delete(p.files, key)
 	return nil
 }
 
 func (p *memPathFS) Walk(yield func(path []string, file File) bool) {
 	for key, file := range p.files {
-		path := strings.Split(key, "/")
+		path := strings.Split(key, PathSeparator)
 		if ok := yield(path, file); !ok {
 			return
 		}
