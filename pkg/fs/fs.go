@@ -14,11 +14,14 @@ type File interface {
 var ErrNotExist = errors.New("not_exist")
 var ErrExist = errors.New("exist")
 
-type FileSystem interface {
-	Create(path []string) (File, error)
-	Delete(path []string) error
-	Load(path []string) (File, error)
+type Path = []Name
+type Name = string
 
-	List(prefix []string) (func(yield func(name string, file File) bool), error)
-	Walk(prefix []string) (func(yield func(path []string, file File) bool), error)
+type FileSystem interface {
+	Create(path Path) (File, error)
+	Delete(path Path) error
+	Load(path Path) (File, error)
+
+	List(prefix Path) (func(yield func(name Name, file File) bool), error)
+	Walk(prefix Path) (func(yield func(path Path, file File) bool), error)
 }

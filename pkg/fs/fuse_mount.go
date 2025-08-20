@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/jacobsa/fuse"
@@ -18,8 +19,6 @@ type memPathFS struct {
 const (
 	PathSeparator = "/"
 )
-
-type Path = []string
 
 // MountMemPathFS mounts an in-memory PathFS at mountpoint using jacobsa/fuse.
 // Directories are represented by nil File entries. Files are 0666 and directories 0777.
@@ -41,16 +40,22 @@ func MountMemPathFS(mountpoint string) error {
 }
 
 // jacobsa/fuse-backed FS implementation mapping to memPathFS
+
 type memFS struct {
 	fuseutil.NotImplementedFileSystem
-	p           *memPathFS
+	fs          *memPathFS
 	inodeToPath map[fuseops.InodeID]Path
 	pathToInode map[string]fuseops.InodeID
 	nextInode   fuseops.InodeID
 }
 
 func newMemFS(p *memPathFS) *memFS {
-	m := &memFS{p: p, inodeToPath: make(map[fuseops.InodeID]Path), pathToInode: make(map[string]fuseops.InodeID), nextInode: fuseops.InodeID(2)}
+	m := &memFS{
+		fs:          p,
+		inodeToPath: make(map[fuseops.InodeID]Path),
+		pathToInode: make(map[string]fuseops.InodeID),
+		nextInode:   fuseops.InodeID(2),
+	}
 	m.inodeToPath[fuseops.RootInodeID] = nil
 	m.pathToInode[""] = fuseops.RootInodeID
 	return m
@@ -76,14 +81,14 @@ func (m *memFS) pathForInode(inode fuseops.InodeID) (Path, bool) {
 func (m *memFS) StatFS(ctx context.Context, op *fuseops.StatFSOp) error { return nil }
 
 func (m *memFS) LookUpInode(ctx context.Context, op *fuseops.LookUpInodeOp) error {
-	parentPath, ok := m.pathForInode(op.Parent)
+	parent, ok := m.pathForInode(op.Parent)
 	if !ok {
 		return fuse.ENOENT
 	}
-	child := append(Path{}, parentPath...)
+	child := slices.Clone(parent)
 	child = append(child, op.Name)
 	key, _ := pathToKey(child)
-	if file, ok := m.p.files[key]; ok {
+	if file, ok := m.fs.files[key]; ok {
 		ino := m.inodeForPath(child)
 		op.Entry.Child = ino
 		if file == nil {
@@ -94,7 +99,7 @@ func (m *memFS) LookUpInode(ctx context.Context, op *fuseops.LookUpInodeOp) erro
 		return nil
 	}
 	prefix := key + PathSeparator
-	for k := range m.p.files {
+	for k := range m.fs.files {
 		if strings.HasPrefix(k, prefix) {
 			ino := m.inodeForPath(child)
 			op.Entry.Child = ino
@@ -115,7 +120,7 @@ func (m *memFS) GetInodeAttributes(ctx context.Context, op *fuseops.GetInodeAttr
 		return nil
 	}
 	key := strings.Join(pth, PathSeparator)
-	if file, ok := m.p.files[key]; ok {
+	if file, ok := m.fs.files[key]; ok {
 		if file == nil {
 			op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}
 		} else {
@@ -124,7 +129,7 @@ func (m *memFS) GetInodeAttributes(ctx context.Context, op *fuseops.GetInodeAttr
 		return nil
 	}
 	prefix := key + PathSeparator
-	for k := range m.p.files {
+	for k := range m.fs.files {
 		if strings.HasPrefix(k, prefix) {
 			op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}
 			return nil
@@ -144,7 +149,7 @@ func (m *memFS) ReadDir(ctx context.Context, op *fuseops.ReadDirOp) error {
 	baseKey := strings.Join(base, PathSeparator)
 	seen := make(map[string]fuseutil.Dirent)
 	idx := 1
-	for k, file := range m.p.files {
+	for k, file := range m.fs.files {
 		parts := strings.Split(k, PathSeparator)
 		if depth > 0 {
 			if strings.Join(parts[:min(depth, len(parts))], PathSeparator) != baseKey {
@@ -189,10 +194,10 @@ func (m *memFS) MkDir(ctx context.Context, op *fuseops.MkDirOp) error {
 	if !ok {
 		return fuse.ENOENT
 	}
-	child := append(Path{}, parent...)
+	child := slices.Clone(parent)
 	child = append(child, op.Name)
 	key, _ := pathToKey(child)
-	m.p.files[key] = nil
+	m.fs.files[key] = nil
 	ino := m.inodeForPath(child)
 	op.Entry = fuseops.ChildInodeEntry{Child: ino, Attributes: fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}}
 	return nil
@@ -203,10 +208,10 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 	if !ok {
 		return fuse.ENOENT
 	}
-	child := append(Path{}, parent...)
+	child := slices.Clone(parent)
 	child = append(child, op.Name)
 	key, _ := pathToKey(child)
-	m.p.files[key] = NewMemFile()
+	m.fs.files[key] = NewMemFile()
 	ino := m.inodeForPath(child)
 	op.Handle = fuseops.HandleID(ino)
 	op.Entry = fuseops.ChildInodeEntry{Child: ino, Attributes: fuseops.InodeAttributes{Nlink: 1, Mode: 0o666}}
@@ -221,7 +226,7 @@ func (m *memFS) ReadFile(ctx context.Context, op *fuseops.ReadFileOp) error {
 		return fuse.ENOENT
 	}
 	key := strings.Join(pth, PathSeparator)
-	file, ok := m.p.files[key]
+	file, ok := m.fs.files[key]
 	if !ok || file == nil {
 		return fuse.ENOENT
 	}
@@ -239,7 +244,7 @@ func (m *memFS) WriteFile(ctx context.Context, op *fuseops.WriteFileOp) error {
 		return fuse.ENOENT
 	}
 	key := strings.Join(pth, PathSeparator)
-	file, ok := m.p.files[key]
+	file, ok := m.fs.files[key]
 	if !ok || file == nil {
 		return fuse.ENOENT
 	}
@@ -256,7 +261,7 @@ func (m *memFS) SetInodeAttributes(ctx context.Context, op *fuseops.SetInodeAttr
 			return fuse.ENOENT
 		}
 		key := strings.Join(pth, PathSeparator)
-		file, ok := m.p.files[key]
+		file, ok := m.fs.files[key]
 		if !ok || file == nil {
 			return fuse.ENOENT
 		}
@@ -272,10 +277,10 @@ func (m *memFS) Unlink(ctx context.Context, op *fuseops.UnlinkOp) error {
 	if !ok {
 		return fuse.ENOENT
 	}
-	child := append(Path{}, parent...)
+	child := slices.Clone(parent)
 	child = append(child, op.Name)
 	key, _ := pathToKey(child)
-	delete(m.p.files, key)
+	delete(m.fs.files, key)
 	return nil
 }
 
@@ -284,22 +289,15 @@ func (m *memFS) RmDir(ctx context.Context, op *fuseops.RmDirOp) error {
 	if !ok {
 		return fuse.ENOENT
 	}
-	child := append(Path{}, parent...)
+	child := slices.Clone(parent)
 	child = append(child, op.Name)
 	key, _ := pathToKey(child)
 	prefix := key + PathSeparator
-	for k := range m.p.files {
+	for k := range m.fs.files {
 		if strings.HasPrefix(k, prefix) {
 			return fuse.ENOTEMPTY
 		}
 	}
-	delete(m.p.files, key)
+	delete(m.fs.files, key)
 	return nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
