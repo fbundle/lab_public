@@ -1,4 +1,4 @@
-package vfs
+package pathfs
 
 import "strings"
 
