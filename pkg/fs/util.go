@@ -5,17 +5,12 @@ import (
 )
 
 func ensurePath(path []string) []string {
-	var pathOut []string = nil
 	for _, name := range path {
-		if len(name) == 0 {
-			continue
-		}
-		if strings.Contains(name, "/") {
+		if len(name) > 0 && strings.Contains(name, "/") {
 			panic("invalid path")
 		}
-		pathOut = append(pathOut, name)
 	}
-	return pathOut
+	return path
 }
 
 func pathToKey(path []string) string {
