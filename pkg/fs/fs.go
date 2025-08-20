@@ -1,5 +1,7 @@
 package fs
 
+import "errors"
+
 type Closer = func() error
 
 type File interface {
@@ -17,6 +19,9 @@ type FileWriter interface {
 	Write(offset uint64, length uint64, writer func([]byte)) error
 	Truncate(length uint64) error
 }
+
+var ErrNotExist = errors.New("not_exist")
+var ErrExist = errors.New("exist")
 
 type FileSystem interface {
 	Create(path []string) (File, error)

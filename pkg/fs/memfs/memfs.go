@@ -9,8 +9,6 @@ import (
 )
 
 var ErrPath = errors.New("path")
-var ErrNotExist = errors.New("not_exist")
-var ErrExist = errors.New("exist")
 
 func NewFlatMemFS(makeFile func() fs.File) fs.FileSystem {
 	return &flatMemFS{
@@ -31,7 +29,7 @@ func (m *flatMemFS) Load(path []string) (fs.File, error) {
 	}
 	file, ok := m.files.Load(key)
 	if !ok {
-		return nil, ErrNotExist
+		return nil, fs.ErrNotExist
 	}
 	return file, nil
 }
@@ -45,7 +43,7 @@ func (m *flatMemFS) Create(path []string) (fs.File, error) {
 		key, m.makeFile(),
 	)
 	if loaded {
-		return nil, ErrExist
+		return nil, fs.ErrExist
 	}
 	return file, nil
 }
