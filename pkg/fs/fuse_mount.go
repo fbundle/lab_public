@@ -87,7 +87,7 @@ func (m *memFS) LookUpInode(ctx context.Context, op *fuseops.LookUpInodeOp) erro
 	}
 	child := slices.Clone(parent)
 	child = append(child, op.Name)
-	key, _ := pathToKey(child)
+	key := pathToKey(child)
 	if file, ok := m.fs.files[key]; ok {
 		ino := m.inodeForPath(child)
 		op.Entry.Child = ino
@@ -196,7 +196,7 @@ func (m *memFS) MkDir(ctx context.Context, op *fuseops.MkDirOp) error {
 	}
 	child := slices.Clone(parent)
 	child = append(child, op.Name)
-	key, _ := pathToKey(child)
+	key := pathToKey(child)
 	m.fs.files[key] = nil
 	ino := m.inodeForPath(child)
 	op.Entry = fuseops.ChildInodeEntry{Child: ino, Attributes: fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}}
@@ -210,7 +210,7 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 	}
 	child := slices.Clone(parent)
 	child = append(child, op.Name)
-	key, _ := pathToKey(child)
+	key := pathToKey(child)
 	m.fs.files[key] = NewMemFile()
 	ino := m.inodeForPath(child)
 	op.Handle = fuseops.HandleID(ino)
@@ -279,7 +279,7 @@ func (m *memFS) Unlink(ctx context.Context, op *fuseops.UnlinkOp) error {
 	}
 	child := slices.Clone(parent)
 	child = append(child, op.Name)
-	key, _ := pathToKey(child)
+	key := pathToKey(child)
 	delete(m.fs.files, key)
 	return nil
 }
@@ -291,7 +291,7 @@ func (m *memFS) RmDir(ctx context.Context, op *fuseops.RmDirOp) error {
 	}
 	child := slices.Clone(parent)
 	child = append(child, op.Name)
-	key, _ := pathToKey(child)
+	key := pathToKey(child)
 	prefix := key + PathSeparator
 	for k := range m.fs.files {
 		if strings.HasPrefix(k, prefix) {

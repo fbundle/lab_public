@@ -4,20 +4,17 @@ import (
 	"strings"
 )
 
-func ensurePath(path []string) bool {
+func ensurePath(path []string) {
 	for _, name := range path {
 		if len(name) == 0 || strings.Contains(name, "/") {
-			return false
+			panic("invalid path")
 		}
 	}
-	return true
 }
 
-func pathToKey(path []string) (string, bool) {
-	if !ensurePath(path) {
-		return "", false
-	}
-	return strings.Join(path, "/"), true
+func pathToKey(path []string) string {
+	ensurePath(path)
+	return strings.Join(path, "/")
 }
 
 func keyToPath(key string) []string {

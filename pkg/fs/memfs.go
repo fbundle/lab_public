@@ -22,10 +22,7 @@ type flatMemFS struct {
 }
 
 func (m *flatMemFS) Load(path []string) (File, error) {
-	key, ok := pathToKey(path)
-	if !ok {
-		return nil, ErrPath
-	}
+	key := pathToKey(path)
 	file, ok := m.files.Load(key)
 	if !ok {
 		return nil, ErrNotExist
@@ -34,10 +31,7 @@ func (m *flatMemFS) Load(path []string) (File, error) {
 }
 
 func (m *flatMemFS) Create(path []string) (File, error) {
-	key, ok := pathToKey(path)
-	if !ok {
-		return nil, ErrPath
-	}
+	key := pathToKey(path)
 	file, loaded := m.files.LoadOrStore(
 		key, m.makeFile(),
 	)
