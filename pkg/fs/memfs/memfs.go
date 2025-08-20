@@ -24,25 +24,25 @@ type flatMemFS struct {
 	files    sync_util.Map[string, fs.File]
 }
 
-func (fs *flatMemFS) Load(path []string) (fs.File, error) {
+func (m *flatMemFS) Load(path []string) (fs.File, error) {
 	key, ok := pathToKey(path)
 	if !ok {
 		return nil, ErrPath
 	}
-	file, ok := fs.files.Load(key)
+	file, ok := m.files.Load(key)
 	if !ok {
 		return nil, ErrNotExist
 	}
 	return file, nil
 }
 
-func (fs *flatMemFS) Create(path []string) (fs.File, error) {
+func (m *flatMemFS) Create(path []string) (fs.File, error) {
 	key, ok := pathToKey(path)
 	if !ok {
 		return nil, ErrPath
 	}
-	file, loaded := fs.files.LoadOrStore(
-		key, fs.makeFile(),
+	file, loaded := m.files.LoadOrStore(
+		key, m.makeFile(),
 	)
 	if loaded {
 		return nil, ErrExist
@@ -50,18 +50,18 @@ func (fs *flatMemFS) Create(path []string) (fs.File, error) {
 	return file, nil
 }
 
-func (fs *flatMemFS) Delete(path []string) error {
+func (m *flatMemFS) Delete(path []string) error {
 	key, ok := pathToKey(path)
 	if !ok {
 		return ErrPath
 	}
-	fs.files.Delete(key)
+	m.files.Delete(key)
 	return nil
 }
 
-func (fs *flatMemFS) List(prefix []string) (func(yield func(name string, file fs.File) bool), error) {
+func (m *flatMemFS) List(prefix []string) (func(yield func(name string, file fs.File) bool), error) {
 
-	it, err := fs.Walk(prefix)
+	it, err := m.Walk(prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (fs *flatMemFS) List(prefix []string) (func(yield func(name string, file fs
 	}, nil
 }
 
-func (fs *flatMemFS) Walk(prefix []string) (func(yield func(path []string, file fs.File) bool), error) {
+func (m *flatMemFS) Walk(prefix []string) (func(yield func(path []string, file fs.File) bool), error) {
 	prefixKey, ok := pathToKey(prefix)
 	if !ok {
 		return nil, ErrPath
@@ -85,7 +85,7 @@ func (fs *flatMemFS) Walk(prefix []string) (func(yield func(path []string, file 
 	prefixKey += "/"
 
 	return func(yield func(path []string, file fs.File) bool) {
-		for key, file := range fs.files.Range {
+		for key, file := range m.files.Range {
 			if strings.HasPrefix(key, prefixKey) {
 				path := keyToPath(key)
 				if ok := yield(path, file); !ok {
