@@ -66,11 +66,7 @@ func (m *flatMemFS) List(prefix []string) (func(yield func(name string, file Fil
 }
 
 func (m *flatMemFS) Walk(prefix []string) (func(yield func(path []string, file File) bool), error) {
-	prefixKey, ok := pathToKey(prefix)
-	if !ok {
-		return nil, ErrPath
-	}
-	prefixKey += "/"
+	prefixKey := pathToKey(prefix) + "/"
 
 	return func(yield func(path []string, file File) bool) {
 		for key, file := range m.files.Range {
