@@ -7,7 +7,9 @@ import (
 )
 
 func main() {
-	if err := fs.MountMemPathFS("tmp/memfs"); err != nil {
+	memfs := fs.NewFlatMemFS(fs.NewMemFile)
+
+	if err := fs.Mount(memfs, "tmp/memfs"); err != nil {
 		log.Fatal(err)
 	}
 }
