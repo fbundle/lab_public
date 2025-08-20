@@ -43,32 +43,48 @@ func Mount(fs FileSystem, mountpoint string) error {
 
 type memFS struct {
 	fuseutil.NotImplementedFileSystem
-	actual    FileSystem
-	mp        *memPathFS
+	actual FileSystem
+	mp     *memPathFS
+	// inodeToKey *twoWayMap[fuseops.InodeID, string]
+
 	inodePool *InodePool
+
+	inodeToPath map[fuseops.InodeID]Path
+	pathToInode map[string]fuseops.InodeID
+
+	nextInode fuseops.InodeID
 }
 
 func newMemFS(actual FileSystem, p *memPathFS) *memFS {
 	m := &memFS{
-		mp:        p,
-		actual:    actual,
-		inodePool: NewInodePool(),
+		mp:          p,
+		actual:      actual,
+		inodeToPath: make(map[fuseops.InodeID]Path),
+		pathToInode: make(map[string]fuseops.InodeID),
+		nextInode:   fuseops.InodeID(2),
 	}
+	m.inodeToPath[fuseops.RootInodeID] = nil
+	m.pathToInode[""] = fuseops.RootInodeID
 	return m
 }
 
 func (m *memFS) getInodeFromPath(path Path) fuseops.InodeID {
 	key := pathToKey(path)
-	return m.inodePool.GetInodeFromKey(key)
+	if ino, ok := m.pathToInode[key]; ok {
+		return ino
+	}
+	ino := m.nextInode
+	m.nextInode++
+
+	m.pathToInode[key] = ino
+	m.inodeToPath[ino] = append(Path{}, path...)
+
+	return ino
 }
 
-func (m *memFS) getPathFromInode(ino fuseops.InodeID) (Path, bool) {
-	key, ok := m.inodePool.GetKeyFromInode(ino)
-	if !ok {
-		return nil, false
-	}
-	path := keyToPath(key)
-	return path, true
+func (m *memFS) getPathFromInode(inode fuseops.InodeID) (Path, bool) {
+	pth, ok := m.inodeToPath[inode]
+	return pth, ok
 }
 
 func (m *memFS) StatFS(ctx context.Context, op *fuseops.StatFSOp) error {
@@ -105,15 +121,15 @@ func (m *memFS) LookUpInode(ctx context.Context, op *fuseops.LookUpInodeOp) erro
 }
 
 func (m *memFS) GetInodeAttributes(ctx context.Context, op *fuseops.GetInodeAttributesOp) error {
-	path, ok := m.getPathFromInode(op.Inode)
+	pth, ok := m.getPathFromInode(op.Inode)
 	if !ok {
 		return fuse.ENOENT
 	}
-	if len(path) == 0 {
+	if len(pth) == 0 {
 		op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}
 		return nil
 	}
-	key := pathToKey(path)
+	key := pathToKey(pth)
 	if file, ok := m.mp.files[key]; ok {
 		if file == nil {
 			op.Attributes = fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}
