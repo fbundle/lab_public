@@ -5,11 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b16f107d-c96f-4e25-8395-7b2db2a7446a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/pkg/fs/util.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmd/mnt/main.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmd/mount_memfs/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/mount_memfs/main.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/fs/fuse_mount.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/fs/fuse_mount.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/fs/memfile/memfile.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/fs/memfile.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/fs/memfs/memfs.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/fs/memfs.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/fs/memfs/util.go" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,6 +64,7 @@
       <recent name="$PROJECT_DIR$/pkg/fs" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/pkg/fs" />
       <recent name="$PROJECT_DIR$/pkg/persistent" />
       <recent name="$PROJECT_DIR$/pkg/persistent/internal" />
     </key>

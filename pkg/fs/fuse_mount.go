@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/fbundle/go_util/pkg/fs/memfile"
 	"github.com/jacobsa/fuse"
 	"github.com/jacobsa/fuse/fuseops"
 	"github.com/jacobsa/fuse/fuseutil"
@@ -207,7 +206,7 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 	child := append(Path{}, parent...)
 	child = append(child, op.Name)
 	key, _ := pathToKey(child)
-	m.p.files[key] = memfile.NewMemFile()
+	m.p.files[key] = NewMemFile()
 	ino := m.inodeForPath(child)
 	op.Handle = fuseops.HandleID(ino)
 	op.Entry = fuseops.ChildInodeEntry{Child: ino, Attributes: fuseops.InodeAttributes{Nlink: 1, Mode: 0o666}}

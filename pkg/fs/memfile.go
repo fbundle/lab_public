@@ -1,12 +1,10 @@
-package memfile
+package fs
 
 import (
 	"errors"
-
-	"github.com/fbundle/go_util/pkg/fs"
 )
 
-func NewMemFile() fs.File {
+func NewMemFile() File {
 	return &memFile{
 		data: nil,
 	}
