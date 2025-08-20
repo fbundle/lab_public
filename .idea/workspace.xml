@@ -5,10 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b16f107d-c96f-4e25-8395-7b2db2a7446a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/pkg/fs/memfs/memfs.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pkg/fs/memfs/util.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/fs/fs.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/fs/fs.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/fs/memfs/memfs.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/fs/memfs/memfs.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
