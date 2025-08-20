@@ -6,19 +6,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fbundle/go_util/pkg/fs/memfile"
 	"github.com/jacobsa/fuse"
 	"github.com/jacobsa/fuse/fuseops"
 	"github.com/jacobsa/fuse/fuseutil"
 )
 
-func Mount(fs FileSystem, mountpoint string) error {
-
-	fuseutil.FileSystem()
-	return nil
-}
-
 type memPathFS struct {
-	files map[string]FileWriter
+	files map[string]File
 }
 
 const (
@@ -37,7 +32,7 @@ func MountMemPathFS(mountpoint string) error {
 	if err := os.MkdirAll(mountpoint, 0o755); err != nil {
 		return err
 	}
-	mp := &memPathFS{files: make(map[string]FileWriter)}
+	mp := &memPathFS{files: make(map[string]File)}
 	server := fuseutil.NewFileSystemServer(newMemFS(mp))
 	mfs, err := fuse.Mount(mountpoint, server, &fuse.MountConfig{ReadOnly: false})
 	if err != nil {
@@ -88,7 +83,7 @@ func (m *memFS) LookUpInode(ctx context.Context, op *fuseops.LookUpInodeOp) erro
 	}
 	child := append(Path{}, parentPath...)
 	child = append(child, op.Name)
-	key := strings.Join(child, PathSeparator)
+	key, _ := pathToKey(child)
 	if file, ok := m.p.files[key]; ok {
 		ino := m.inodeForPath(child)
 		op.Entry.Child = ino
@@ -197,7 +192,7 @@ func (m *memFS) MkDir(ctx context.Context, op *fuseops.MkDirOp) error {
 	}
 	child := append(Path{}, parent...)
 	child = append(child, op.Name)
-	key := strings.Join(child, PathSeparator)
+	key, _ := pathToKey(child)
 	m.p.files[key] = nil
 	ino := m.inodeForPath(child)
 	op.Entry = fuseops.ChildInodeEntry{Child: ino, Attributes: fuseops.InodeAttributes{Nlink: 1, Mode: os.ModeDir | 0o777}}
@@ -211,8 +206,8 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 	}
 	child := append(Path{}, parent...)
 	child = append(child, op.Name)
-	key := strings.Join(child, PathSeparator)
-	m.p.files[key] = newMemFile()
+	key, _ := pathToKey(child)
+	m.p.files[key] = memfile.NewMemFile()
 	ino := m.inodeForPath(child)
 	op.Handle = fuseops.HandleID(ino)
 	op.Entry = fuseops.ChildInodeEntry{Child: ino, Attributes: fuseops.InodeAttributes{Nlink: 1, Mode: 0o666}}
@@ -280,7 +275,7 @@ func (m *memFS) Unlink(ctx context.Context, op *fuseops.UnlinkOp) error {
 	}
 	child := append(Path{}, parent...)
 	child = append(child, op.Name)
-	key := strings.Join(child, PathSeparator)
+	key, _ := pathToKey(child)
 	delete(m.p.files, key)
 	return nil
 }
@@ -292,7 +287,7 @@ func (m *memFS) RmDir(ctx context.Context, op *fuseops.RmDirOp) error {
 	}
 	child := append(Path{}, parent...)
 	child = append(child, op.Name)
-	key := strings.Join(child, PathSeparator)
+	key, _ := pathToKey(child)
 	prefix := key + PathSeparator
 	for k := range m.p.files {
 		if strings.HasPrefix(k, prefix) {
