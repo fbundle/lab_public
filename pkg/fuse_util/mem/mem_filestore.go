@@ -22,7 +22,7 @@ type memFileStore struct {
 	lastId uint64
 }
 
-func (f *memFileStore) Create(updaters ...func(fuse_util.File) error) (fuse_util.File, error) {
+func (f *memFileStore) Create() (fuse_util.File, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -37,11 +37,6 @@ func (f *memFileStore) Create(updaters ...func(fuse_util.File) error) (fuse_util
 			Mtime: time.Now(),
 			Size:  0,
 		},
-	}
-	for _, updater := range updaters {
-		if err := updater(file); err != nil {
-			return nil, err
-		}
 	}
 
 	f.files[f.lastId] = file
