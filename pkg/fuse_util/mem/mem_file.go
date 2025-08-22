@@ -60,7 +60,6 @@ func (f *memFile) UpdateAttr(updater func(fuse_util.FileAttr) fuse_util.FileAttr
 func (f *memFile) Read(offset uint64, buffer []byte) (n int, err error) {
 	f.lockRead(func() {
 		if uint64(len(f.data)) <= offset {
-			err = errors.New("index out of range")
 			return
 		}
 		n = copy(buffer, f.data[offset:])

@@ -1,7 +1,6 @@
 package fuse_util
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
 	"reflect"
@@ -69,18 +68,6 @@ func getInodeAttributes(a FileAttr) fuseops.InodeAttributes {
 		Mode:  mode,
 		Mtime: a.Mtime,
 	}
-}
-func deepCopy[T any](src T) T {
-	b, err := json.Marshal(src)
-	if err != nil {
-		panic(err)
-	}
-	var dst T
-	err = json.Unmarshal(b, &dst)
-	if err != nil {
-		panic(err)
-	}
-	return dst
 }
 
 func mtimeReducer(parent node, child node) (newParent node) {

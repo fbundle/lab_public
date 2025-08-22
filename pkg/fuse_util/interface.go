@@ -1,6 +1,7 @@
 package fuse_util
 
 import (
+	"slices"
 	"time"
 )
 
@@ -14,7 +15,9 @@ type FileAttr struct {
 }
 
 func (a FileAttr) Clone() FileAttr {
-	return deepCopy(a)
+	newAttr := a
+	newAttr.Path = slices.Clone(a.Path)
+	return newAttr
 }
 
 type FileViewer interface {
