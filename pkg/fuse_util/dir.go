@@ -35,7 +35,7 @@ func (d *dir) Write(offset uint64, buffer []byte) (n int, err error) {
 }
 
 func (d *dir) Trunc(size uint64) error {
-	errors.New("no_permission")
+	return errors.New("no_permission")
 }
 
 func (d *dir) UpdateAttr(f func(FileAttr) FileAttr) error {
