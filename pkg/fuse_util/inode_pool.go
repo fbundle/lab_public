@@ -82,7 +82,7 @@ func (p *inodePool) createNode(path []string, file File) (n node, ok bool) {
 	return n, true
 }
 
-func (p *inodePool) deleteNode(path []string, filters ...func(node) bool) bool {
+func (p *inodePool) deleteNodeIf(path []string, filters ...func(node) bool) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 

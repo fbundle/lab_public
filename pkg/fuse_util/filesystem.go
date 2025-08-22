@@ -183,7 +183,7 @@ func (m *memFS) RmDir(ctx context.Context, op *fuseops.RmDirOp) error {
 		return fuse.ENOENT
 	}
 	path := append(slices.Clone(parent.path), op.Name)
-	ok = m.inodePool.deleteNode(path, func(n node) bool {
+	ok = m.inodePool.deleteNodeIf(path, func(n node) bool {
 		return n.isDir()
 	})
 	if !ok {
@@ -201,7 +201,7 @@ func (m *memFS) Unlink(ctx context.Context, op *fuseops.UnlinkOp) error {
 	path := append(slices.Clone(parent.path), op.Name)
 
 	var err error
-	if ok := m.inodePool.deleteNode(path, func(n node) bool {
+	if ok := m.inodePool.deleteNodeIf(path, func(n node) bool {
 		if n.isDir() {
 			return false
 		}
