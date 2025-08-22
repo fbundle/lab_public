@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = "gen/relay_pb";
+
+package relay;
+
+message Message {
+  string sender = 1;
+  string receiver = 2;
+  bytes payload = 3;
+}

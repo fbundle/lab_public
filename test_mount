@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -xe
+cd tmp/mnt
+
+
+mkdir a
+tree
+mkdir b
+tree
+mkdir c
+tree
+mkdir a/aa
+tree
+echo hehe > a/aa/x
+tree
+cat a/aa/x
