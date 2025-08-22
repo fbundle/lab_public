@@ -34,7 +34,6 @@ type FileUpdater interface {
 type File interface {
 	FileViewer
 	FileUpdater
-	// TODO consider adding Mtime - NOTE complicated as need directory Mtime - need tree traversal in Trie - like reduce op on the tree where parent = max(children)
 }
 
 // FileStore - just a map[path]File - there is no hardlink or symlink
