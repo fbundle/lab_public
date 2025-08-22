@@ -15,11 +15,11 @@ const (
 	defaultDirMode  = os.ModeDir | 0o777
 )
 
-func (m *memFS) updateAllMtime() {
+func (m *memFS) updateAllMtimeWithoutLock() {
 	m.inodePool.pathToNode.ReduceAll(mtimeReducer)
 }
 
-func (m *memFS) updateMtime(path []string) {
+func (m *memFS) updateMtimeWithoutLock(path []string) {
 	m.inodePool.pathToNode.ReducePartial(path, mtimeReducer)
 }
 

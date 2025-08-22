@@ -43,7 +43,7 @@ func NewFuseFileSystem(files FileStore) (fuseutil.FileSystem, error) {
 		return nil, iterErr
 	}
 
-	m.updateAllMtime()
+	m.updateAllMtimeWithoutLock()
 
 	return m, nil
 }
@@ -168,7 +168,7 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 		return fuse.ENOENT
 	}
 
-	defer m.updateMtime(node.path)
+	defer m.updateMtimeWithoutLock(node.path)
 
 	op.Handle = fuseops.HandleID(node.inode)
 	op.Entry = fuseops.ChildInodeEntry{
@@ -249,7 +249,7 @@ func (m *memFS) WriteFile(ctx context.Context, op *fuseops.WriteFileOp) error {
 	if !ok || node.isDir() {
 		return fuse.ENOENT
 	}
-	defer m.updateMtime(node.path)
+	defer m.updateMtimeWithoutLock(node.path)
 
 	_, err := node.file.Write(uint64(op.Offset), op.Data)
 	return err
@@ -263,7 +263,7 @@ func (m *memFS) SetInodeAttributes(ctx context.Context, op *fuseops.SetInodeAttr
 			return fuse.ENOENT
 		}
 
-		defer m.updateMtime(node.path)
+		defer m.updateMtimeWithoutLock(node.path)
 
 		return node.file.Trunc(*op.Size)
 	}
