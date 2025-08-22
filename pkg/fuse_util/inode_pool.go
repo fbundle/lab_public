@@ -66,15 +66,12 @@ func (p *inodePool) getNodeFromInode(inode fuseops.InodeID) (node, bool) {
 	return n, ok
 }
 
-func (p *inodePool) createNode(path []string, setters ...func(node) node) (n node, ok bool) {
+func (p *inodePool) createNode(path []string, file File) (n node, ok bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	n = newNode(p.maxInode+1, path, nil)
+	n = newNode(p.maxInode+1, path, file)
 
-	for _, setter := range setters {
-		n = setter(n)
-	}
 	p.maxInode = max(p.maxInode, n.inode)
 
 	ok = p.pathToNode.Insert(path, n)

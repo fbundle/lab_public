@@ -29,17 +29,11 @@ func NewFuseFileSystem(files FileStore) fuseutil.FileSystem {
 		for i := 0; i < len(path); i++ {
 			dirpath := path[:i]
 			if _, ok := m.inodePool.getNodeFromPath(dirpath); !ok {
-				m.inodePool.createNode(dirpath, func(n node) node {
-					n.file = newDir()
-					return n
-				})
+				m.inodePool.createNode(dirpath, newDir())
 			}
 		}
 		// set the file inode
-		m.inodePool.createNode(path, func(n node) node {
-			n.file = file
-			return n
-		})
+		m.inodePool.createNode(path, file)
 		return true
 	}); err != nil {
 		panic(err)
@@ -136,10 +130,7 @@ func (m *memFS) MkDir(ctx context.Context, op *fuseops.MkDirOp) error {
 	}
 
 	path := append(slices.Clone(parent.path), op.Name)
-	node, ok := m.inodePool.createNode(path, func(n node) node {
-		n.file = newDir()
-		return n
-	})
+	node, ok := m.inodePool.createNode(path, newDir())
 	if !ok {
 		return fuse.ENOENT
 	}
@@ -172,10 +163,7 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 		return err
 	}
 
-	node, ok := m.inodePool.createNode(path, func(n node) node {
-		n.file = file
-		return n
-	})
+	node, ok := m.inodePool.createNode(path, file)
 	if !ok {
 		return fuse.ENOENT
 	}
