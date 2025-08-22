@@ -159,14 +159,13 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 
 	path := append(slices.Clone(parent.path), op.Name)
 
-	file, err := m.files.Create()
+	file, err := m.files.Create(func(file File) error {
+		return file.UpdateAttr(func(attr FileAttr) FileAttr {
+			attr.Path = path
+			return attr
+		})
+	})
 	if err != nil {
-		return err
-	}
-	if err = file.UpdateAttr(func(attr FileAttr) FileAttr {
-		attr.Path = path
-		return attr
-	}); err != nil {
 		return err
 	}
 

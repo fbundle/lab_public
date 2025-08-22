@@ -3,6 +3,7 @@ package fuse_util_mem
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/fbundle/go_util/pkg/fuse_util"
 )
@@ -21,12 +22,28 @@ type memFileStore struct {
 	lastId uint64
 }
 
-func (f *memFileStore) Create() (fuse_util.File, error) {
+func (f *memFileStore) Create(updaters ...func(fuse_util.File) error) (fuse_util.File, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	f.lastId++
-	file := newMemFile(f.lastId)
+	file := &memFile{
+		mu:   sync.RWMutex{},
+		data: nil,
+		attr: fuse_util.FileAttr{
+			ID:    f.lastId,
+			IsDir: false,
+			Path:  nil,
+			Mtime: time.Now(),
+			Size:  0,
+		},
+	}
+	for _, updater := range updaters {
+		if err := updater(file); err != nil {
+			return nil, err
+		}
+	}
+
 	f.files[f.lastId] = file
 	return file, nil
 }

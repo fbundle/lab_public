@@ -8,23 +8,6 @@ import (
 	"github.com/fbundle/go_util/pkg/fuse_util"
 )
 
-func newMemFile(id uint64) *memFile {
-	return &memFile{
-		mu:   sync.RWMutex{},
-		data: nil,
-		attr: fuse_util.FileAttr{
-			ID:    id,
-			IsDir: false,
-
-			Path:  nil,
-			Mtime: time.Now(),
-			Size:  0,
-		},
-	}
-}
-
-var _ fuse_util.File = (*memFile)(nil)
-
 type memFile struct {
 	mu   sync.RWMutex
 	attr fuse_util.FileAttr

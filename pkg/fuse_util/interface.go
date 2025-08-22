@@ -7,7 +7,7 @@ import (
 type FileAttr struct {
 	ID    uint64
 	IsDir bool
-	
+
 	Path  []string
 	Mtime time.Time
 	Size  uint64
@@ -36,7 +36,7 @@ type File interface {
 
 // FileStore - just a map[path]File - there is no hardlink or symlink
 type FileStore interface {
-	Create() (file File, err error)
+	Create(updaters ...func(File) error) (file File, err error)
 	Delete(id uint64) (err error)
 	Iterate(yield func(file File) bool) (err error)
 }
