@@ -19,6 +19,10 @@ const (
 
 func getField[T any](o any, name string) (t T, err error) {
 	v := reflect.ValueOf(o)
+	// If it's a pointer, dereference it
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
 	t, ok := v.FieldByName(name).Interface().(T)
 	if !ok {
 		return t, errors.New("internal error")
