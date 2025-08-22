@@ -162,6 +162,8 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 	if !ok {
 		return fuse.ENOENT
 	}
+	
+	defer m.updateMtime(node.path)
 
 	op.Handle = fuseops.HandleID(node.inode)
 	op.Entry = fuseops.ChildInodeEntry{
