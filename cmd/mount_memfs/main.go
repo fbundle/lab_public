@@ -39,7 +39,6 @@ func main() {
 
 	files := fuse_util_mem.NewMemFileStore()
 	if err := mount(files, "mnt"); err != nil {
-		mustRunCmd("fusermount -u mnt")
-		mustRunCmd("rm -rf mnt")
+		panic(err)
 	}
 }

@@ -8,7 +8,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmd/mount_memfs/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/mount_memfs/main.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/fuse_util/mem/mem_file.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/fuse_util/mem/mem_file.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/fuse_util/util.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/fuse_util/util.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test_mount" beforeDir="false" afterPath="$PROJECT_DIR$/test_mount" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
