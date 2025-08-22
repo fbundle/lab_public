@@ -3,7 +3,6 @@ package fuse_util
 import (
 	"context"
 	"errors"
-	"slices"
 
 	"github.com/jacobsa/fuse"
 	"github.com/jacobsa/fuse/fuseops"
@@ -55,11 +54,10 @@ func (m *memFS) StatFS(ctx context.Context, op *fuseops.StatFSOp) error {
 
 // LookUpInode - get child info
 func (m *memFS) LookUpInode(ctx context.Context, op *fuseops.LookUpInodeOp) error {
-	parent, ok := m.inodePool.getNodeFromInode(op.Parent)
-	if !ok {
-		return fuse.ENOENT
+	path, err := getPathWithParent(m, op)
+	if err != nil {
+		return err
 	}
-	path := append(slices.Clone(parent.path), op.Name)
 
 	node, ok := m.inodePool.getNodeFromPath(path)
 	if !ok {
@@ -124,12 +122,10 @@ func (m *memFS) ReadDir(ctx context.Context, op *fuseops.ReadDirOp) error {
 
 // MkDir -
 func (m *memFS) MkDir(ctx context.Context, op *fuseops.MkDirOp) error {
-	parent, ok := m.inodePool.getNodeFromInode(op.Parent)
-	if !ok {
-		return fuse.ENOENT
+	path, err := getPathWithParent(m, op)
+	if err != nil {
+		return err
 	}
-
-	path := append(slices.Clone(parent.path), op.Name)
 	node, ok := m.inodePool.createNode(path, newDir())
 	if !ok {
 		return fuse.ENOENT
@@ -143,12 +139,10 @@ func (m *memFS) MkDir(ctx context.Context, op *fuseops.MkDirOp) error {
 }
 
 func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error {
-	parent, ok := m.inodePool.getNodeFromInode(op.Parent)
-	if !ok {
-		return fuse.ENOENT
+	path, err := getPathWithParent(m, op)
+	if err != nil {
+		return err
 	}
-
-	path := append(slices.Clone(parent.path), op.Name)
 
 	file, err := m.files.Create()
 	if err != nil {
@@ -178,15 +172,13 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 
 // RmDir - rmdir
 func (m *memFS) RmDir(ctx context.Context, op *fuseops.RmDirOp) error {
-	parent, ok := m.inodePool.getNodeFromInode(op.Parent)
-	if !ok {
-		return fuse.ENOENT
+	path, err := getPathWithParent(m, op)
+	if err != nil {
+		return err
 	}
-	path := append(slices.Clone(parent.path), op.Name)
-	ok = m.inodePool.deleteNodeIf(path, func(n node) bool {
+	if ok := m.inodePool.deleteNodeIf(path, func(n node) bool {
 		return n.isDir()
-	})
-	if !ok {
+	}); !ok {
 		return fuse.ENOENT
 	}
 	return nil
@@ -194,13 +186,11 @@ func (m *memFS) RmDir(ctx context.Context, op *fuseops.RmDirOp) error {
 
 // Unlink - rm
 func (m *memFS) Unlink(ctx context.Context, op *fuseops.UnlinkOp) error {
-	parent, ok := m.inodePool.getNodeFromInode(op.Parent)
-	if !ok {
-		return fuse.ENOENT
+	path, err := getPathWithParent(m, op)
+	if err != nil {
+		return err
 	}
-	path := append(slices.Clone(parent.path), op.Name)
 
-	var err error
 	if ok := m.inodePool.deleteNodeIf(path, func(n node) bool {
 		if n.isDir() {
 			return false

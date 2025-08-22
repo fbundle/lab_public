@@ -3,8 +3,11 @@ package fuse_util
 import (
 	"encoding/json"
 	"os"
+	"reflect"
+	"slices"
 	"time"
 
+	"github.com/jacobsa/fuse"
 	"github.com/jacobsa/fuse/fuseops"
 )
 
@@ -12,6 +15,26 @@ const (
 	defaultFileMode = 0o666
 	defaultDirMode  = os.ModeDir | 0o777
 )
+
+func mustGetField[T any](o any, name string) T {
+	v := reflect.ValueOf(o)
+	t, ok := v.FieldByName(name).Interface().(T)
+	if !ok {
+		panic("internal error")
+	}
+	return t
+}
+
+func getPathWithParent(m *memFS, op any) ([]string, error) {
+	parent := mustGetField[fuseops.InodeID](op, "Parent")
+	name := mustGetField[string](op, "Name")
+
+	node, ok := m.inodePool.getNodeFromInode(parent)
+	if !ok {
+		return nil, fuse.ENOENT
+	}
+	return append(slices.Clone(node.path), name), nil
+}
 
 func getInodeAttributes(a FileAttr) fuseops.InodeAttributes {
 	var mode os.FileMode
