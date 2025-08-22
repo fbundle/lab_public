@@ -9,7 +9,7 @@ import (
 	"github.com/jacobsa/fuse/fuseutil"
 )
 
-func NewFuseFileSystem(files FileStore) fuseutil.FileSystem {
+func NewFuseFileSystem(files FileStore) (fuseutil.FileSystem, error) {
 	m := &memFS{
 		files: files,
 		inodePool: newInodePool(node{
@@ -19,10 +19,12 @@ func NewFuseFileSystem(files FileStore) fuseutil.FileSystem {
 		}),
 	}
 	// populate the inodes for directories and files
+	iterErr := error(nil)
 	if err := files.Iterate(func(file File) bool {
 		path := mustAttr(file).Path
 		if len(path) == 0 {
-			panic("file must not have empty path")
+			iterErr = errors.New("file must not have empty path")
+			return false
 		}
 		// populate the parent directories
 		for i := 0; i < len(path); i++ {
@@ -35,12 +37,15 @@ func NewFuseFileSystem(files FileStore) fuseutil.FileSystem {
 		m.inodePool.createNode(path, file)
 		return true
 	}); err != nil {
-		panic(err)
+		return nil, err
+	}
+	if iterErr != nil {
+		return nil, iterErr
 	}
 
 	m.updateAllMtime()
 
-	return m
+	return m, nil
 }
 
 type memFS struct {
@@ -162,7 +167,7 @@ func (m *memFS) CreateFile(ctx context.Context, op *fuseops.CreateFileOp) error 
 	if !ok {
 		return fuse.ENOENT
 	}
-	
+
 	defer m.updateMtime(node.path)
 
 	op.Handle = fuseops.HandleID(node.inode)

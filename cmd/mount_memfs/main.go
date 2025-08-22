@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"log"
 	"os/exec"
 	"strings"
 
@@ -23,8 +24,11 @@ func mount(fs fuse_util.FileStore, mountpoint string) error {
 	if mountpoint == "" {
 		return errors.New("mountpoint is required")
 	}
-
-	server := fuseutil.NewFileSystemServer(fuse_util.NewFuseFileSystem(fs))
+	ffs, err := fuse_util.NewFuseFileSystem(fs)
+	if err != nil {
+		return err
+	}
+	server := fuseutil.NewFileSystemServer(ffs)
 	mfs, err := fuse.Mount(mountpoint, server, &fuse.MountConfig{
 		ReadOnly: false,
 	})
@@ -39,6 +43,6 @@ func main() {
 
 	files := fuse_util_mem.NewMemFileStore()
 	if err := mount(files, "mnt"); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
