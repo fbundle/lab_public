@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	"github.com/fbundle/go_util/pkg/fuse_util"
-	"github.com/fbundle/go_util/pkg/fuse_util/mem"
+	fuse_util_mem "github.com/fbundle/go_util/pkg/fuse_util/mem"
 	"github.com/jacobsa/fuse"
 	"github.com/jacobsa/fuse/fuseutil"
 )
 
-func mustRunCmd(command string) {
+func justRunCmd(command string) {
 	parts := strings.Fields(command)
 	cmd := exec.Command(parts[0], parts[1:]...)
 	output, err := cmd.CombinedOutput()
@@ -34,8 +34,8 @@ func mount(fs fuse_util.FileStore, mountpoint string) error {
 	return mfs.Join(context.Background())
 }
 func main() {
-	mustRunCmd("fusermount -u mnt")
-	mustRunCmd("mkdir mnt")
+	justRunCmd("fusermount -u mnt")
+	justRunCmd("mkdir mnt")
 
 	files := fuse_util_mem.NewMemFileStore()
 	if err := mount(files, "mnt"); err != nil {
