@@ -6,7 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="b16f107d-c96f-4e25-8395-7b2db2a7446a" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/fuse_util/filesystem.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/fuse_util/filesystem.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmd/mount_memfs/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/mount_memfs/main.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/fuse_util/mem/mem_file.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/fuse_util/mem/mem_file.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/fuse_util/util.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/fuse_util/util.go" afterDir="false" />
     </list>

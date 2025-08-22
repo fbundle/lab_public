@@ -35,11 +35,17 @@ func mount(fs fuse_util.FileStore, mountpoint string) error {
 	return mfs.Join(context.Background())
 }
 func main() {
-	mustRunCmd("fusermount -u tmp/mnt")
-	mustRunCmd("mkdir -p tmp/mnt")
+	func() {
+		mustRunCmd("fusermount -u mnt")
+		mustRunCmd("mkdir mnt")
+	}()
+	defer func() {
+		mustRunCmd("fusermount -u mnt")
+		mustRunCmd("rm -rf mnt")
+	}()
 
 	files := fuse_util_mem.NewMemFileStore()
-	if err := mount(files, "tmp/mnt"); err != nil {
+	if err := mount(files, "mnt"); err != nil {
 		log.Fatal(err)
 	}
 }
