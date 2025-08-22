@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"os/exec"
 	"strings"
 
@@ -35,17 +34,12 @@ func mount(fs fuse_util.FileStore, mountpoint string) error {
 	return mfs.Join(context.Background())
 }
 func main() {
-	func() {
-		mustRunCmd("fusermount -u mnt")
-		mustRunCmd("mkdir mnt")
-	}()
-	defer func() {
-		mustRunCmd("fusermount -u mnt")
-		mustRunCmd("rm -rf mnt")
-	}()
+	mustRunCmd("fusermount -u mnt")
+	mustRunCmd("mkdir mnt")
 
 	files := fuse_util_mem.NewMemFileStore()
 	if err := mount(files, "mnt"); err != nil {
-		log.Fatal(err)
+		mustRunCmd("fusermount -u mnt")
+		mustRunCmd("rm -rf mnt")
 	}
 }
