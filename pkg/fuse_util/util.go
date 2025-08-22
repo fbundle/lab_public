@@ -5,7 +5,6 @@ import (
 	"os"
 	"reflect"
 	"slices"
-	"time"
 
 	"github.com/jacobsa/fuse"
 	"github.com/jacobsa/fuse/fuseops"
@@ -92,45 +91,4 @@ func mustAttr(file File) FileAttr {
 		panic(err)
 	}
 	return meta
-}
-
-func newDir() File {
-	return &dir{
-		attr: FileAttr{
-			ID:    0,
-			IsDir: true,
-
-			Path:  nil,
-			Mtime: time.Now(),
-			Size:  0,
-		},
-	}
-}
-
-type dir struct {
-	attr FileAttr
-}
-
-func (d *dir) Attr() (FileAttr, error) {
-	return d.attr, nil
-}
-
-func (d *dir) Read(offset uint64, buffer []byte) (n int, err error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (d *dir) Write(offset uint64, buffer []byte) (n int, err error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (d *dir) Trunc(size uint64) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (d *dir) UpdateAttr(f func(FileAttr) FileAttr) error {
-	d.attr = f(d.attr)
-	return nil
 }
