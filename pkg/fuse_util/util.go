@@ -2,6 +2,7 @@ package fuse_util
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"reflect"
 	"slices"
@@ -16,18 +17,24 @@ const (
 	defaultDirMode  = os.ModeDir | 0o777
 )
 
-func mustGetField[T any](o any, name string) T {
+func getField[T any](o any, name string) (t T, err error) {
 	v := reflect.ValueOf(o)
 	t, ok := v.FieldByName(name).Interface().(T)
 	if !ok {
-		panic("internal error")
+		return t, errors.New("internal error")
 	}
-	return t
+	return t, nil
 }
 
 func getPathWithParent(m *memFS, op any) ([]string, error) {
-	parent := mustGetField[fuseops.InodeID](op, "Parent")
-	name := mustGetField[string](op, "Name")
+	parent, err := getField[fuseops.InodeID](op, "Parent")
+	if err != nil {
+		return nil, err
+	}
+	name, err := getField[string](op, "Name")
+	if err != nil {
+		return nil, err
+	}
 
 	node, ok := m.inodePool.getNodeFromInode(parent)
 	if !ok {
