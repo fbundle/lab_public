@@ -38,7 +38,8 @@ func NewFuseFileSystem(files FileStore) fuseutil.FileSystem {
 		panic(err)
 	}
 
-	m.inodePool.pathToNode.ReduceAll(mtimeReducer)
+	m.updateAllMtime()
+
 	return m
 }
 
@@ -241,7 +242,7 @@ func (m *memFS) WriteFile(ctx context.Context, op *fuseops.WriteFileOp) error {
 	if !ok || node.isDir() {
 		return fuse.ENOENT
 	}
-	defer m.inodePool.pathToNode.ReducePartial(node.path, mtimeReducer)
+	defer m.updateMtime(node.path)
 
 	_, err := node.file.Write(uint64(op.Offset), op.Data)
 	return err
@@ -255,7 +256,7 @@ func (m *memFS) SetInodeAttributes(ctx context.Context, op *fuseops.SetInodeAttr
 			return fuse.ENOENT
 		}
 
-		defer m.inodePool.pathToNode.ReducePartial(node.path, mtimeReducer)
+		defer m.updateMtime(node.path)
 
 		return node.file.Trunc(*op.Size)
 	}

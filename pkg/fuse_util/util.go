@@ -17,6 +17,14 @@ const (
 	defaultDirMode  = os.ModeDir | 0o777
 )
 
+func (m *memFS) updateAllMtime() {
+	m.inodePool.pathToNode.ReduceAll(mtimeReducer)
+}
+
+func (m *memFS) updateMtime(path []string) {
+	m.inodePool.pathToNode.ReducePartial(path, mtimeReducer)
+}
+
 func getField[T any](o any, name string) (t T, err error) {
 	v := reflect.ValueOf(o)
 	// If it's a pointer, dereference it
