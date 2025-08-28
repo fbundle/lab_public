@@ -1,8 +1,6 @@
 package kv_filesystem
 
-import (
-	"encoding/binary"
-)
+import "errors"
 
 type keyType byte
 
@@ -11,17 +9,12 @@ const (
 	keyTypeBlock keyType = 1
 )
 
-func wrapKey(t keyType, i uint64) []byte {
-	b := make([]byte, 9)
-	b[0] = byte(t)
-	binary.LittleEndian.PutUint64(b[1:9], i)
-	return b
+func wrapKey(t keyType, i uint64) uint64 {
+	return (uint64(t) << 56) + i
 }
 
-func unwrapKey(b []byte) (t keyType, i uint64) {
-	t = keyType(b[0])
-	i = binary.LittleEndian.Uint64(b[1:9])
-	return t, i
+func unwrapKey(key uint64) (t keyType, i uint64) {
+	return keyType(key >> 56), key & 0x00FFFFFFFFFFFFFF
 }
 
 func size[T any](s []T) uint64 {
@@ -36,44 +29,31 @@ type file struct {
 }
 
 type kvFilesystem struct {
-	kvstore KVStore
+	kvstore KVStore[uint64, []byte]
 	files   map[uint64]*file
 }
 
-func (fs *kvFilesystem) Read(id uint64, offset uint64, buffer []byte) (n int, err error) {
-	f := fs.files[id]
-	begOffset, endOffset := offset, offset+uint64(len(buffer))
-
-	begBlockOffset := begOffset / f.BlockSize
-	endBlockOffset := endOffset / f.BlockSize
-	extendedBuffer := make([]byte, f.BlockSize*(endBlockOffset-begBlockOffset))
-
-	m, err := fs.readExactBlocks(id, begBlockOffset, endBlockOffset, extendedBuffer)
-	if m > 0 {
-		// shift
-		extendedBuffer = extendedBuffer[begOffset-begBlockOffset*f.BlockSize:]
-		n = copy(buffer, extendedBuffer)
+func (fs *kvFilesystem) readBlocks(blockSize uint64, blockList []uint64, buffer []byte) error {
+	if size(blockList)*blockSize != size(buffer) {
+		return errors.New("invalid buffer size")
 	}
-	return n, err
-}
-
-func (fs *kvFilesystem) readExactBlocks(id uint64, begBlockOffset uint64, endBlockOffset uint64, buffer []byte) (uint64, error) {
-	f := fs.files[id]
-
-	i := uint64(0)
-
-	for idx := begBlockOffset; idx < endBlockOffset; idx++ {
-		if idx >= size(f.BlockList) {
-			break
-		}
-
-		bufferOffset := i * f.BlockSize
-		block, err := fs.kvstore.Get(wrapKey(keyTypeBlock, f.BlockList[idx]))
+	for i, block := range blockList {
+		blockData, err := fs.kvstore.Get(block)
 		if err != nil {
-			return i, err
+			return err
 		}
-		copy(buffer[bufferOffset:], block)
-		i++
+		copy(buffer[uint64(i)*blockSize:], blockData)
 	}
-	return i, nil
+	return nil
+}
+func (fs *kvFilesystem) writeBlocks(blockSize uint64, blockList []uint64, buffer []byte) error {
+	if size(blockList)*blockSize != size(buffer) {
+		return errors.New("invalid buffer size")
+	}
+	for i, block := range blockList {
+		if err := fs.kvstore.Set(block, buffer[uint64(i)*blockSize:]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
