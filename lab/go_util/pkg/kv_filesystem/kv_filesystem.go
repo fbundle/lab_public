@@ -1,44 +1,114 @@
 package kv_filesystem
 
-import "errors"
-
-type keyType byte
-
-const (
-	keyTypeFile  keyType = 0
-	keyTypeBlock keyType = 1
+import (
+	"errors"
 )
 
-func wrapKey(t keyType, i uint64) uint64 {
-	return (uint64(t) << 56) + i
-}
+var ErrFileNotFound = errors.New("file_not_found")
 
-func unwrapKey(key uint64) (t keyType, i uint64) {
-	return keyType(key >> 56), key & 0x00FFFFFFFFFFFFFF
-}
-
-func size[T any](s []T) uint64 {
-	return uint64(len(s))
-}
+type FileID uint64
+type Block uint64
 
 type file struct {
-	ID        uint64   `json:"id"`
-	BlockSize uint64   `json:"block_size"`
-	BlockList []uint64 `json:"block_list"`
-	Other     any      `json:"other"`
+	ID        FileID `json:"id"`
+	Size      uint64
+	BlockSize uint64  `json:"block_size"`
+	BlockList []Block `json:"block_list"`
+	Other     any     `json:"other"`
 }
 
-type kvFilesystem struct {
-	kvstore KVStore[uint64, []byte]
-	files   map[uint64]*file
+type blockFS struct {
+	kvstore KVStore[Block, []byte]
+	files   map[FileID]*file
 }
 
-func (fs *kvFilesystem) readBlocks(blockSize uint64, blockList []uint64, buffer []byte) error {
+func (fs *blockFS) Size(id FileID) (uint64, error) {
+	f, ok := fs.files[id]
+	if !ok {
+		return 0, ErrFileNotFound
+	}
+	return f.Size, nil
+}
+
+func (fs *blockFS) Read(id FileID, offset uint64, buffer []byte) error {
+	f, ok := fs.files[id]
+	if !ok {
+		return ErrFileNotFound
+	}
+
+	begOffset := offset
+	endOffset := offset + size(buffer) - 1
+
+	begBlockIdx := begOffset / f.BlockSize
+	endBlockIdx := endOffset / f.BlockSize
+
+	blockList := f.BlockList[begBlockIdx : endBlockIdx+1]
+	readBuffer := make([]byte, size(blockList)*f.BlockSize)
+	err := readBlocks(fs.kvstore, readBuffer, f.BlockSize, blockList...)
+	if err != nil {
+		return err
+	}
+
+	copy(buffer, readBuffer[begOffset:])
+	return nil
+}
+
+func (fs *blockFS) Write(id FileID, offset uint64, buffer []byte) error {
+	f, ok := fs.files[id]
+	if !ok {
+		return ErrFileNotFound
+	}
+
+	begOffset := offset
+	endOffset := offset + size(buffer) - 1
+
+	begBlockIdx := begOffset / f.BlockSize
+	endBlockIdx := endOffset / f.BlockSize
+
+	blockList := f.BlockList[begBlockIdx : endBlockIdx+1]
+	writeBuffer := make([]byte, size(blockList)*f.BlockSize)
+
+	err := readBlocks(fs.kvstore, writeBuffer[:f.BlockSize], f.BlockSize, blockList[0])
+	if err != nil {
+		return err
+	}
+	err = readBlocks(fs.kvstore, writeBuffer[size(writeBuffer)-f.BlockSize:], f.BlockSize, blockList[size(blockList)-1])
+	if err != nil {
+		return err
+	}
+
+	copy(writeBuffer[begOffset:], buffer)
+
+	return writeBlocks(fs.kvstore, writeBuffer, f.BlockSize, blockList...)
+}
+
+func (fs *blockFS) Trunc(id FileID, length uint64) error {
+	f, ok := fs.files[id]
+	if !ok {
+		return ErrFileNotFound
+	}
+	endOffset := length - 1
+	endBlockIdx := endOffset / f.BlockSize
+
+	for idx := endBlockIdx + 1; idx < size(f.BlockList); idx++ {
+		block := f.BlockList[idx]
+		err := fs.kvstore.Del(block)
+		if err != nil {
+			return err
+		}
+	}
+
+	f.BlockList = f.BlockList[:endBlockIdx+1]
+	f.Size = length
+	return nil
+}
+
+func readBlocks(kv KVStore[Block, []byte], buffer []byte, blockSize uint64, blockList ...Block) error {
 	if size(blockList)*blockSize != size(buffer) {
 		return errors.New("invalid buffer size")
 	}
 	for i, block := range blockList {
-		blockData, err := fs.kvstore.Get(block)
+		blockData, err := kv.Get(block)
 		if err != nil {
 			return err
 		}
@@ -46,12 +116,12 @@ func (fs *kvFilesystem) readBlocks(blockSize uint64, blockList []uint64, buffer 
 	}
 	return nil
 }
-func (fs *kvFilesystem) writeBlocks(blockSize uint64, blockList []uint64, buffer []byte) error {
+func writeBlocks(kv KVStore[Block, []byte], buffer []byte, blockSize uint64, blockList ...Block) error {
 	if size(blockList)*blockSize != size(buffer) {
 		return errors.New("invalid buffer size")
 	}
 	for i, block := range blockList {
-		if err := fs.kvstore.Set(block, buffer[uint64(i)*blockSize:]); err != nil {
+		if err := kv.Set(block, buffer[uint64(i)*blockSize:]); err != nil {
 			return err
 		}
 	}
