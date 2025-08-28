@@ -1,6 +1,7 @@
 package kv_filesystem
 
 import (
+	"encoding/json"
 	"errors"
 )
 
@@ -20,6 +21,18 @@ type file struct {
 type blockFS struct {
 	kv    KVStore[Block, []byte]
 	files map[FileID]*file
+}
+
+func (fs *blockFS) writeFileMeta(f *file) {
+	b, err := json.Marshal(f)
+	if err != nil {
+		panic(err)
+	}
+	block := wrapKey(keyTypeFile, uint64(f.ID))
+	err = fs.kv.Set(Block(block), b)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (fs *blockFS) Size(id FileID) (uint64, error) {
@@ -59,6 +72,8 @@ func (fs *blockFS) Write(id FileID, offset uint64, buffer []byte) error {
 		return ErrFileNotFound
 	}
 
+	defer fs.writeFileMeta(f)
+
 	begOffset := offset
 	endOffset := offset + size(buffer) - 1
 
@@ -87,6 +102,8 @@ func (fs *blockFS) Trunc(id FileID, length uint64) error {
 	if !ok {
 		return ErrFileNotFound
 	}
+	defer fs.writeFileMeta(f)
+
 	endOffset := length - 1
 	endBlockIdx := endOffset / f.BlockSize
 
