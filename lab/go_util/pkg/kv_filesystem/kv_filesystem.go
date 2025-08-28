@@ -77,7 +77,7 @@ func (fs *blockFS) Write(id FileID, offset uint64, buffer []byte) error {
 		return err
 	}
 
-	copy(writeBuffer[begOffset:], buffer)
+	copy(writeBuffer[begOffset%f.BlockSize:], buffer)
 
 	return writeBlocks(fs.kvstore, writeBuffer, f.BlockSize, blockList...)
 }
@@ -104,9 +104,6 @@ func (fs *blockFS) Trunc(id FileID, length uint64) error {
 }
 
 func readBlocks(kv KVStore[Block, []byte], buffer []byte, blockSize uint64, blockList ...Block) error {
-	if size(blockList)*blockSize != size(buffer) {
-		return errors.New("invalid buffer size")
-	}
 	for i, block := range blockList {
 		blockData, err := kv.Get(block)
 		if err != nil {
@@ -117,9 +114,6 @@ func readBlocks(kv KVStore[Block, []byte], buffer []byte, blockSize uint64, bloc
 	return nil
 }
 func writeBlocks(kv KVStore[Block, []byte], buffer []byte, blockSize uint64, blockList ...Block) error {
-	if size(blockList)*blockSize != size(buffer) {
-		return errors.New("invalid buffer size")
-	}
 	for i, block := range blockList {
 		if err := kv.Set(block, buffer[uint64(i)*blockSize:]); err != nil {
 			return err
