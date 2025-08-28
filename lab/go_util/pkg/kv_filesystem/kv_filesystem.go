@@ -18,8 +18,8 @@ type file struct {
 }
 
 type blockFS struct {
-	kvstore KVStore[Block, []byte]
-	files   map[FileID]*file
+	kv    KVStore[Block, []byte]
+	files map[FileID]*file
 }
 
 func (fs *blockFS) Size(id FileID) (uint64, error) {
@@ -44,7 +44,7 @@ func (fs *blockFS) Read(id FileID, offset uint64, buffer []byte) error {
 
 	blockList := f.BlockList[begBlockIdx : endBlockIdx+1]
 	readBuffer := make([]byte, size(blockList)*f.BlockSize)
-	err := readBlocks(fs.kvstore, readBuffer, f.BlockSize, blockList...)
+	err := readBlocks(fs.kv, readBuffer, f.BlockSize, blockList...)
 	if err != nil {
 		return err
 	}
@@ -68,18 +68,18 @@ func (fs *blockFS) Write(id FileID, offset uint64, buffer []byte) error {
 	blockList := f.BlockList[begBlockIdx : endBlockIdx+1]
 	writeBuffer := make([]byte, size(blockList)*f.BlockSize)
 
-	err := readBlocks(fs.kvstore, writeBuffer[:f.BlockSize], f.BlockSize, blockList[0])
+	err := readBlocks(fs.kv, writeBuffer[:f.BlockSize], f.BlockSize, blockList[0])
 	if err != nil {
 		return err
 	}
-	err = readBlocks(fs.kvstore, writeBuffer[size(writeBuffer)-f.BlockSize:], f.BlockSize, blockList[size(blockList)-1])
+	err = readBlocks(fs.kv, writeBuffer[size(writeBuffer)-f.BlockSize:], f.BlockSize, blockList[size(blockList)-1])
 	if err != nil {
 		return err
 	}
 
 	copy(writeBuffer[begOffset%f.BlockSize:], buffer)
 
-	return writeBlocks(fs.kvstore, writeBuffer, f.BlockSize, blockList...)
+	return writeBlocks(fs.kv, writeBuffer, f.BlockSize, blockList...)
 }
 
 func (fs *blockFS) Trunc(id FileID, length uint64) error {
@@ -92,7 +92,7 @@ func (fs *blockFS) Trunc(id FileID, length uint64) error {
 
 	for idx := endBlockIdx + 1; idx < size(f.BlockList); idx++ {
 		block := f.BlockList[idx]
-		err := fs.kvstore.Del(block)
+		err := fs.kv.Del(block)
 		if err != nil {
 			return err
 		}
