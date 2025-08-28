@@ -49,7 +49,7 @@ func (fs *blockFS) Read(id FileID, offset uint64, buffer []byte) error {
 		return err
 	}
 
-	copy(buffer, readBuffer[begOffset:])
+	copy(buffer, readBuffer[begOffset%f.BlockSize:])
 	return nil
 }
 
