@@ -10,8 +10,8 @@ type FileID uint64
 type Block uint64
 
 type file struct {
-	ID        FileID `json:"id"`
-	Size      uint64
+	ID        FileID  `json:"id"`
+	Size      uint64  `json:"size"`
 	BlockSize uint64  `json:"block_size"`
 	BlockList []Block `json:"block_list"`
 	Other     any     `json:"other"`
