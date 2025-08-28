@@ -104,6 +104,8 @@ func (fs *blockFS) Write(id FileID, offset uint64, buffer []byte) error {
 	begBlockIdx := begOffset / f.BlockSize
 	endBlockIdx := endOffset / f.BlockSize
 
+	// TODO - allocate new blocks if endBlockIdx >= size(f.BlockList)
+
 	blockList := f.BlockList[begBlockIdx : endBlockIdx+1]
 	writeBuffer := make([]byte, size(blockList)*f.BlockSize)
 
@@ -162,6 +164,7 @@ func readBlocks(kv KVStore[Block, []byte], buffer []byte, blockSize uint64, bloc
 	}
 	return nil
 }
+
 func writeBlocks(kv KVStore[Block, []byte], buffer []byte, blockSize uint64, blockList ...Block) error {
 	for i, block := range blockList {
 		if err := kv.Set(block, buffer[uint64(i)*blockSize:]); err != nil {
