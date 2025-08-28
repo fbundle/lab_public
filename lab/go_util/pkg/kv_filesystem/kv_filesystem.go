@@ -105,6 +105,7 @@ func (fs *blockFS) Write(id FileID, offset uint64, buffer []byte) error {
 	endBlockIdx := endOffset / f.BlockSize
 
 	// TODO - allocate new blocks if endBlockIdx >= size(f.BlockList)
+	// TODO - update *file
 
 	blockList := f.BlockList[begBlockIdx : endBlockIdx+1]
 	writeBuffer := make([]byte, size(blockList)*f.BlockSize)
