@@ -128,8 +128,12 @@ func (fs *blockFS) Trunc(id FileID, length uint64) error {
 	}
 	defer fs.writeFileMeta()
 
-	endOffset := length - 1
-	endBlockIdx := endOffset / f.BlockSize
+	var endBlockIdx uint64
+	if length == 0 {
+		endBlockIdx = 0
+	} else {
+		endBlockIdx = (length - 1) / f.BlockSize
+	}
 
 	for idx := endBlockIdx + 1; idx < size(f.BlockList); idx++ {
 		block := f.BlockList[idx]
