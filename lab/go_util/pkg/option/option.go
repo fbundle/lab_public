@@ -5,9 +5,21 @@ type Option[T any] struct {
 	Err error
 }
 
-func (o Option[T]) Unwrap(err *error) T {
-	*err = o.Err
-	return o.Val
+func (o Option[T]) Unwrap(val *T) error {
+	if val != nil {
+		*val = o.Val
+	}
+	return o.Err
+}
+
+func Wrap[T any](f func(...any) (T, error)) func(...any) Option[T] {
+	return func(args ...any) Option[T] {
+		val, err := f(args...)
+		if err != nil {
+			return Error[T](err)
+		}
+		return Some(val)
+	}
 }
 
 func Error[T any](err error) Option[T] {
