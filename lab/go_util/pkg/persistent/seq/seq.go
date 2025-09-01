@@ -60,7 +60,6 @@ func (s Seq[T]) Repr() []T {
 func Slice[T any](s Seq[T], beg int, end int) Seq[T] {
 	if beg > end {
 		panic("slice out of range")
-		return Empty[T]()
 	}
 	s, _ = s.Split(end)
 	_, s = s.Split(beg)
