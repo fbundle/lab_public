@@ -39,3 +39,12 @@ func (s Stack[T]) Iter(f func(i int, val T) bool) {
 	s1, _ := s.Pop()
 	s1.Iter(f)
 }
+
+func (s Stack[T]) Repr() []T {
+	buffer := make([]T, 0, s.Depth())
+	s.Iter(func(i int, val T) bool {
+		buffer = append(buffer, val)
+		return true
+	})
+	return buffer
+}
