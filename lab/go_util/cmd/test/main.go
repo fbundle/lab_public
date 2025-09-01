@@ -358,5 +358,5 @@ func testStack() {
 }
 
 func main() {
-	testStack()
+	testMonad()
 }

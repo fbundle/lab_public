@@ -3,6 +3,19 @@ package monad
 type Iterator[T any] = func() (v T, ok bool) // TODO - make Iterator[T] = iter.Seq[T]
 type Monad[T any] func() Iterator[T]
 
+func (m Monad[T]) Iter(yield func(T) bool) {
+	mi := m()
+	for {
+		v, ok := mi()
+		if !ok {
+			break
+		}
+		if ok := yield(v); !ok {
+			break
+		}
+	}
+}
+
 func (m Monad[T]) Slice() []T {
 	mi := m()
 	var vs []T
