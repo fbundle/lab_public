@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/fbundle/lab_public/lab/go_util/pkg/fib"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/int_ntt"
@@ -16,6 +15,7 @@ import (
 	"github.com/fbundle/lab_public/lab/go_util/pkg/padic"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/persistent/ordered_map"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/persistent/seq"
+	"github.com/fbundle/lab_public/lab/go_util/pkg/persistent/stack"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/ring"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/tup"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/vec"
@@ -342,6 +342,21 @@ func testPersistentVector() {
 	}
 }
 
+func testStack() {
+	s := stack.Empty[int]()
+	s = s.Push(1)
+	s = s.Push(2)
+	s = s.Push(3)
+	for i, v := range s.Iter {
+		fmt.Println(i, v)
+	}
+	s, v := s.Pop()
+	fmt.Println(v)
+	for i, v := range s.Iter {
+		fmt.Println(i, v)
+	}
+}
+
 func main() {
-	time.Now().UnixNano()
+	testStack()
 }
