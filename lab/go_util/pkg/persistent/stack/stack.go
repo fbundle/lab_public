@@ -18,7 +18,7 @@ func (s Stack[T]) Pop() (Stack[T], T) {
 	}, s.node.value
 }
 
-func (s Stack[T]) Len() int {
+func (s Stack[T]) Depth() int {
 	return int(depth(s.node))
 }
 
@@ -29,7 +29,7 @@ func (s Stack[T]) Push(v T) Stack[T] {
 }
 
 func (s Stack[T]) Iter(f func(i int, val T) bool) {
-	length := s.Len()
+	length := s.Depth()
 	if length == 0 {
 		return
 	}
