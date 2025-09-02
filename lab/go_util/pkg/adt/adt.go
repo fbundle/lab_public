@@ -14,9 +14,9 @@ func (o Option[T]) Unwrap(val *T) error {
 	return o.Err
 }
 
-func Wrap[T any](f func(...any) (T, error)) func(...any) Option[T] {
-	return func(args ...any) Option[T] {
-		val, err := f(args...)
+func Wrap[T any](f func() (T, error)) func() Option[T] {
+	return func() Option[T] {
+		val, err := f()
 		if err != nil {
 			return Error[T](err)
 		}
