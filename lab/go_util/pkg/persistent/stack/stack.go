@@ -36,8 +36,7 @@ func (s Stack[T]) Iter(f func(i int, val T) bool) {
 	if ok := f(length-1, s.node.value); !ok {
 		return
 	}
-	s1, _ := s.Pop()
-	s1.Iter(f)
+	s.Pop().Iter(f)
 }
 
 func (s Stack[T]) Repr() []T {
