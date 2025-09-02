@@ -1,4 +1,4 @@
-package more_type
+package adt
 
 import "errors"
 
