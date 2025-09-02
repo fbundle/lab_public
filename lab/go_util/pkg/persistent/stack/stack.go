@@ -12,10 +12,10 @@ func (s Stack[T]) Peek() T {
 	return s.node.value
 }
 
-func (s Stack[T]) Pop() (Stack[T], T) {
+func (s Stack[T]) Pop() Stack[T] {
 	return Stack[T]{
 		node: s.node.next,
-	}, s.node.value
+	}
 }
 
 func (s Stack[T]) Depth() int {
