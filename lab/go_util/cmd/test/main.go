@@ -7,18 +7,17 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/fbundle/lab_public/lab/go_util/pkg/caller"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/fib"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/int_ntt"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/integer"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/line_slice"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/monad"
-	"github.com/fbundle/lab_public/lab/go_util/pkg/option"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/padic"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/persistent/ordered_map"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/persistent/seq"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/persistent/stack"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/ring"
-	"github.com/fbundle/lab_public/lab/go_util/pkg/tup"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/vec"
 )
 
@@ -59,11 +58,6 @@ func testIntNTT() {
 	z := int_ntt.FromString("0x539543980a084524")
 	fmt.Println(z)
 	fmt.Println(z.Add(x).Mod(x))
-}
-
-func testTup() {
-	t := tup.MakeTup(2, 2.5)
-	fmt.Println(t)
 }
 
 func testVecFunctor() {
@@ -365,37 +359,10 @@ func divide(a float64, b float64) (float64, error) {
 	return a / b, nil
 }
 
-func testOption() {
-	div := option.Wrap(func(args ...any) (float64, error) {
-		if len(args) != 2 {
-			return 0, fmt.Errorf("invalid number of arguments")
-		}
-		a, ok := args[0].(float64)
-		if !ok {
-			return 0, fmt.Errorf("invalid type of argument 1")
-		}
-		b, ok := args[1].(float64)
-		if !ok {
-			return 0, fmt.Errorf("invalid type of argument 2")
-		}
-		return divide(a, b)
-	})
-
-	var v float64
-	o1 := div(10.0, 2.0)
-	o2 := div(10.0, 0.0)
-	if err := o1.Unwrap(&v); err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(v)
-	}
-	if err := o2.Unwrap(&v); err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(v)
-	}
+func testCaller() {
+	fmt.Println(caller.CallStackError(0))
 }
 
 func main() {
-	testOption()
+	testCaller()
 }

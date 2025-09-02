@@ -100,3 +100,33 @@ func NewSum2[T1 any, T2 any](val any) Sum2[T1, T2] {
 	}
 	return Sum2[T1, T2]{val: val}
 }
+
+type Option2[T1 any, T2 any] struct {
+	val1 T1
+	val2 T2
+	err  error
+}
+
+func (o Option2[T1, T2]) Unwrap(val1 *T1, val2 *T2) error {
+	if val1 != nil {
+		*val1 = o.val1
+	}
+	if val2 != nil {
+		*val2 = o.val2
+	}
+	return o.err
+}
+
+func Some2[T1 any, T2 any](val1 T1, val2 T2) Option2[T1, T2] {
+	return Option2[T1, T2]{
+		val1: val1,
+		val2: val2,
+		err:  nil,
+	}
+}
+
+func Error2[T1 any, T2 any](err error) Option2[T1, T2] {
+	return Option2[T1, T2]{
+		err: err,
+	}
+}
