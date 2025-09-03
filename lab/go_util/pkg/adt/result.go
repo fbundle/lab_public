@@ -13,19 +13,18 @@ func (r Result[T]) Unwrap(val *T) error {
 }
 
 func (r Result[T]) Iter(yield func(T)) {
-	if r.Err != nil {
-		return
+	if r.Err == nil {
+		yield(r.Val)
 	}
-	yield(r.Val)
 }
 
-func Error[T any](err error) Result[T] {
+func Err[T any](err error) Result[T] {
 	return Result[T]{
 		Err: err,
 	}
 }
 
-func Some[T any](val T) Result[T] {
+func Ok[T any](val T) Result[T] {
 	return Result[T]{
 		Val: val,
 		Err: nil,
