@@ -41,8 +41,8 @@ func (o Option2[T1, T2]) Unwrap(val1 *T1, val2 *T2) bool {
 	return o.Ok
 }
 
-func None2[T any]() Option[T] {
-	return Option[T]{
+func None2[T1 any, T2 any]() Option2[T1, T2] {
+	return Option2[T1, T2]{
 		Ok: false,
 	}
 }
