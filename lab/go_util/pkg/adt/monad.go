@@ -1,5 +1,9 @@
 package adt
 
+type PureMonad[T any] interface {
+	Monad() Monad[T]
+}
+
 type Monad[T any] interface {
 	Iter(func(T) bool)
 }
