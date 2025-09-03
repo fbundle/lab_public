@@ -29,3 +29,11 @@ func Some[T any](val T) Option[T] {
 		Ok:  true,
 	}
 }
+
+func Cast[T any](v any) Option[T] {
+	val, ok := v.(T)
+	return Option[T]{
+		Val: val,
+		Ok:  ok,
+	}
+}
