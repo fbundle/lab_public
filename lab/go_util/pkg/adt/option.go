@@ -11,11 +11,6 @@ func (o Option[T]) Unwrap(val *T) bool {
 	}
 	return o.Ok
 }
-func (o Option[T]) Iter(yield func(T)) {
-	if o.Ok {
-		yield(o.Val)
-	}
-}
 
 func None[T any]() Option[T] {
 	return Option[T]{
@@ -34,6 +29,16 @@ type Option2[T1 any, T2 any] struct {
 	Val1 T1
 	Val2 T2
 	Ok   bool
+}
+
+func (o Option2[T1, T2]) Unwrap(val1 *T1, val2 *T2) bool {
+	if val1 != nil {
+		*val1 = o.Val1
+	}
+	if val2 != nil {
+		*val2 = o.Val2
+	}
+	return o.Ok
 }
 
 func None2[T any]() Option[T] {
