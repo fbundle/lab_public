@@ -4,6 +4,10 @@ type PureMonad[T any] interface {
 	Monad() Monad[T]
 }
 
+type PureMonad2[T1 any, T2 any] interface {
+	Monad2() Monad[Prod2[T1, T2]]
+}
+
 type Monad[T any] interface {
 	Iter(func(T) bool)
 }
