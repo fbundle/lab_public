@@ -76,3 +76,13 @@ func (s Seq[T]) Monad() adt.Monad[T] {
 		}
 	})
 }
+
+func (s Seq[T]) Monad2() adt.Monad[adt.Prod2[int, T]] {
+	return adt.Iter[adt.Prod2[int, T]](func(yield func(adt.Prod2[int, T]) bool) {
+		for i, val := range s.Iter {
+			if ok := yield(adt.NewProd2(i, val)); !ok {
+				return
+			}
+		}
+	})
+}
