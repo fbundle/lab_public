@@ -1,9 +1,5 @@
 package seq
 
-import (
-	"github.com/fbundle/lab_public/lab/go_util/pkg/adt"
-)
-
 func (s Seq[T]) Front() T {
 	return s.Get(0)
 }
@@ -65,24 +61,4 @@ func Merge[T any](ss ...Seq[T]) Seq[T] {
 		s = s.Merge(ss[i])
 	}
 	return s
-}
-
-func (s Seq[T]) Monad() adt.Monad[T] {
-	return adt.Iter[T](func(yield func(T) bool) {
-		for _, val := range s.Iter {
-			if ok := yield(val); !ok {
-				return
-			}
-		}
-	})
-}
-
-func (s Seq[T]) Monad2() adt.Monad[adt.Prod2[int, T]] {
-	return adt.Iter[adt.Prod2[int, T]](func(yield func(adt.Prod2[int, T]) bool) {
-		for i, val := range s.Iter {
-			if ok := yield(adt.NewProd2(i, val)); !ok {
-				return
-			}
-		}
-	})
 }

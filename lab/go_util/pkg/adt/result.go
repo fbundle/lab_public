@@ -12,13 +12,11 @@ func (r Result[T]) Unwrap(val *T) error {
 	return r.Err
 }
 
-func (r Result[T]) Monad() Monad[T] {
-	return Iter[T](func(yield func(T) bool) {
-		if r.Err != nil {
-			return
-		}
-		yield(r.Val)
-	})
+func (r Result[T]) Iter(yield func(T)) {
+	if r.Err != nil {
+		return
+	}
+	yield(r.Val)
 }
 
 func Error[T any](err error) Result[T] {
