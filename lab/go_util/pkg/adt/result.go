@@ -13,7 +13,7 @@ func (r Result[T]) Unwrap(val *T) error {
 }
 
 func (r Result[T]) Monad() Monad[T] {
-	return newIterMonad(func(yield func(T) bool) {
+	return Iter[T](func(yield func(T) bool) {
 		if r.Err != nil {
 			return
 		}

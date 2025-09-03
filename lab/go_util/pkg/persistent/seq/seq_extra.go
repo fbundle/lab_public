@@ -1,27 +1,39 @@
 package seq
 
-func PushFront[T any](s Seq[T], vals ...T) Seq[T] {
+import (
+	"github.com/fbundle/lab_public/lab/go_util/pkg/adt"
+)
+
+func (s Seq[T]) Front() T {
+	return s.Get(0)
+}
+
+func (s Seq[T]) Back() T {
+	return s.Get(s.Len() - 1)
+}
+
+func (s Seq[T]) PushFront(vals ...T) Seq[T] {
 	for i := len(vals) - 1; i >= 0; i-- {
 		s = s.Ins(0, vals[i])
 	}
 	return s
 }
-func PushBack[T any](s Seq[T], vals ...T) Seq[T] {
+func (s Seq[T]) PushBack(vals ...T) Seq[T] {
 	for i := 0; i < len(vals); i++ {
 		s = s.Ins(s.Len(), vals[i])
 	}
 	return s
 }
 
-func PopFront[T any](s Seq[T]) Seq[T] {
+func (s Seq[T]) PopFront() Seq[T] {
 	return s.Del(0)
 }
 
-func PopBack[T any](s Seq[T]) Seq[T] {
+func (s Seq[T]) PopBack() Seq[T] {
 	return s.Del(s.Len() - 1)
 }
 
-func IndexOf[T any](s Seq[T], pred func(T) bool) int {
+func (s Seq[T]) IndexOf(pred func(T) bool) int {
 	index := -1
 	for i, val := range s.Iter {
 		if pred(val) {
@@ -31,13 +43,11 @@ func IndexOf[T any](s Seq[T], pred func(T) bool) int {
 	}
 	return index
 }
-func Contains[T any](s Seq[T], pred func(T) bool) bool {
-	return IndexOf(s, pred) >= 0
+func (s Seq[T]) Contains(pred func(T) bool) bool {
+	return s.IndexOf(pred) >= 0
 }
 
-func FlatMap[T1 any, T2 any](s Seq[T1], f func(T1))
-
-func Slice[T any](s Seq[T], beg int, end int) Seq[T] {
+func (s Seq[T]) Slice(beg int, end int) Seq[T] {
 	if beg > end {
 		panic("slice out of range")
 	}
@@ -55,4 +65,14 @@ func Merge[T any](ss ...Seq[T]) Seq[T] {
 		s = s.Merge(ss[i])
 	}
 	return s
+}
+
+func (s Seq[T]) Monad() adt.Monad[T] {
+	return adt.Iter[T](func(yield func(T) bool) {
+		for _, val := range s.Iter {
+			if ok := yield(val); !ok {
+				return
+			}
+		}
+	})
 }
