@@ -20,18 +20,24 @@ type Sum2[T1 any, T2 any] struct {
 	val any
 }
 
-func (s Sum2[T1, T2]) Unwrap1() Option[T1] {
+func (s Sum2[T1, T2]) Unwrap1(val *T1) bool {
 	if v, ok := s.val.(T1); ok {
-		return Some(v)
+		if val != nil {
+			*val = v
+		}
+		return true
 	} else {
-		return None[T1]()
+		return false
 	}
 }
-func (s Sum2[T1, T2]) Unwrap2() Option[T2] {
+func (s Sum2[T1, T2]) Unwrap2(val *T2) bool {
 	if v, ok := s.val.(T2); ok {
-		return Some(v)
+		if val != nil {
+			*val = v
+		}
+		return true
 	} else {
-		return None[T2]()
+		return false
 	}
 }
 
