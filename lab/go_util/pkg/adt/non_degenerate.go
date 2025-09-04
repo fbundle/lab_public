@@ -1,5 +1,12 @@
 package adt
 
+func MustNonEmpty[T any](s []T) NonEmptySlice[T] {
+	if len(s) == 0 {
+		panic("adt_error")
+	}
+	return nonEmptySlice[T](s)
+}
+
 func NonEmpty[T any](s []T) Option[NonEmptySlice[T]] {
 	if len(s) == 0 {
 		return None[NonEmptySlice[T]]()
@@ -36,6 +43,13 @@ func (s nonEmptySlice[T]) Last() T {
 
 func (s nonEmptySlice[T]) Init() []T {
 	return s[:len(s)-1]
+}
+
+func MustNonNil[T any](pointer *T) NonNilPointer[T] {
+	if pointer == nil {
+		panic("adt_error")
+	}
+	return nonNilPointer[T]{pointer: pointer}
 }
 
 func NonNil[T any](pointer *T) Option[NonNilPointer[T]] {
