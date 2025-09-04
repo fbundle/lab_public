@@ -1,10 +1,11 @@
 package adt
 
 func MustNonEmpty[T any](s []T) NonEmptySlice[T] {
-	if len(s) == 0 {
+	var out NonEmptySlice[T]
+	if ok := NonEmpty(s).Unwrap(&out); !ok {
 		panic("adt_error")
 	}
-	return nonEmptySlice[T](s)
+	return out
 }
 
 func NonEmpty[T any](s []T) Option[NonEmptySlice[T]] {
@@ -46,10 +47,11 @@ func (s nonEmptySlice[T]) Init() []T {
 }
 
 func MustNonNil[T any](pointer *T) NonNilPointer[T] {
-	if pointer == nil {
+	var out NonNilPointer[T]
+	if ok := NonNil(pointer).Unwrap(&out); !ok {
 		panic("adt_error")
 	}
-	return nonNilPointer[T]{pointer: pointer}
+	return out
 }
 
 func NonNil[T any](pointer *T) Option[NonNilPointer[T]] {
