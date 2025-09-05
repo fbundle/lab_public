@@ -12,6 +12,13 @@ func (o Option[T]) Unwrap(val *T) bool {
 	return o.Ok
 }
 
+func (o Option[T]) MustUnwrap() T {
+	if !o.Ok {
+		panic(o)
+	}
+	return o.Val
+}
+
 func None[T any]() Option[T] {
 	return Option[T]{
 		Ok: false,
@@ -52,13 +59,5 @@ func Some2[T1 any, T2 any](val1 T1, val2 T2) Option2[T1, T2] {
 		Val1: val1,
 		Val2: val2,
 		Ok:   true,
-	}
-}
-
-func Cast[T any](v any) Option[T] {
-	val, ok := v.(T)
-	return Option[T]{
-		Val: val,
-		Ok:  ok,
 	}
 }
