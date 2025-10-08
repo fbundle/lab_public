@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/fbundle/lab_public/lab/go_util/pkg/caller"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/fib"
@@ -16,7 +17,6 @@ import (
 	"github.com/fbundle/lab_public/lab/go_util/pkg/padic"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/persistent/ordered_map"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/persistent/seq"
-	"github.com/fbundle/lab_public/lab/go_util/pkg/persistent/stack"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/ring"
 	"github.com/fbundle/lab_public/lab/go_util/pkg/vec"
 )
@@ -337,21 +337,6 @@ func testPersistentVector() {
 	}
 }
 
-func testStack() {
-	s := stack.Empty[int]()
-	s = s.Push(1)
-	s = s.Push(2)
-	s = s.Push(3)
-	for i, v := range s.Iter {
-		fmt.Println(i, v)
-	}
-	s, v := s.Pop()
-	fmt.Println(v)
-	for i, v := range s.Iter {
-		fmt.Println(i, v)
-	}
-}
-
 func divide(a float64, b float64) (float64, error) {
 	if b == 0 {
 		return 0, fmt.Errorf("divide by zero")
@@ -363,6 +348,82 @@ func testCaller() {
 	fmt.Println(caller.CallStackError(0))
 }
 
+func zero[T any]() T {
+	var z T
+	return z
+}
+
+type Result[T any] struct {
+	Error error
+	Value T
+}
+
+func (r Result[T]) String() string {
+	if r.Error != nil {
+		return r.Error.Error()
+	}
+	return fmt.Sprintf("%v", r.Value)
+}
+
+func Wrap[T1 any, T2 any](f func(T1) (T2, error)) func(Result[T1]) Result[T2] {
+	return func(t1Result Result[T1]) Result[T2] {
+		t1, err := t1Result.Value, t1Result.Error
+		if err != nil {
+			return Result[T2]{Error: err}
+		}
+		t2, err := f(t1)
+		return Result[T2]{Value: t2, Error: err}
+	}
+}
+
+type Pair[T1 any, T2 any] struct {
+	Left  T1
+	Right T2
+}
+
+func divideFromString(input string) (string, error) {
+	parse := func(input string) (Pair[int, int], error) {
+		parts := strings.SplitN(input, "/", 2)
+		if len(parts) != 2 {
+			return zero[Pair[int, int]](), fmt.Errorf("invalid input: %s", input)
+		}
+		part1, part2 := parts[0], parts[1]
+		x1, err := strconv.Atoi(part1)
+		if err != nil {
+			return zero[Pair[int, int]](), err
+		}
+		x2, err := strconv.Atoi(part2)
+		if err != nil {
+			return zero[Pair[int, int]](), err
+		}
+		return Pair[int, int]{x1, x2}, nil
+	}
+
+	divide := func(pair Pair[int, int]) (int, error) {
+		x1, x2 := pair.Left, pair.Right
+		if x2 == 0 {
+			return 0, fmt.Errorf("divide by zero")
+		}
+		return x1 / x2, nil
+	}
+
+	convert := func(x int) (string, error) {
+		return strconv.Itoa(x), nil
+	}
+
+	x0 := Result[string]{Value: input}
+	x1 := Wrap(parse)(x0)
+	x2 := Wrap(divide)(x1)
+	x3 := Wrap(convert)(x2)
+	return x3.Value, x3.Error
+}
+
+func testChain() {
+	fmt.Println(divideFromString("1241cas"))
+	fmt.Println(divideFromString("1241/0"))
+	fmt.Println(divideFromString("1241/11"))
+}
+
 func main() {
-	testCaller()
+	testChain()
 }
