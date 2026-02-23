@@ -98,7 +98,7 @@ class Memo:
     def get_html(self, node: Node) -> str | None:
         protocol, website, path, local_path = self.parse_url(node)
         if protocol != "http" and protocol != "https":
-            return self, [] # skip non-http/https URLs
+            return None # skip non-http/https URLs
         
         if not os.path.exists(local_path):
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
@@ -111,10 +111,10 @@ class Memo:
 
             except urllib.error.HTTPError as e:
                 print("HTTP error", e.code, "for", node)
-                return self, []
+                return None
             except urllib.error.URLError as e:
                 print("URL error", e.reason, "for", node)
-                return self, []
+                return None
 
         html: str | None = None
         with open(local_path, "rb") as f:
@@ -122,7 +122,7 @@ class Memo:
         try:
             html = body.decode("utf-8", errors="ignore")
         except Exception:
-            html = None
+            return None
 
         return html
 
@@ -159,7 +159,6 @@ def fetch(root_url: str, root_dir: str) -> None:
         memo=memo,
         root_node=root_url,
         visit_node=Memo.visit_node,
-        is_visited=Memo.is_visited,
     )
 
 
