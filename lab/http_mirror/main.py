@@ -1,7 +1,8 @@
-import html
-import os
 from typing import Any, Callable
-import urllib
+from html.parser import HTMLParser
+import os
+import urllib.parse
+import urllib.request
 
 Node = Any
 Memo = Any
@@ -24,7 +25,7 @@ def dfs(
     return memo
 
 
-class HrefParser(html.parser.HTMLParser):
+class HrefParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.hrefs: list[str] = []
@@ -53,11 +54,15 @@ class Memo:
     def parse_url(self, node: str) -> tuple[str, str, str, str]:
         url = urllib.parse.urlparse(node)
         protocol, website, path = url.scheme, url.netloc, url.path
-        if path == "" or path.endswith("/"):
-            path_with_index = path + "index.html"
-        else:
-            path_with_index = path
+        
+        path_with_index = path
+        if path_with_index == "" or path_with_index.endswith("/"):
+            path_with_index = path_with_index + "index.html"
+        if path_with_index.startswith("/"):
+            path_with_index = path_with_index.lstrip("/")
+
         local_path = os.path.join(self.root_dir, protocol, website, path_with_index)
+
         return protocol, website, path, local_path
     
     def is_visited(self, node: str) -> bool:
