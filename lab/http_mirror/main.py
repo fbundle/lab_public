@@ -24,6 +24,23 @@ def dfs(
             stack.append(child)
     return memo
 
+def bfs(
+    memo: Memo,
+    root_node: Node,
+    visit_node: Callable[[Memo, Node], tuple[Memo, list[Node]]],
+    is_visited: Callable[[Memo, Node], bool],
+) -> Memo:
+    queue: deque[Node] = deque([root_node])
+    while queue:
+        node = queue.popleft()
+        print(f"queue size: {len(queue)}, visiting {node} ...")
+        memo, children = visit_node(memo, node)
+        for child in children:
+            if is_visited(memo, child):
+                continue
+            queue.append(child)
+    return memo
+
 
 class HrefParser(HTMLParser):
     def __init__(self):
@@ -119,7 +136,7 @@ def fetch(root_url: str, root_dir: str) -> None:
     website = urllib.parse.urlparse(root_url).netloc
     memo = Memo(root_dir=root_dir, whitelist={website})
 
-    memo = dfs(
+    memo = bfs(
         memo=memo,
         root_node=root_url,
         visit_node=Memo.visit_node,
