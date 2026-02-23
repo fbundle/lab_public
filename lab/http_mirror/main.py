@@ -55,11 +55,35 @@ class HrefParser(HTMLParser):
         self.hrefs: list[str] = []
     
     def handle_starttag(self, tag, attrs):
-        if tag != "a":
+        tag = tag.lower()
+
+        # <a href="...">
+        if tag == "a":
+            for k, v in attrs:
+                if (k or "").lower() == "href" and v:
+                    self.hrefs.append(v)
             return
-        for k, v in attrs:
-            if k == "href" and v:
-                self.hrefs.append(v)
+
+        # <link rel="stylesheet" href="...">
+        if tag == "link":
+            rel = ""
+            href = None
+            for k, v in attrs:
+                lk = (k or "").lower()
+                if lk == "rel" and v:
+                    rel = v.lower()
+                elif lk == "href" and v:
+                    href = v
+            if href and "stylesheet" in rel:
+                self.hrefs.append(href)
+            return
+
+        # <script src="..."></script>
+        if tag == "script":
+            for k, v in attrs:
+                if (k or "").lower() == "src" and v:
+                    self.hrefs.append(v)
+            return
 
 def parse_hrefs(html: str) -> list[str]:
     parser = HrefParser()
