@@ -77,10 +77,18 @@ class Memo:
             return self, [] # skip non-http/https URLs
         
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
-        with urllib.request.urlopen(node) as response:
-            content_type = response.headers.get("Content-Type") or ""
-            is_html = "text/html" in content_type.lower()
-            body = response.read()
+        try:
+            with urllib.request.urlopen(node) as response:
+                content_type = response.headers.get("Content-Type") or ""
+                is_html = "text/html" in content_type.lower()
+                body = response.read()
+        except urllib.error.HTTPError as e:
+            print("HTTP error", e.code, "for", node)
+            return self, []
+        except urllib.error.URLError as e:
+            print("URL error", e.reason, "for", node)
+            return self, []
+        
         with open(local_path, "wb") as f:
             f.write(body)
         
