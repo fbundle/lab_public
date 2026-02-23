@@ -66,7 +66,7 @@ def main() -> None:
     p.add_argument(
         "dir",
         nargs="?",
-        default=os.path.join("tmp", "fextralife_eldenring", "https", "eldenring.wiki.fextralife.com"),
+        default="/mnt/pool/tmp/fextralife_eldenring/https/eldenring.wiki.fextralife.com",
         help="Directory to serve",
     )
     p.add_argument("-p", "--port", type=int, default=3000)

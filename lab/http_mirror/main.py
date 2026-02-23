@@ -163,5 +163,5 @@ def fetch(root_url: str, root_dir: str) -> None:
 
 
 if __name__ == "__main__":
-    fetch("https://eldenring.wiki.fextralife.com", "tmp/fextralife_eldenring")
+    fetch("https://eldenring.wiki.fextralife.com", "/mnt/pool/tmp/fextralife_eldenring")
 
