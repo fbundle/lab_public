@@ -125,12 +125,15 @@ class Memo:
             return self, [] # skip non-http/https URLs
         
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        html: str | None = None
         try:
             node = urllib.parse.quote(node, safe=":/?&=%#")
             with urllib.request.urlopen(node) as response:
                 content_type = response.headers.get("Content-Type") or ""
                 is_html = "text/html" in content_type.lower()
                 body = response.read()
+                if is_html:
+                    html = body.decode("utf-8", errors="ignore")
         except urllib.error.HTTPError as e:
             print("HTTP error", e.code, "for", node)
             return self, []
@@ -142,8 +145,7 @@ class Memo:
             f.write(body)
         
         children: list[Node] = []
-        if is_html:
-            html = body.decode("utf-8", errors="ignore")
+        if html is not None:
             hrefs = parse_hrefs(html)
 
             absolute_hrefs = []

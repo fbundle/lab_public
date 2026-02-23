@@ -37,10 +37,15 @@ class MirrorHandler(http.server.SimpleHTTPRequestHandler):
 
     def guess_type(self, path: str) -> str:
         """
-        If a file has no extension but looks like HTML, serve it as text/html.
-        This prevents browsers (Firefox) from downloading it as octet-stream.
+        Ensure HTML is served as UTF‑8 so special characters render correctly.
+        - Known .html/.htm files: force 'text/html; charset=utf-8'
+        - Extensionless files that *look* like HTML: same.
+        Otherwise, fall back to the default mapping.
         """
         _root, ext = os.path.splitext(path)
+        if ext.lower() in {".html", ".htm"}:
+            return "text/html; charset=utf-8"
+
         if ext:
             return super().guess_type(path)
 
@@ -51,7 +56,7 @@ class MirrorHandler(http.server.SimpleHTTPRequestHandler):
             return super().guess_type(path)
 
         if head.startswith(b"<!doctype html") or head.startswith(b"<html") or b"<head" in head[:200]:
-            return "text/html"
+            return "text/html; charset=utf-8"
 
         return super().guess_type(path)
 
