@@ -3,6 +3,8 @@ from html.parser import HTMLParser
 import os
 import urllib.parse
 import urllib.request
+from collections import deque
+
 
 Node = Any
 Memo = Any
