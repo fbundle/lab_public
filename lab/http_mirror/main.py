@@ -21,6 +21,8 @@ def dfs(
         print(f"stack size: {len(stack)}, visiting {node} ...")
         memo, children = visit_node(memo, node)
         for child in children:
+            if child in stack:
+                continue
             if is_visited(memo, child):
                 continue
             stack.append(child)
@@ -38,6 +40,8 @@ def bfs(
         print(f"queue size: {len(queue)}, visiting {node} ...")
         memo, children = visit_node(memo, node)
         for child in children:
+            if child in queue:
+                continue
             if is_visited(memo, child):
                 continue
             queue.append(child)
