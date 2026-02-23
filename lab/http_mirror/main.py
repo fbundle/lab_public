@@ -15,19 +15,19 @@ def bfs(
     root_node: Node,
     visit_node: Callable[[Memo, Node], tuple[Memo, list[Node]]],
 ) -> Memo:
-    visited: set[str] = set[str]()
-    queue: deque[Node] = deque([root_node])
+    visited: set[Node] = set()
+    queue: deque[tuple[Node, int]] = deque([(root_node, 0)])
     while queue:
-        node = queue.popleft()
-        print(f"queue size: {len(queue)}, visiting {node} ...")
+        node, depth = queue.popleft()
+        print(f"queue size: {len(queue)}, visiting (depth {depth}) {node} ...")
         memo, children = visit_node(memo, node)
         visited.add(node)
         for child in children:
-            if child in queue:
-                continue
             if child in visited:
                 continue
-            queue.append(child)
+            if any(c == child for (c, _) in queue):
+                continue
+            queue.append((child, depth + 1))
     return memo
 
 
