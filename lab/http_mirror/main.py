@@ -3,6 +3,7 @@ from html.parser import HTMLParser
 import os
 import urllib.parse
 import urllib.request
+import urllib.error
 from collections import deque
 
 
@@ -101,6 +102,7 @@ class Memo:
         
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         try:
+            node = urllib.parse.quote(node, safe=":/?&=%#")
             with urllib.request.urlopen(node) as response:
                 content_type = response.headers.get("Content-Type") or ""
                 is_html = "text/html" in content_type.lower()
