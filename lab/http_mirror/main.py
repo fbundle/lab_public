@@ -10,40 +10,22 @@ from collections import deque
 Node = Any
 Memo = Any
 
-def dfs(
-    memo: Memo,
-    root_node: Node,
-    visit_node: Callable[[Memo, Node], tuple[Memo, list[Node]]],
-    is_visited: Callable[[Memo, Node], bool],
-) -> Memo:
-    stack: list[Node] = [root_node]
-    while stack:
-        node = stack.pop()
-        print(f"stack size: {len(stack)}, visiting {node} ...")
-        memo, children = visit_node(memo, node)
-        for child in children:
-            if child in stack:
-                continue
-            if is_visited(memo, child):
-                continue
-            stack.append(child)
-    return memo
-
 def bfs(
     memo: Memo,
     root_node: Node,
     visit_node: Callable[[Memo, Node], tuple[Memo, list[Node]]],
-    is_visited: Callable[[Memo, Node], bool],
 ) -> Memo:
+    visited: set[str] = set[str]()
     queue: deque[Node] = deque([root_node])
     while queue:
         node = queue.popleft()
         print(f"queue size: {len(queue)}, visiting {node} ...")
         memo, children = visit_node(memo, node)
+        visited.add(node)
         for child in children:
             if child in queue:
                 continue
-            if is_visited(memo, child):
+            if child in visited:
                 continue
             queue.append(child)
     return memo
@@ -113,36 +95,39 @@ class Memo:
 
         return protocol, website, path, local_path
     
-    def is_visited(self, node: str) -> bool:
-        protocol, website, path, local_path = self.parse_url(node)
-        if protocol != "http" and protocol != "https":
-            return True # skip non-http/https URLs
-        return os.path.exists(local_path)
-    
-    def visit_node(self, node: Node) -> tuple[Memo, list[Node]]:
+    def get_html(self, node: Node) -> str | None:
         protocol, website, path, local_path = self.parse_url(node)
         if protocol != "http" and protocol != "https":
             return self, [] # skip non-http/https URLs
         
-        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        if not os.path.exists(local_path):
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            try:
+                node = urllib.parse.quote(node, safe=":/?&=%#")
+                with urllib.request.urlopen(node) as response:
+                    body = response.read()
+                with open(local_path, "wb") as f:
+                    f.write(body)
+
+            except urllib.error.HTTPError as e:
+                print("HTTP error", e.code, "for", node)
+                return self, []
+            except urllib.error.URLError as e:
+                print("URL error", e.reason, "for", node)
+                return self, []
+
         html: str | None = None
+        with open(local_path, "rb") as f:
+            body = f.read()
         try:
-            node = urllib.parse.quote(node, safe=":/?&=%#")
-            with urllib.request.urlopen(node) as response:
-                content_type = response.headers.get("Content-Type") or ""
-                is_html = "text/html" in content_type.lower()
-                body = response.read()
-                if is_html:
-                    html = body.decode("utf-8", errors="ignore")
-        except urllib.error.HTTPError as e:
-            print("HTTP error", e.code, "for", node)
-            return self, []
-        except urllib.error.URLError as e:
-            print("URL error", e.reason, "for", node)
-            return self, []
-        
-        with open(local_path, "wb") as f:
-            f.write(body)
+            html = body.decode("utf-8", errors="ignore")
+        except Exception:
+            html = None
+
+        return html
+
+    def visit_node(self, node: Node) -> tuple[Memo, list[Node]]:
+        html = self.get_html(node)
         
         children: list[Node] = []
         if html is not None:
