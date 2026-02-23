@@ -15,6 +15,7 @@ def dfs(
     stack: list[Node] = [root_node]
     while stack:
         node = stack.pop()
+        print(f"stack size: {len(stack)}, visiting {node} ...")
         memo, children = visit_node(memo, node)
         for child in children:
             if is_visited(memo, child):
@@ -91,9 +92,6 @@ class Memo:
                 abs_url, _ = urllib.parse.urldefrag(abs_url)
                 absolute_hrefs.append(abs_url)
             
-
-
-            
             for href in absolute_hrefs:
                 protocol, website, path, local_path = self.parse_url(href)
                 if website not in self.whitelist:
@@ -105,8 +103,15 @@ class Memo:
 
 
 def fetch(root_url: str, root_dir: str) -> None:
-    """Placeholder for your HTTP/HTML mirror logic."""
-    raise NotImplementedError("implement me: fetch(root_url, root_dir)")
+    website = urllib.parse.urlparse(root_url).netloc
+    memo = Memo(root_dir=root_dir, whitelist={website})
+
+    memo = dfs(
+        memo=memo,
+        root_node=root_url,
+        visit_node=Memo.visit_node,
+        is_visited=Memo.is_visited,
+    )
 
 
 if __name__ == "__main__":
